@@ -41,3 +41,6 @@ marketplace/
 # Helm charts
 **/*.tgz
 **/*.lock
+
+# env
+.env
