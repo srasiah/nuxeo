@@ -14,6 +14,7 @@
   <packaging>pom</packaging>
 
   <properties>
+    <docker.benchmark.image>docker.platform.dev.nuxeo.com/nuxeo/nuxeo:2023.x</docker.benchmark.image>
     <docker.base.image>docker.platform.dev.nuxeo.com/nuxeo/nuxeo:2023.x</docker.base.image>
   </properties>
 
@@ -64,7 +65,7 @@
         <configuration>
           <images>
             <image>
-              <name>nuxeo/nuxeo-benchmark:2023.x</name>
+              <name>${docker.benchmark.image}</name>
               <build>
                 <args>
                   <BASE_IMAGE>${docker.base.image}</BASE_IMAGE>
