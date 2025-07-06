@@ -72,15 +72,7 @@ _build-benchmark-image:
 		$(MAVEN_COMMON) \
 
 # === Deploy ===
-clean-build-packages:
-	@echo "📦 Deploying Maven artifact to GitHub Packages..."
-	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
-	mvn clean install -Pdistrib  \
-	-Drevision=$(REVISION) \
-	$(MAVEN_COMMON)
-
-
-clean-deploy-packages:
+deploy-packages:
 	@echo "📦 Deploying Maven artifact to GitHub Packages..."
 	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
 	mvn clean deploy -Pdistrib -DskipTests \
@@ -88,10 +80,10 @@ clean-deploy-packages:
 		$(MAVEN_COMMON) \
 		$(MAVEN_DEPLOY)
 
-deploy-packages:
-	@echo "📦 Deploying Maven artifact to GitHub Packages..."
+deploy-release:
+	@echo "📦 Deploying Release Maven artifact to GitHub Packages..."
 	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
-	mvn deploy -Pdistrib \
+	mvn clean deploy -Prelease \
 	$(MAVEN_COMMON) \
 	$(MAVEN_DEPLOY)
 
