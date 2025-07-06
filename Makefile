@@ -4,7 +4,7 @@ DOCKER_BASE_IMAGE_NAME       ?= $(DOCKER_REGISTRY)/nuxeo/nuxeo
 DOCKER_BENCHMARK_IMAGE_NAME  ?= $(DOCKER_REGISTRY)/nuxeo-benchmark
 DOCKER_IMAGE_TAG             ?= 2023.x
 TARGETPLATFORM               ?= linux/amd64
-MAVEN_PROFILE                ?= "-Pdistrib,docker,amd64"
+MAVEN_PROFILE                ?= "-Pdistrib,docker"
 REVISION                     ?= 2023.29-SNAPSHOT
 RELEASE_VERSION              ?= 2023.29
 NUXEO_PLATFORM_VERSION       ?= 2023.29-SNAPSHOT
@@ -26,24 +26,24 @@ MAVEN_OPTS    := -Xmx4g -Xms2g -XX:+TieredCompilation -XX:TieredStopAtLevel=1
 MAVEN_COMMON  := -B -DskipTests -Dnuxeo.skip.enforcer=true -T6
 
 # ===== Targets =====
-.PHONY: all build-base-image build-benchmark-image push push-base push-benchmark \
+.PHONY: all build-and-deploy-base-image build-and-deploy-benchmark-image push push-base push-benchmark \
         clean-all-unused preview-orphans clean-orphans \
         nuxeo-run nuxeo-stop nuxeo-start nuxeo-rm \
         test deploy-packages \
         set_version reset_version check-env
 
 # === Build Images ===
-all: build-base-image build-benchmark-image
+all: build-and-deploy-base-image build-and-deploy-benchmark-image
 
 build-packages: _build-packages
 	@echo "✅ Packages build successful..."
 
-build-base-image: _build-base-image
+build-and-deploy-base-image: _build-base-image
 	@echo "✅ Base build successful, cleaning orphan images..."
 	@-$(MAKE) clean-orphans
 	@-$(MAKE) push-base
 
-build-benchmark-image: _build-benchmark-image
+build-and-deploy-benchmark-image: _build-benchmark-image
 	@echo "✅ Benchmark build successful, cleaning orphan images..."
 	@-$(MAKE) clean-orphans
 	@-$(MAKE) push-benchmark
@@ -56,7 +56,7 @@ _build-packages:
 _build-base-image:
 	@echo "🐳 Building Docker base image: $(DOCKER_BASE_IMAGE)"
 	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
-	mvn install ${MAVEN_PROFILE} -pl docker/nuxeo -am $(MAVEN_COMMON) \
+	mvn install -Pdistrib,docker,amd64 -pl docker/nuxeo -am $(MAVEN_COMMON) \
 	    -Drevision=$(REVISION) \
 		-Ddocker.base.image=$(DOCKER_BASE_IMAGE) \
 		-Ddocker.platforms=$(TARGETPLATFORM)
@@ -64,13 +64,30 @@ _build-base-image:
 _build-benchmark-image:
 	@echo "🐳 Building Docker benchmark image: $(DOCKER_BENCHMARK_IMAGE)"
 	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
-	mvn clean install ${MAVEN_PROFILE} $(MAVEN_COMMON) \
+	mvn clean install -Pdistrib,docker,amd64 -DskipTests \
 	 	-Drevision=$(REVISION) \
 		-Ddocker.base.image=$(DOCKER_BASE_IMAGE) \
 		-Ddocker.benchmark.image=$(DOCKER_BENCHMARK_IMAGE) \
-		-Ddocker.platforms=$(TARGETPLATFORM)
+		-Ddocker.platforms=$(TARGETPLATFORM) \
+		$(MAVEN_COMMON) \
 
 # === Deploy ===
+clean-build-packages:
+	@echo "📦 Deploying Maven artifact to GitHub Packages..."
+	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
+	mvn clean install -Pdistrib  \
+	-Drevision=$(REVISION) \
+	$(MAVEN_COMMON)
+
+
+clean-deploy-packages:
+	@echo "📦 Deploying Maven artifact to GitHub Packages..."
+	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
+	mvn clean deploy -Pdistrib -DskipTests \
+		-Drevision=$(REVISION) \
+		$(MAVEN_COMMON) \
+		$(MAVEN_DEPLOY)
+
 deploy-packages:
 	@echo "📦 Deploying Maven artifact to GitHub Packages..."
 	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
