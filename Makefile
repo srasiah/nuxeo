@@ -1,7 +1,7 @@
 # ===== Configuration (defaults) =====
 DOCKER_REGISTRY              ?= docker.platform.dev.nuxeo.com
 DOCKER_BASE_IMAGE_NAME       ?= $(DOCKER_REGISTRY)/nuxeo/nuxeo
-DOCKER_BENCHMARK_IMAGE_NAME  ?= $(DOCKER_REGISTRY)/nuxeo-benchmark
+DOCKER_BENCHMARK_IMAGE_NAME  ?= $(DOCKER_REGISTRY)/nuxeo/nuxeo-benchmark
 DOCKER_IMAGE_TAG             ?= 2023.x
 TARGETPLATFORM               ?= linux/amd64
 MAVEN_PROFILE                ?= "-Pdistrib,docker"
