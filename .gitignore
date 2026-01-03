@@ -10,6 +10,7 @@
 *~gen
 
 # ide
+.venv
 bin
 .classpath
 .metadata
