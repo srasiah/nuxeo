@@ -6,8 +6,8 @@ endif
 
 # ===== Configuration (defaults) =====
 DOCKER_REGISTRY              ?= docker.platform.dev.nuxeo.com
-DOCKER_BASE_IMAGE_NAME       ?= $(DOCKER_REGISTRY)/nuxeo/nuxeo
-DOCKER_BENCHMARK_IMAGE_NAME  ?= $(DOCKER_REGISTRY)/nuxeo/nuxeo-benchmark
+DOCKER_BASE_IMAGE_NAME       ?= $(DOCKER_REGISTRY)/nuxeo
+DOCKER_BENCHMARK_IMAGE_NAME  ?= $(DOCKER_REGISTRY)/nuxeo-benchmark
 DOCKER_IMAGE_TAG             ?= 2025.x
 TARGETPLATFORM               ?= linux/amd64
 REVISION                     ?= 2025.9-SNAPSHOT
