@@ -42,4 +42,9 @@ marketplace/
 
 # Helm charts
 **/*.tgz
-**/*.lock
+**/*.lockdocker.platform.dev.nuxeo.com/nuxeo/nuxeo:2025.x
+Platform: linux/arm64
+
+# Docker
+.env
+docker-compose.override.yml

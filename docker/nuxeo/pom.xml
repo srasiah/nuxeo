@@ -13,6 +13,10 @@
   <name>Nuxeo Docker Image</name>
   <packaging>pom</packaging>
 
+  <properties>
+    <docker.image.name>nuxeo/nuxeo:2025.x</docker.image.name>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.nuxeo.ecm.distribution</groupId>
@@ -56,7 +60,7 @@
           <verbose>true</verbose>
           <images>
             <image>
-              <name>nuxeo/nuxeo:2025.x</name>
+              <name>${docker.image.name}</name>
               <build>
                 <args>
                   <BUILD_TAG>local-nuxeo-nuxeo</BUILD_TAG>
