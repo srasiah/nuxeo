@@ -33,6 +33,8 @@ else ifeq ($(CONTAINER_ENGINE_NAME),docker)
     ifndef DOCKER_HOST
         export DOCKER_HOST := unix:///var/run/docker.sock
     endif
+    # Enable BuildKit for Docker
+    export DOCKER_BUILDKIT := 1
 endif
 
 # ===== Maven Options =====
@@ -58,7 +60,7 @@ else
 endif
 
 # ===== Targets =====
-.PHONY: all build-parent build-base build-benchmark push push-base push-benchmark \
+.PHONY: all build-distrib build-parent build-base build-base-full build-benchmark build-benchmark-full push push-base push-benchmark \
         build-and-push build-and-push-base build-and-push-benchmark \
         clean-orphans nuxeo-run nuxeo-stop nuxeo-start nuxeo-rm \
         test help
@@ -70,9 +72,12 @@ help:
 	@echo "Nuxeo Container Build Targets:"
 	@echo ""
 	@echo "  make all                      - Build both base and benchmark images"
+	@echo "  make build-distrib            - Build Nuxeo distribution (prerequisite for images)"
 	@echo "  make build-parent             - Build parent distribution only (no Docker images)"
-	@echo "  make build-base               - Build nuxeo base image"
-	@echo "  make build-benchmark          - Build nuxeo-benchmark image"
+	@echo "  make build-base               - Build nuxeo base image (skips distrib rebuild)"
+	@echo "  make build-base-full          - Build nuxeo base image with full distrib rebuild"
+	@echo "  make build-benchmark          - Build nuxeo-benchmark image (skips distrib rebuild)"
+	@echo "  make build-benchmark-full     - Build nuxeo-benchmark image with full distrib rebuild"
 	@echo "  make build-and-push           - Build and push both images"
 	@echo "  make build-and-push-base      - Build and push base image"
 	@echo "  make build-and-push-benchmark - Build and push benchmark image"
@@ -99,6 +104,13 @@ help:
 	@echo "  TARGETPLATFORM=$(TARGETPLATFORM)"
 	@echo "  REVISION=$(REVISION)"
 
+# === Build Distribution ===
+build-distrib:
+	@echo "📦 Building Nuxeo distribution..."
+	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
+	cd .. && mvn install -Pdistrib -DskipTests -Drevision=$(REVISION)
+	@echo "✅ Distribution build complete"
+
 # === Build Parent Distribution ===
 build-parent:
 	@echo "📦 Building nuxeo-parent..."
@@ -107,7 +119,7 @@ build-parent:
 	@echo "✅ nuxeo-parent build complete"
 
 # === Build Base Image ===
-build-base: _prepare-distrib
+build-base:
 	@echo "🐳 Building base image with $(CONTAINER_ENGINE_NAME): $(DOCKER_BASE_IMAGE)"
 	@echo "   Platform: $(DOCKER_PLATFORM)"
 	@echo "   Architecture Profile: $(ARCH_PROFILE)"
@@ -120,10 +132,16 @@ build-base: _prepare-distrib
 	    -Ddocker.platforms=$(DOCKER_PLATFORM) \
 	    -Ddocker.image.name=$(DOCKER_BASE_IMAGE)
 	@echo "✅ Base image build complete"
+	@# Tag for local benchmark builds
+	@$(CONTAINER_ENGINE) tag $(DOCKER_BASE_IMAGE) $(DOCKER_BASE_IMAGE_NAME):$(REVISION)
 	@-$(MAKE) clean-orphans
 
+# === Build Base Image with full rebuild ===
+build-base-full: build-distrib
+	@$(MAKE) build-base
+
 # === Build Benchmark Image ===
-build-benchmark: _prepare-distrib
+build-benchmark:
 	@echo "🐳 Building benchmark image with $(CONTAINER_ENGINE_NAME): $(DOCKER_BENCHMARK_IMAGE)"
 	@echo "   Platform: $(DOCKER_PLATFORM)"
 	@echo "   Base image: $(DOCKER_BASE_IMAGE)"
@@ -135,15 +153,17 @@ build-benchmark: _prepare-distrib
 	    -Drevision=$(REVISION) \
 	    -Ddocker.base.image=$(DOCKER_BASE_IMAGE) \
 	    -Ddocker.platforms=$(DOCKER_PLATFORM) \
+	    -Ddocker.buildx.enabled=false \
 	    -Ddocker.image.name=$(DOCKER_BENCHMARK_IMAGE)
 	@echo "✅ Benchmark image build complete"
 	@-$(MAKE) clean-orphans
 
-# === Prepare Distribution ===
-_prepare-distrib:
-	@echo "📦 Preparing Nuxeo distribution..."
-	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
-	cd .. && mvn install -Pdistrib -DskipTests -Drevision=$(REVISION)
+# === Build Benchmark Image with full rebuild ===
+build-benchmark-full: build-distrib
+	@$(MAKE) build-benchmark
+
+# === Prepare Distribution (deprecated - use build-distrib) ===
+_prepare-distrib: build-distrib
 
 # === Build and Push ===
 build-and-push: build-and-push-base build-and-push-benchmark
