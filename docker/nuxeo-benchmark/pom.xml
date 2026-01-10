@@ -78,6 +78,11 @@
           </execution>
         </executions>
         <configuration>
+          <registry>docker.io</registry>
+          <authConfig>
+            <username>${env.DOCKER_USERNAME}</username>
+            <password>${env.DOCKER_PASSWORD}</password>
+          </authConfig>
           <images>
             <image>
               <name>${docker.image.name}</name>

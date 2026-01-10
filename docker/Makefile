@@ -8,6 +8,7 @@ endif
 DOCKER_REGISTRY              ?= docker.platform.dev.nuxeo.com
 DOCKER_BASE_IMAGE_NAME       ?= $(DOCKER_REGISTRY)/nuxeo
 DOCKER_BENCHMARK_IMAGE_NAME  ?= $(DOCKER_REGISTRY)/nuxeo-benchmark
+DOCKER_PLATFORMS             ?= linux/amd64,linux/arm64
 DOCKER_IMAGE_TAG             ?= 2025.x
 TARGETPLATFORM               ?= linux/amd64
 REVISION                     ?= 2025.9-SNAPSHOT
@@ -16,6 +17,7 @@ SCM_REF                      ?= $(shell git rev-parse HEAD 2>/dev/null || echo "
 VERSION                      ?= $(DOCKER_IMAGE_TAG)
 DOCKER_BASE_IMAGE            := $(DOCKER_BASE_IMAGE_NAME):$(DOCKER_IMAGE_TAG)
 DOCKER_BENCHMARK_IMAGE       := $(DOCKER_BENCHMARK_IMAGE_NAME):$(DOCKER_IMAGE_TAG)
+MAVEN_OPTS                   :='-Xmx4g -Xms2g -XX:+TieredCompilation -XX:TieredStopAtLevel=1'
 
 # ===== Container Engine Detection =====
 # Auto-detect podman or docker
@@ -153,7 +155,7 @@ build-benchmark:
 	    -Drevision=$(REVISION) \
 	    -Ddocker.base.image=$(DOCKER_BASE_IMAGE) \
 	    -Ddocker.platforms=$(DOCKER_PLATFORM) \
-	    -Ddocker.buildx.enabled=false \
+	    -Ddocker.buildx.enabled=true \
 	    -Ddocker.image.name=$(DOCKER_BENCHMARK_IMAGE)
 	@echo "✅ Benchmark image build complete"
 	@-$(MAKE) clean-orphans
@@ -179,12 +181,12 @@ push: push-base push-benchmark
 
 push-base:
 	@echo "📤 Pushing base image $(DOCKER_BASE_IMAGE)..."
-	$(CONTAINER_ENGINE) push $(DOCKER_BASE_IMAGE)
+	$(CONTAINER_ENGINE) push $(DOCKER_BASE_IMAGE) --platform $(TARGETPLATFORM)
 	@echo "✅ Base image pushed successfully"
 
 push-benchmark:
 	@echo "📤 Pushing benchmark image $(DOCKER_BENCHMARK_IMAGE)..."
-	$(CONTAINER_ENGINE) push $(DOCKER_BENCHMARK_IMAGE)
+	$(CONTAINER_ENGINE) push $(DOCKER_BENCHMARK_IMAGE) --platform $(TARGETPLATFORM)
 	@echo "✅ Benchmark image pushed successfully"
 
 # === Container Management ===
