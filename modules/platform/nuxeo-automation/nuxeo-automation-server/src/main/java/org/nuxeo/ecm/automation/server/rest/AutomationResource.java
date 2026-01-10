@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.security.Principal;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -108,8 +108,8 @@ public class AutomationResource extends ModuleRoot {
         Principal p = request.getUserPrincipal();
         if (p instanceof NuxeoPrincipal np) {
             List<String> groups = np.getAllGroups();
-            HashSet<String> set = new HashSet<>(groups);
-            return Response.ok(new LoginInfo(np.getName(), set, np.isAdministrator())).build();
+            Set<String> set = new HashSet<>(groups);
+            return Response.ok(new LoginInfo(np.getId(), np.getName(), set, np.isAdministrator())).build();
         } else {
             return Response.status(401).build();
         }

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@
  */
 package org.nuxeo.ecm.directory.sql;
 
-import static jakarta.servlet.http.HttpServletResponse.SC_CONFLICT;
+import static org.nuxeo.ecm.directory.api.DirectoryConstants.EXTERNAL_ID_TYPE;
+import static org.nuxeo.ecm.directory.api.DirectoryConstants.SYSTEM_ID_PROPERTY;
 
 import java.io.Serializable;
 import java.sql.Connection;
@@ -52,7 +53,6 @@ import org.nuxeo.ecm.core.api.security.SecurityConstants;
 import org.nuxeo.ecm.core.query.QueryParseException;
 import org.nuxeo.ecm.core.query.sql.model.OrderByExpr;
 import org.nuxeo.ecm.core.query.sql.model.OrderByList;
-import org.nuxeo.ecm.core.query.sql.model.QueryBuilder;
 import org.nuxeo.ecm.core.schema.types.Field;
 import org.nuxeo.ecm.core.storage.sql.ColumnSpec;
 import org.nuxeo.ecm.core.storage.sql.jdbc.JDBCLogger;
@@ -67,6 +67,7 @@ import org.nuxeo.ecm.directory.BaseSession;
 import org.nuxeo.ecm.directory.DirectoryException;
 import org.nuxeo.ecm.directory.OperationNotAllowedException;
 import org.nuxeo.ecm.directory.PasswordHelper;
+import org.nuxeo.ecm.directory.api.DirectoryQueryBuilder;
 import org.nuxeo.ecm.directory.sql.SQLQueryBuilder.ColumnAndValue;
 
 /**
@@ -103,7 +104,7 @@ public class SQLSession extends BaseSession {
     }
 
     @Override
-    public DocumentModel getEntryFromSource(String id, boolean fetchReferences) {
+    public DocumentModel getEntryFromSource(String idOrSysId, boolean fetchReferences) {
         acquireConnection();
         // String sql = String.format("SELECT * FROM %s WHERE %s = ?",
         // tableName, idField);
@@ -111,7 +112,7 @@ public class SQLSession extends BaseSession {
         select.setFrom(table.getQuotedName());
         select.setWhat(getReadColumnsSQL());
 
-        String whereClause = table.getPrimaryColumn().getQuotedName() + " = ?";
+        String whereClause = buildIdWhereClause();
         whereClause = addFilterWhereClause(whereClause);
 
         select.setWhere(whereClause);
@@ -119,14 +120,18 @@ public class SQLSession extends BaseSession {
 
         if (logger.isLogEnabled()) {
             List<Serializable> values = new ArrayList<>();
-            values.add(id);
+            values.add(idOrSysId);
             addFilterValuesForLog(values);
             logger.logSQL(sql, values);
         }
 
         try (PreparedStatement ps = sqlConnection.prepareStatement(sql)) {
-            setFieldValue(ps, 1, table.getPrimaryColumn(), id);
-            addFilterValues(ps, 2);
+            int fieldIndex = 1;
+            setFieldValue(ps, fieldIndex++, table.getPrimaryColumn(), idOrSysId);
+            if (directory.getTypes().contains(EXTERNAL_ID_TYPE)) {
+                setFieldValue(ps, fieldIndex++, table.getColumn(SYSTEM_ID_PROPERTY), idOrSysId);
+            }
+            addFilterValues(ps, fieldIndex);
 
             Map<String, Object> fieldMap = new HashMap<>();
             try (ResultSet rs = ps.executeQuery()) {
@@ -201,7 +206,7 @@ public class SQLSession extends BaseSession {
     }
 
     protected DocumentModel fieldMapToDocumentModel(Map<String, Object> fieldMap) {
-        String idFieldName = directory.getSchemaFieldMap().get(getIdField()).getName().getPrefixedName();
+        String idFieldName = getPrefixedIdField();
         // If the prefixed id is not here, try to get without prefix
         // It may happen when we gentry from sql
         if (!fieldMap.containsKey(idFieldName)) {
@@ -210,7 +215,7 @@ public class SQLSession extends BaseSession {
 
         String id = String.valueOf(fieldMap.get(idFieldName));
         try {
-            return BaseSession.createEntryModel(schemaName, id, fieldMap, isReadOnly());
+            return createEntryModel(id, fieldMap);
         } catch (PropertyException e) {
             log.error(e, e);
             return null;
@@ -238,6 +243,15 @@ public class SQLSession extends BaseSession {
         if (dialect.isConcurrentUpdateException(e)) {
             throw new ConcurrentUpdateException(e);
         }
+    }
+
+    protected String buildIdWhereClause() {
+        String primaryColumClause = table.getPrimaryColumn().getQuotedName() + " = ?";
+        if (directory.getTypes().contains(EXTERNAL_ID_TYPE)) {
+            String sysIdColumClause = table.getColumn(SYSTEM_ID_PROPERTY).getQuotedName() + " = ?";
+            return "(%s OR %s)".formatted(primaryColumClause, sysIdColumClause);
+        }
+        return primaryColumClause;
     }
 
     protected String addFilterWhereClause(String whereClause) {
@@ -351,16 +365,6 @@ public class SQLSession extends BaseSession {
         } catch (SQLException e) {
             throw new DirectoryException("getPassword failed", e);
         }
-    }
-
-    @Override
-    public void deleteEntry(String id) {
-        acquireConnection();
-        if (!canDeleteMultiTenantEntry(id)) {
-            throw new OperationNotAllowedException("Operation not allowed in the current tenant context",
-                    "label.directory.error.multi.tenant.operationNotAllowed", null);
-        }
-        super.deleteEntry(id);
     }
 
     @Override
@@ -602,14 +606,14 @@ public class SQLSession extends BaseSession {
     }
 
     @Override
-    public DocumentModelList query(QueryBuilder queryBuilder, boolean fetchReferences) {
+    @SuppressWarnings("deprecation") // annotation to remove
+    protected DocumentModelList doQuery(DirectoryQueryBuilder queryBuilder) {
         if (!hasPermission(SecurityConstants.READ)) {
             return new DocumentModelListImpl();
         }
         if (FieldDetector.hasField(queryBuilder.predicate(), getPasswordField())) {
             throw new DirectoryException("Cannot filter on password");
         }
-        queryBuilder = addTenantId(queryBuilder);
 
         // build where clause from query
         SQLQueryBuilder builder = new SQLQueryBuilder(getDirectory());
@@ -679,7 +683,7 @@ public class SQLSession extends BaseSession {
                         }
                         DocumentModel docModel = fieldMapToDocumentModel(map);
                         // fetch the reference fields
-                        if (fetchReferences) {
+                        if (queryBuilder.fetchReferences()) {
                             Map<String, List<String>> targetIdsMap = new HashMap<>();
                             for (org.nuxeo.ecm.directory.Reference reference : directory.getReferences()) {
                                 List<String> targetIds = reference.getTargetIdsForSource(docModel.getId());
@@ -742,14 +746,14 @@ public class SQLSession extends BaseSession {
     }
 
     @Override
-    public List<String> queryIds(QueryBuilder queryBuilder) {
+    @SuppressWarnings("deprecation") // annotation to remove
+    protected List<String> doQueryIds(DirectoryQueryBuilder queryBuilder) {
         if (!hasPermission(SecurityConstants.READ)) {
             return Collections.emptyList();
         }
         if (FieldDetector.hasField(queryBuilder.predicate(), getPasswordField())) {
             throw new DirectoryException("Cannot filter on password");
         }
-        queryBuilder = addTenantId(queryBuilder);
 
         // build where clause from query
         SQLQueryBuilder builder = new SQLQueryBuilder(getDirectory());
@@ -827,47 +831,23 @@ public class SQLSession extends BaseSession {
         }
     }
 
-    @Override
     protected DocumentModel createEntryWithoutReferences(Map<String, Object> fieldMap) {
+        fieldMap = new HashMap<>(fieldMap);
+        if (autoincrementId) {
+            fieldMap.remove(getPrefixedIdField()); // ensure id is computed by DB
+        }
+        return super.createEntryWithoutReferences(fieldMap);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+    protected DocumentModel doCreateEntryWithoutReferences(Map<String, Object> fieldMap) {
         // Make a copy of fieldMap to avoid modifying it
         fieldMap = new HashMap<>(fieldMap);
 
         Map<String, Field> schemaFieldMap = directory.getSchemaFieldMap();
-        Field schemaIdField = schemaFieldMap.get(getIdField());
-
-        String idFieldName = schemaIdField.getName().getPrefixedName();
 
         acquireConnection();
-        if (autoincrementId) {
-            fieldMap.remove(idFieldName);
-        } else {
-            // check id that was given
-            Object rawId = fieldMap.get(idFieldName);
-            if (rawId == null) {
-                throw new DirectoryException("Missing id");
-            }
-
-            String id = String.valueOf(rawId);
-            if (StringUtils.isBlank(id)) {
-                throw new DirectoryException("Missing id");
-            }
-            if (isMultiTenant()) {
-                String tenantId = getCurrentTenantId();
-                if (!StringUtils.isBlank(tenantId)) {
-                    fieldMap.put(TENANT_ID_FIELD, tenantId);
-                    if (computeMultiTenantId) {
-                        id = computeMultiTenantDirectoryId(tenantId, id);
-                        fieldMap.put(idFieldName, id);
-                    }
-                }
-            }
-
-            if (hasEntry(id)) {
-                throw new DirectoryException(
-                        String.format("Entry with id %s already exists in directory %s", id, directory.getName()),
-                        SC_CONFLICT);
-            }
-        }
 
         List<Column> columnList = new ArrayList<>(table.getColumns());
         Column idColumn = null;
@@ -876,7 +856,7 @@ public class SQLSession extends BaseSession {
             if (column.isIdentity()) {
                 idColumn = column;
             }
-            String prefixedName = schemaFieldMap.get(column.getKey()).getName().getPrefixedName();
+            String prefixedName = getPrefixedFieldName(column.getKey());
 
             if (!fieldMap.containsKey(prefixedName)) {
                 Field prefixedField = schemaFieldMap.get(prefixedName);
@@ -923,6 +903,7 @@ public class SQLSession extends BaseSession {
             }
             ps.execute();
             if (autoincrementId) {
+                String idFieldName = getPrefixedIdField();
                 Column column = table.getColumn(getIdField());
                 if (dialect.hasIdentityGeneratedKey()) {
                     try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -974,7 +955,8 @@ public class SQLSession extends BaseSession {
     }
 
     @Override
-    protected List<String> updateEntryWithoutReferences(DocumentModel docModel) {
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+    protected List<String> doUpdateEntryWithoutReferences(DocumentModel docModel) {
         acquireConnection();
         List<Column> storedColumnList = new LinkedList<>();
         List<String> referenceFieldList = new LinkedList<>();
@@ -997,8 +979,9 @@ public class SQLSession extends BaseSession {
             if (fieldName.equals(getIdField())) {
                 continue;
             }
-            Property prop = docModel.getPropertyObject(schemaName, fieldName);
-            if (!prop.isDirty()) {
+            Property prop = fieldName.contains(":") ? docModel.getProperty(fieldName)
+                    : docModel.getPropertyObject(schemaName, fieldName);
+            if (prop == null || !prop.isDirty()) {
                 continue;
             }
             if (fieldName.equals(getPasswordField()) && StringUtils.isEmpty((String) prop.getValue())) {
@@ -1029,7 +1012,9 @@ public class SQLSession extends BaseSession {
             if (logger.isLogEnabled()) {
                 List<Serializable> values = new ArrayList<>(storedColumnList.size());
                 for (Column column : storedColumnList) {
-                    Object value = docModel.getProperty(schemaName, column.getKey());
+                    String columnKey = column.getKey();
+                    Object value = columnKey.contains(":") ? docModel.getPropertyValue(columnKey)
+                            : docModel.getProperty(schemaName, columnKey);
                     if (HIDE_PASSWORD_IN_LOGS && column.getKey().equals(getPasswordField())) {
                         value = "********"; // hide password in logs
                     }
@@ -1044,7 +1029,9 @@ public class SQLSession extends BaseSession {
                 int index = 1;
                 // TODO: how can I reset dirty fields?
                 for (Column column : storedColumnList) {
-                    Object value = docModel.getProperty(schemaName, column.getKey());
+                    String columnKey = column.getKey();
+                    Object value = columnKey.contains(":") ? docModel.getPropertyValue(columnKey)
+                            : docModel.getProperty(schemaName, columnKey);
                     setFieldValue(ps, index, column, value);
                     index++;
                 }
@@ -1060,17 +1047,18 @@ public class SQLSession extends BaseSession {
     }
 
     @Override
-    public void deleteEntryWithoutReferences(String id) {
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+    public void doDeleteEntryWithoutReferences(String entryId) {
         // second step: clean stored fields
         Delete delete = new Delete(table);
         String whereString = table.getPrimaryColumn().getQuotedName() + " = ?";
         delete.setWhere(whereString);
         String sql = delete.getStatement();
         if (logger.isLogEnabled()) {
-            logger.logSQL(sql, Collections.singleton(id));
+            logger.logSQL(sql, Collections.singleton(entryId));
         }
         try (PreparedStatement ps = sqlConnection.prepareStatement(sql)) {
-            setFieldValue(ps, 1, table.getPrimaryColumn(), id);
+            setFieldValue(ps, 1, table.getPrimaryColumn(), entryId);
             ps.execute();
         } catch (SQLException e) {
             checkConcurrentUpdate(e);
@@ -1109,14 +1097,14 @@ public class SQLSession extends BaseSession {
 
     protected Serializable fieldValueForWrite(Object value, Column column) {
         ColumnSpec spec = column.getType().spec;
-        if (value instanceof String) {
+        if (value instanceof String string) {
             if (spec == ColumnSpec.LONG || spec == ColumnSpec.AUTOINC) {
                 // allow storing string into integer/long key
-                return Long.valueOf((String) value);
+                return Long.valueOf(string);
             }
             if (column.getKey().equals(getPasswordField())) {
                 // hash password if not already hashed
-                String password = (String) value;
+                String password = string;
                 if (!PasswordHelper.isHashed(password)) {
                     password = PasswordHelper.hashPassword(password, passwordHashAlgorithm);
                 }
@@ -1125,8 +1113,8 @@ public class SQLSession extends BaseSession {
         } else if (value instanceof Number) {
             if (spec == ColumnSpec.LONG || spec == ColumnSpec.AUTOINC) {
                 // canonicalize to Long
-                if (value instanceof Integer) {
-                    return Long.valueOf(((Integer) value).longValue());
+                if (value instanceof Integer integer) {
+                    return Long.valueOf((integer).longValue());
                 }
             } else if (spec == ColumnSpec.STRING) {
                 // allow storing number in string field
@@ -1174,20 +1162,23 @@ public class SQLSession extends BaseSession {
     }
 
     @Override
-    public boolean hasEntry(String id) {
+    public boolean hasEntry(String idOrSysId) {
         acquireConnection();
         Select select = new Select(table);
         select.setFrom(table.getQuotedName());
         select.setWhat("1");
-        select.setWhere(table.getPrimaryColumn().getQuotedName() + " = ?");
+        select.setWhere(buildIdWhereClause());
         String sql = select.getStatement();
 
         if (logger.isLogEnabled()) {
-            logger.logSQL(sql, Collections.singleton(id));
+            logger.logSQL(sql, Collections.singleton(idOrSysId));
         }
 
         try (PreparedStatement ps = sqlConnection.prepareStatement(sql)) {
-            setFieldValue(ps, 1, table.getPrimaryColumn(), id);
+            setFieldValue(ps, 1, table.getPrimaryColumn(), idOrSysId);
+            if (directory.getTypes().contains(EXTERNAL_ID_TYPE)) {
+                setFieldValue(ps, 2, table.getColumn(SYSTEM_ID_PROPERTY), idOrSysId);
+            }
             try (ResultSet rs = ps.executeQuery()) {
                 boolean has = rs.next();
                 if (logger.isLogEnabled()) {

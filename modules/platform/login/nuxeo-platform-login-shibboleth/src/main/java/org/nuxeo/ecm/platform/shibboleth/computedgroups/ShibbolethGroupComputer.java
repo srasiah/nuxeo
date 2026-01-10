@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2010 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2010-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Arnaud Kervern
  */
-
 package org.nuxeo.ecm.platform.shibboleth.computedgroups;
 
 import java.util.ArrayList;
@@ -59,8 +58,8 @@ public class ShibbolethGroupComputer extends AbstractGroupComputer {
     public List<String> getGroupsForUser(NuxeoPrincipalImpl nxPrincipal) {
         List<String> groupsId = new ArrayList<>();
         for (DocumentModel group : getAllGroups()) {
-            String el = (String) group.getPropertyValue(ShibbolethConstants.SHIBBOLETH_SCHEMA + ":"
-                    + ShibbolethConstants.GROUP_EL_PROPERTY);
+            String el = (String) group.getPropertyValue(
+                    ShibbolethConstants.SHIBBOLETH_SCHEMA + ":" + ShibbolethConstants.GROUP_EL_PROPERTY);
             if (ELGroupComputerHelper.isUserInGroup(nxPrincipal.getModel(), el)) {
                 groupsId.add(group.getId());
             }
@@ -88,9 +87,10 @@ public class ShibbolethGroupComputer extends AbstractGroupComputer {
     /**
      * List all Shibboleth Group in a DocumentModelList
      */
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
     private DocumentModelList getAllGroups() {
         try (Session shibGroupDirectory = getDS().open(getDirectoryName())) {
-            return shibGroupDirectory.query(new QueryBuilder(), false);
+            return shibGroupDirectory.query(new QueryBuilder());
         }
     }
 }

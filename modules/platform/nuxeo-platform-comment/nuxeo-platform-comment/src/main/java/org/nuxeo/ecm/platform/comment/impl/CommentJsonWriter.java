@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018-2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
  */
 package org.nuxeo.ecm.platform.comment.impl;
 
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
 import static org.nuxeo.ecm.core.io.registry.reflect.Priorities.REFERENCE;
 import static org.nuxeo.ecm.platform.comment.api.CommentConstants.COMMENT_ANCESTOR_IDS_FIELD;
@@ -51,10 +52,14 @@ import org.nuxeo.ecm.core.api.NuxeoPrincipal;
 import org.nuxeo.ecm.core.api.PartialList;
 import org.nuxeo.ecm.core.api.security.PermissionProvider;
 import org.nuxeo.ecm.core.io.marshallers.json.ExtensibleEntityJsonWriter;
+import org.nuxeo.ecm.core.io.marshallers.json.OutputStreamWithJsonWriter;
+import org.nuxeo.ecm.core.io.registry.MarshallerRegistry;
+import org.nuxeo.ecm.core.io.registry.context.RenderingContext;
 import org.nuxeo.ecm.core.io.registry.reflect.Setup;
 import org.nuxeo.ecm.platform.comment.api.Comment;
 import org.nuxeo.ecm.platform.comment.api.CommentManager;
 import org.nuxeo.ecm.platform.comment.api.ExternalEntity;
+import org.nuxeo.ecm.platform.usermanager.UserManager;
 import org.nuxeo.runtime.api.Framework;
 
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -64,6 +69,9 @@ import com.fasterxml.jackson.core.JsonGenerator;
  */
 @Setup(mode = SINGLETON, priority = REFERENCE)
 public class CommentJsonWriter extends ExtensibleEntityJsonWriter<Comment> {
+
+    /** @since 2025.9 */
+    public static final String FETCH_AUTHOR = "author";
 
     public static final String FETCH_REPLIES_SUMMARY = "repliesSummary";
 
@@ -76,7 +84,7 @@ public class CommentJsonWriter extends ExtensibleEntityJsonWriter<Comment> {
 
     @Override
     protected void writeEntityBody(Comment entity, JsonGenerator jg) throws IOException {
-        writeCommentEntity(entity, jg);
+        writeCommentEntity(entity, jg, ctx);
         CoreSession session = ctx.getSession(null).getSession();
         NuxeoPrincipal principal = session.getPrincipal();
         PermissionProvider permissionProvider = Framework.getService(PermissionProvider.class);
@@ -103,7 +111,8 @@ public class CommentJsonWriter extends ExtensibleEntityJsonWriter<Comment> {
         }
     }
 
-    protected static void writeCommentEntity(Comment entity, JsonGenerator jg) throws IOException {
+    protected static void writeCommentEntity(Comment entity, JsonGenerator jg, RenderingContext ctx)
+            throws IOException {
         jg.writeStringField(COMMENT_ID_FIELD, entity.getId());
         jg.writeStringField(COMMENT_PARENT_ID_FIELD, entity.getParentId());
         jg.writeArrayFieldStart(COMMENT_ANCESTOR_IDS_FIELD);
@@ -111,7 +120,18 @@ public class CommentJsonWriter extends ExtensibleEntityJsonWriter<Comment> {
             jg.writeString(ancestorId);
         }
         jg.writeEndArray();
-        jg.writeStringField(COMMENT_AUTHOR_FIELD, entity.getAuthor());
+        jg.writeFieldName(COMMENT_AUTHOR_FIELD);
+        var userManager = Framework.getService(UserManager.class);
+        if (ctx.getFetched(COMMENT_ENTITY_TYPE).contains(FETCH_AUTHOR)
+                && userManager.getPrincipal(entity.getAuthor()) instanceof NuxeoPrincipal principal) {
+            var principalClass = NuxeoPrincipal.class;
+            var principalWriter = Framework.getService(MarshallerRegistry.class)
+                                           .getWriter(ctx, principalClass, APPLICATION_JSON_TYPE);
+            var out = new OutputStreamWithJsonWriter(jg);
+            principalWriter.write(principal, principalClass, principalClass, APPLICATION_JSON_TYPE, out);
+        } else {
+            jg.writeString(entity.getAuthor());
+        }
         jg.writeStringField(COMMENT_TEXT_FIELD, entity.getText());
 
         String creationDate = entity.getCreationDate() != null ? entity.getCreationDate().toString() : null;
@@ -130,7 +150,7 @@ public class CommentJsonWriter extends ExtensibleEntityJsonWriter<Comment> {
         PartialList<Comment> comments = commentManager.getComments(session, entity.getId(), 1L, 0L, false);
         jg.writeNumberField(COMMENT_NUMBER_OF_REPLIES_FIELD, comments.totalSize());
         if (!comments.isEmpty()) {
-            jg.writeStringField(COMMENT_LAST_REPLY_DATE_FIELD, comments.get(0).getCreationDate().toString());
+            jg.writeStringField(COMMENT_LAST_REPLY_DATE_FIELD, comments.getFirst().getCreationDate().toString());
         }
     }
 }

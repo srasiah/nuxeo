@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,16 @@
  *
  * Contributors:
  *     Nuxeo - initial API and implementation
- *
  */
-
 package org.nuxeo.ecm.platform.usermanager;
+
+import static org.nuxeo.ecm.directory.api.DirectoryConstants.SYSTEM_ID_PROPERTY;
+import static org.nuxeo.ecm.directory.api.DirectoryConstants.SYSTEM_SCHEMA;
 
 import java.util.List;
 import java.util.Objects;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.NuxeoGroup;
 import org.nuxeo.ecm.core.api.impl.SimpleDocumentModel;
@@ -102,6 +104,14 @@ public class NuxeoGroupImpl implements NuxeoGroup {
     }
 
     @Override
+    public String getId() {
+        if (model.hasSchema(SYSTEM_SCHEMA)) {
+            return (String) ObjectUtils.getIfNull(model.getPropertyValue(SYSTEM_ID_PROPERTY), this::getName);
+        }
+        return getName();
+    }
+
+    @Override
     public String getName() {
         return (String) model.getProperty(config.schemaName, config.idField);
     }
@@ -128,6 +138,12 @@ public class NuxeoGroupImpl implements NuxeoGroup {
     }
 
     @Override
+    public int hashCode() {
+        String name = getName();
+        return name == null ? 0 : name.hashCode();
+    }
+
+    @Override
     public boolean equals(Object other) {
         if (other == this) {
             return true;
@@ -138,12 +154,6 @@ public class NuxeoGroupImpl implements NuxeoGroup {
             return Objects.equals(name, otherName);
         }
         return false;
-    }
-
-    @Override
-    public int hashCode() {
-        String name = getName();
-        return name == null ? 0 : name.hashCode();
     }
 
     @Override

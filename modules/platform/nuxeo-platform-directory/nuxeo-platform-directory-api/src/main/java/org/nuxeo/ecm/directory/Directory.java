@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2007 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,26 @@
  *
  * Contributors:
  *     Nuxeo - initial API and implementation
- * $Id$
  */
-
 package org.nuxeo.ecm.directory;
 
+import static org.nuxeo.ecm.directory.api.DirectoryConstants.EXTERNAL_ID_TYPE;
+import static org.nuxeo.ecm.directory.api.DirectoryConstants.READONLY_ENTRY_FLAG;
+import static org.nuxeo.ecm.directory.api.DirectoryConstants.SYSTEM_SCHEMA;
+
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.annotation.Nullable;
+
+import org.apache.commons.collections4.MapUtils;
 import org.nuxeo.ecm.core.api.Blob;
+import org.nuxeo.ecm.core.api.DocumentModel;
+import org.nuxeo.ecm.core.api.impl.DataModelImpl;
+import org.nuxeo.ecm.core.api.impl.DocumentModelImpl;
 import org.nuxeo.ecm.core.schema.types.Field;
 import org.nuxeo.ecm.directory.api.DirectoryDeleteConstraint;
 
@@ -177,6 +187,39 @@ public interface Directory {
      * @since 9.2
      */
     Map<String, Field> getSchemaFieldMap();
+
+    /**
+     * Returns a bare document model suitable for directory implementations.
+     *
+     * @return the directory entry
+     * @since 2025.9
+     */
+    default DocumentModel createBareDocumentModel() {
+        return createBareDocumentModel(null, null);
+    }
+
+    /**
+     * Returns a bare document model suitable for directory implementations.
+     *
+     * @param id the entry id, or {@code null}
+     * @param values the entry values, or {@code null}
+     * @return the directory entry
+     * @since 2025.9
+     */
+    default DocumentModel createBareDocumentModel(@Nullable String id, @Nullable Map<String, Object> values) {
+        var schemaNames = new ArrayList<>(List.of(getSchema()));
+        if (getTypes().contains(EXTERNAL_ID_TYPE)) {
+            schemaNames.add(SYSTEM_SCHEMA);
+        }
+        DocumentModelImpl entry = new DocumentModelImpl(getSchema(), id, null, null, null,
+                schemaNames.toArray(String[]::new), new HashSet<>(), null, false, null, null, null);
+        var nonNullValues = MapUtils.emptyIfNull(values);
+        schemaNames.forEach(name -> entry.addDataModel(new DataModelImpl(name, nonNullValues)));
+        if (isReadOnly()) {
+            entry.putContextData(READONLY_ENTRY_FLAG, Boolean.TRUE);
+        }
+        return entry;
+    }
 
     /**
      * Get descriptor

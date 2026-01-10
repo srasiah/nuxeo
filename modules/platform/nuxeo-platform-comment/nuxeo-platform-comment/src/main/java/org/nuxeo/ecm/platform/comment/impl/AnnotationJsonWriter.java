@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018-2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Funsho David
  */
-
 package org.nuxeo.ecm.platform.comment.impl;
 
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
@@ -61,7 +60,7 @@ public class AnnotationJsonWriter extends ExtensibleEntityJsonWriter<Annotation>
 
     @Override
     protected void writeEntityBody(Annotation entity, JsonGenerator jg) throws IOException {
-        writeCommentEntity(entity, jg);
+        writeCommentEntity(entity, jg, ctx);
         jg.writeStringField(ANNOTATION_XPATH_FIELD, entity.getXpath());
         // Write permissions of current user on the annotation,
         // which are the ones granted on the annotated document

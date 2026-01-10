@@ -19,6 +19,7 @@
 package org.nuxeo.ecm.restapi.server.management;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.nuxeo.ecm.core.bulk.introspection.StreamIntrospectionComputation.INTROSPECTION_KEY;
 import static org.nuxeo.ecm.core.bulk.introspection.StreamIntrospectionComputation.INTROSPECTION_KV_STORE;
 import static org.nuxeo.runtime.pubsub.ClusterActionServiceImpl.STREAM_START_CONSUMER_ACTION;
@@ -67,6 +68,8 @@ public class StreamObject extends AbstractResource<ResourceTypeImpl> {
     protected static final String PUML_FORMAT = "puml";
 
     protected static final String NO_CONSUMER = "none";
+
+    protected static final String ENABLED_OPTION = "metrics.streams.enabled";
 
     @GET
     public String doGet(@QueryParam("format") String format) {
@@ -284,11 +287,19 @@ public class StreamObject extends AbstractResource<ResourceTypeImpl> {
     }
 
     protected String getJson() {
+        checkStreamMetricEnabled();
         return getKvStore().getString(INTROSPECTION_KEY);
     }
 
     protected KeyValueStore getKvStore() {
         return Framework.getService(KeyValueService.class).getKeyValueStore(INTROSPECTION_KV_STORE);
+    }
+
+    protected void checkStreamMetricEnabled() {
+        if (!Boolean.parseBoolean(Framework.getProperty(ENABLED_OPTION, "false"))) {
+            throw new NuxeoException("This endpoint requires the following configuration: " + ENABLED_OPTION + "=true",
+                    SC_FORBIDDEN);
+        }
     }
 
 }

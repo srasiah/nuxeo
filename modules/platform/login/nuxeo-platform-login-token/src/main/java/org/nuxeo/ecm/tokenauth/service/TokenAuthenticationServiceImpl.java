@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,6 @@ import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
-import org.nuxeo.ecm.directory.BaseSession;
 import org.nuxeo.ecm.directory.Session;
 import org.nuxeo.ecm.directory.api.DirectoryService;
 import org.nuxeo.ecm.platform.ui.web.auth.service.AuthenticationPluginDescriptor;
@@ -103,7 +102,7 @@ public class TokenAuthenticationServiceImpl implements TokenAuthenticationServic
                 UUID uuid = UUID.randomUUID();
                 String newToken = uuid.toString();
 
-                final DocumentModel entry = getBareAuthTokenModel(Framework.getService(DirectoryService.class));
+                final DocumentModel entry = session.createEntryModel();
                 entry.setProperty(DIRECTORY_SCHEMA, TOKEN_FIELD, newToken);
                 entry.setProperty(DIRECTORY_SCHEMA, USERNAME_FIELD, userName);
                 entry.setProperty(DIRECTORY_SCHEMA, APPLICATION_NAME_FIELD, applicationName);
@@ -186,7 +185,7 @@ public class TokenAuthenticationServiceImpl implements TokenAuthenticationServic
                     log.debug(
                             "Found token for the (userName, applicationName, deviceId) triplet: ('{}', '{}', '{}'), returning it.",
                             userName, applicationName, deviceId);
-                    DocumentModel tokenModel = tokens.get(0);
+                    DocumentModel tokenModel = tokens.getFirst();
                     return tokenModel.getId();
                 }
 
@@ -244,11 +243,4 @@ public class TokenAuthenticationServiceImpl implements TokenAuthenticationServic
             }
         });
     }
-
-    protected DocumentModel getBareAuthTokenModel(DirectoryService directoryService) {
-
-        String directorySchema = directoryService.getDirectorySchema(DIRECTORY_NAME);
-        return BaseSession.createEntryModel(null, directorySchema, null, null);
-    }
-
 }

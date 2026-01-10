@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  *
  * Contributors:
  *     Florent Guillaume
- *
- * $Id: MemoryDirectorySession.java 30374 2008-02-20 16:31:28Z gracinet $
  */
-
 package org.nuxeo.ecm.directory.memory;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_CONFLICT;
@@ -30,8 +27,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.ecm.core.api.DataModel;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.DocumentModelList;
@@ -42,10 +41,10 @@ import org.nuxeo.ecm.core.api.model.PropertyNotFoundException;
 import org.nuxeo.ecm.core.api.security.SecurityConstants;
 import org.nuxeo.ecm.core.query.sql.model.OrderByList;
 import org.nuxeo.ecm.core.query.sql.model.Predicate;
-import org.nuxeo.ecm.core.query.sql.model.QueryBuilder;
 import org.nuxeo.ecm.directory.AbstractDirectory;
 import org.nuxeo.ecm.directory.BaseSession;
 import org.nuxeo.ecm.directory.DirectoryException;
+import org.nuxeo.ecm.directory.api.DirectoryQueryBuilder;
 
 /**
  * Trivial in-memory implementation of a Directory to use in unit tests.
@@ -112,23 +111,32 @@ public class MemoryDirectorySession extends BaseSession {
         throw new RuntimeException("Not implemented");
     }
 
+    /**
+     * @implNote Memory directory does not support prefixed schema like MongoDB or SQL directories, so do not leverage
+     *           generic code
+     */
     @Override
-    public DocumentModel createEntryWithoutReferences(Map<String, Object> fieldMap) {
+    protected DocumentModel createEntryWithoutReferences(Map<String, Object> fieldMap) {
+        return doCreateEntryWithoutReferences(fieldMap);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+    public DocumentModel doCreateEntryWithoutReferences(Map<String, Object> fieldMap) {
         checkClose();
-        // find id
-        Object rawId = fieldMap.get(getIdField());
-        if (rawId == null) {
+        String idFieldName = getIdField();
+        String id = Objects.toString(fieldMap.get(idFieldName), null);
+        if (StringUtils.isBlank(id)) {
             throw new DirectoryException("Missing id");
         }
-        String id = String.valueOf(rawId);
-        Map<String, Object> map = data.get(id);
-        if (map != null) {
+        Map<String, Object> map = data.compute(id, (key, previous) -> {
+            if (previous == null) {
+                return new HashMap<>();
+            }
             throw new DirectoryException(
                     String.format("Entry with id %s already exists in directory %s", id, directory.getName()),
                     SC_CONFLICT);
-        }
-        map = new HashMap<>();
-        data.put(id, map);
+        });
         // put fields in map
         for (Entry<String, Object> e : fieldMap.entrySet()) {
             String fieldName = e.getKey();
@@ -141,7 +149,8 @@ public class MemoryDirectorySession extends BaseSession {
     }
 
     @Override
-    protected List<String> updateEntryWithoutReferences(DocumentModel docModel) {
+    @SuppressWarnings("deprecation") // for DataModel
+    protected List<String> doUpdateEntryWithoutReferences(DocumentModel docModel) {
         checkClose();
         String id = docModel.getId();
         DataModel dataModel = docModel.getDataModel(directory.getSchema());
@@ -167,10 +176,11 @@ public class MemoryDirectorySession extends BaseSession {
     }
 
     @Override
-    protected void deleteEntryWithoutReferences(String id) {
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+    protected void doDeleteEntryWithoutReferences(String entryId) {
         checkClose();
-        checkDeleteConstraints(id);
-        data.remove(id);
+        checkDeleteConstraints(entryId);
+        data.remove(entryId);
     }
 
     @Override
@@ -188,17 +198,17 @@ public class MemoryDirectorySession extends BaseSession {
     }
 
     @Override
-    public void deleteEntry(String id) {
+    public void deleteEntry(String idOrSysId) {
         checkClose();
         checkPermission(SecurityConstants.WRITE);
-        deleteEntryWithoutReferences(id);
+        deleteEntryWithoutReferences(idOrSysId);
     }
 
     @Override
-    public DocumentModel getEntry(String id, boolean fetchReferences) {
+    public DocumentModel getEntry(String idOrSysId, boolean fetchReferences) {
         checkClose();
         // XXX no references here
-        Map<String, Object> map = data.get(id);
+        Map<String, Object> map = data.get(idOrSysId);
         if (map == null) {
             return null;
         }
@@ -207,7 +217,7 @@ public class MemoryDirectorySession extends BaseSession {
             map.remove(passwordField);
         }
         try {
-            return createEntryModel(null, directory.getSchema(), id, map, isReadOnly());
+            return createEntryModel(idOrSysId, map);
         } catch (PropertyException e) {
             throw new DirectoryException(e);
         }
@@ -268,7 +278,8 @@ public class MemoryDirectorySession extends BaseSession {
     }
 
     @Override
-    public DocumentModelList query(QueryBuilder queryBuilder, boolean fetchReferences) {
+    @SuppressWarnings("deprecation") // annotation to remove
+    protected DocumentModelList doQuery(DirectoryQueryBuilder queryBuilder) {
         checkClose();
         if (!hasPermission(SecurityConstants.READ)) {
             return new DocumentModelListImpl();
@@ -303,7 +314,8 @@ public class MemoryDirectorySession extends BaseSession {
     }
 
     @Override
-    public List<String> queryIds(QueryBuilder queryBuilder) {
+    @SuppressWarnings("deprecation") // annotation to remove
+    protected List<String> doQueryIds(DirectoryQueryBuilder queryBuilder) {
         checkClose();
         if (!hasPermission(SecurityConstants.READ)) {
             return Collections.emptyList();
@@ -341,16 +353,9 @@ public class MemoryDirectorySession extends BaseSession {
     }
 
     @Override
-    public DocumentModel createEntry(DocumentModel entry) {
+    public boolean hasEntry(String idOrSysId) {
         checkClose();
-        Map<String, Object> fieldMap = entry.getProperties(directory.getSchema());
-        return createEntry(fieldMap);
-    }
-
-    @Override
-    public boolean hasEntry(String id) {
-        checkClose();
-        return data.containsKey(id);
+        return data.containsKey(idOrSysId);
     }
 
 }

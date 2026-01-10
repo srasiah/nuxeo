@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.platform.usermanager.io;
 
 import static org.nuxeo.ecm.core.io.marshallers.json.document.DocumentPropertiesJsonReader.DEFAULT_SCHEMA_NAME;
@@ -91,8 +90,10 @@ public class NuxeoGroupJsonReader extends EntityJsonReader<NuxeoGroup> {
     @Override
     protected NuxeoGroup readEntity(JsonNode jn) throws IOException {
         GroupConfig groupConfig = userManager.getGroupConfig();
+        // id could be the sys:id or the groupname
         String id = getStringField(jn, "id");
         String groupName = getStringField(jn, GROUP_NAME_COMPATIBILITY_FIELD);
+        // TODO review: it could be an issue with new behavior, what about removing this backward compatibility?
         if (StringUtils.isBlank(id) || (StringUtils.isNotBlank(groupName) && !id.equals(groupName))) {
             // backward compatibility if `id` not found or if `groupname` is different
             id = groupName;
@@ -104,7 +105,11 @@ public class NuxeoGroupJsonReader extends EntityJsonReader<NuxeoGroup> {
         }
         if (groupModel == null) {
             groupModel = userManager.getBareGroupModel();
-            groupModel.setProperty(groupConfig.schemaName, groupConfig.idField, id);
+            groupModel.setProperty(groupConfig.schemaName, groupConfig.idField,
+                    // here the group doesn't exist, in almost every cases the given `id` would be the Group Name
+                    // but there's still a chance we're reading a json with an uuid in `id` and its Group Name in the
+                    // properties (or the deprecated `groupname` at root level), so prefer to set groupName first
+                    StringUtils.defaultIfBlank(groupName, id));
         }
 
         String beforeReadLabel = (String) groupModel.getProperty(groupConfig.schemaName, groupConfig.labelField);
@@ -116,7 +121,8 @@ public class NuxeoGroupJsonReader extends EntityJsonReader<NuxeoGroup> {
 
         // override the `groupname` that may have been in the `properties` object
         if (StringUtils.isNotBlank(id)) {
-            groupModel.setProperty(groupConfig.schemaName, groupConfig.idField, id);
+            groupModel.setProperty(groupConfig.schemaName, groupConfig.idField,
+                    StringUtils.defaultIfBlank(groupName, id));
         }
 
         // override with the compatibility `grouplabel` if needed
@@ -140,8 +146,9 @@ public class NuxeoGroupJsonReader extends EntityJsonReader<NuxeoGroup> {
             ParameterizedType genericType = TypeUtils.parameterize(List.class, Property.class);
             try (Closeable resource = ctx.wrap().with(DEFAULT_SCHEMA_NAME, groupConfig.schemaName).open()) {
                 List<Property> properties = readEntity(List.class, genericType, propsNode);
-                properties.stream().filter(p -> !excludedProperties.contains(p.getName())).forEach(
-                        p -> groupModel.setPropertyValue(p.getName(), p.getValue()));
+                properties.stream()
+                          .filter(p -> !excludedProperties.contains(p.getName()))
+                          .forEach(p -> groupModel.setPropertyValue(p.getName(), p.getValue()));
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
  *
  * Contributors:
  *     Florent Guillaume
- *
  */
-
 package org.nuxeo.ecm.platform.usermanager;
 
 import static org.junit.Assert.assertEquals;
@@ -25,13 +23,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.Map;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.directory.test.DirectoryFeature;
-import org.nuxeo.ecm.core.api.DocumentModel;
-import org.nuxeo.ecm.directory.BaseSession;
+import org.nuxeo.ecm.core.api.impl.DataModelImpl;
+import org.nuxeo.ecm.core.api.impl.DocumentModelImpl;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
@@ -66,7 +65,9 @@ public class TestNuxeoPrincipalImpl {
 
     @Test
     public void testCopyConstructorContextData() {
-        DocumentModel userModel = BaseSession.createEntryModel(null, "user", null, null);
+        DocumentModelImpl userModel = new DocumentModelImpl("user", null, null, null, null, new String[] { "user" },
+                new HashSet<>(), null, false, null, null, null);
+        userModel.addDataModel(new DataModelImpl("user", Map.of()));
         userModel.putContextData("readonly", true);
         NuxeoPrincipalImpl a = new NuxeoPrincipalImpl("foo");
         a.setModel(userModel);

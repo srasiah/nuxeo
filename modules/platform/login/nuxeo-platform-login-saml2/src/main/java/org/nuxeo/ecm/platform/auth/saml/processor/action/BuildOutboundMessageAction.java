@@ -22,8 +22,8 @@ import java.util.function.Function;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.constraints.NotNull;
 
-import org.jetbrains.annotations.NotNull;
 import org.nuxeo.ecm.platform.ui.web.auth.NXAuthConstants;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.profile.action.AbstractProfileAction;

@@ -18,7 +18,8 @@
  */
 package org.nuxeo.ecm.platform.auth.saml.processor.action;
 
-import org.jetbrains.annotations.NotNull;
+import jakarta.validation.constraints.NotNull;
+
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.opensaml.profile.action.AbstractConditionalProfileAction;
 import org.opensaml.profile.context.ProfileRequestContext;

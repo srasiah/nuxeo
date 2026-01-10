@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2010-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2010-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,6 @@ import org.nuxeo.ecm.core.api.DocumentModelComparator;
 import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.api.model.InvalidPropertyValueException;
 import org.nuxeo.ecm.core.query.sql.model.QueryBuilder;
-import org.nuxeo.ecm.directory.BaseSession;
 import org.nuxeo.ecm.directory.Session;
 import org.nuxeo.ecm.directory.api.DirectoryService;
 import org.nuxeo.ecm.platform.shibboleth.computedgroups.ELGroupComputerHelper;
@@ -60,7 +59,7 @@ public class ShibbolethGroupHelper {
      * @since 2025.0
      */
     public static DocumentModel getBareGroupModel() {
-        return BaseSession.createEntryModel(ShibbolethConstants.SHIBBOLETH_SCHEMA);
+        return getDirectoryService().getDirectory(ShibbolethConstants.SHIBBOLETH_DIRECTORY).createBareDocumentModel();
     }
 
     /**
@@ -122,9 +121,10 @@ public class ShibbolethGroupHelper {
                                     .collect(Collectors.toList());
     }
 
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
     public static DocumentModelList getGroups() {
         try (Session session = getDirectoryService().open(ShibbolethConstants.SHIBBOLETH_DIRECTORY)) {
-            return session.query(new QueryBuilder(), false);
+            return session.query(new QueryBuilder());
         }
     }
 

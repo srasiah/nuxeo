@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  *
  * Contributors:
  *     Florent Guillaume
- *
- * $Id: MultiDirectorySession.java 29556 2008-01-23 00:59:39Z jcarsique $
  */
-
 package org.nuxeo.ecm.directory.multi;
 
 import java.io.Serializable;
@@ -29,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -42,14 +40,16 @@ import org.nuxeo.ecm.core.api.model.Property;
 import org.nuxeo.ecm.core.api.model.impl.primitives.StringProperty;
 import org.nuxeo.ecm.core.api.security.SecurityConstants;
 import org.nuxeo.ecm.core.query.sql.model.OrderByList;
-import org.nuxeo.ecm.core.query.sql.model.QueryBuilder;
 import org.nuxeo.ecm.core.schema.SchemaManager;
 import org.nuxeo.ecm.core.schema.types.Field;
 import org.nuxeo.ecm.core.schema.types.Schema;
 import org.nuxeo.ecm.directory.AbstractDirectory;
 import org.nuxeo.ecm.directory.BaseSession;
+import org.nuxeo.ecm.directory.Directory;
 import org.nuxeo.ecm.directory.DirectoryException;
 import org.nuxeo.ecm.directory.Session;
+import org.nuxeo.ecm.directory.api.DirectoryConstants;
+import org.nuxeo.ecm.directory.api.DirectoryQueryBuilder;
 import org.nuxeo.ecm.directory.api.DirectoryService;
 import org.nuxeo.runtime.api.Framework;
 
@@ -114,6 +114,10 @@ public class MultiDirectorySession extends BaseSession {
             this.toSource = toSource;
             this.defaultEntry = defaultEntry;
             this.isOptional = isOptional;
+        }
+
+        Directory getDirectory() {
+            return directory;
         }
 
         /** Gets the {@link Session} associated to this subdirectory; the session MUST NOT be closed. */
@@ -346,18 +350,18 @@ public class MultiDirectorySession extends BaseSession {
     }
 
     @Override
-    public DocumentModel getEntry(String id, boolean fetchReferences) {
+    public DocumentModel getEntry(String idOrSysId, boolean fetchReferences) {
         if (!hasPermission(SecurityConstants.READ)) {
             return null;
         }
         init();
-        String entryId = id;
+        String entryId = idOrSysId;
         source_loop: for (SourceInfo sourceInfo : sourceInfos) {
             boolean isReadOnlyEntry = true;
             final Map<String, Object> map = new HashMap<>();
 
             for (SubDirectoryInfo dirInfo : sourceInfo.subDirectoryInfos) {
-                final DocumentModel entry = dirInfo.getSession().getEntry(id, fetchReferences);
+                final DocumentModel entry = dirInfo.getSession().getEntry(idOrSysId, fetchReferences);
                 boolean isOptional = dirInfo.isOptional;
                 if (entry == null && !isOptional) {
                     // not in this source
@@ -403,7 +407,9 @@ public class MultiDirectorySession extends BaseSession {
             }
             // ok we have the data
             try {
-                return BaseSession.createEntryModel(schemaName, entryId, map, isReadOnlyEntry);
+                var entry = createEntryModel(entryId, map);
+                entry.putContextData(DirectoryConstants.READONLY_ENTRY_FLAG, isReadOnlyEntry);
+                return entry;
             } catch (PropertyException e) {
                 throw new DirectoryException(e);
             }
@@ -411,14 +417,22 @@ public class MultiDirectorySession extends BaseSession {
         return null;
     }
 
+    /**
+     * @implNote Do not execute generic code because multi directory is a bridge to directories which will execute it
+     */
     @Override
-    public DocumentModel createEntryWithoutReferences(Map<String, Object> fieldMap) {
+    protected DocumentModel createEntryWithoutReferences(Map<String, Object> fieldMap) {
+        return doCreateEntryWithoutReferences(fieldMap);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+    public DocumentModel doCreateEntryWithoutReferences(Map<String, Object> fieldMap) {
         init();
-        final Object rawid = fieldMap.get(schemaIdField);
-        if (rawid == null) {
+        final String id = Objects.toString(fieldMap.get(schemaIdField), null); // XXX allow longs too
+        if (StringUtils.isBlank(id)) {
             throw new DirectoryException(String.format("Entry is missing id field '%s'", schemaIdField));
         }
-        final String id = String.valueOf(rawid); // XXX allow longs too
         for (SourceInfo sourceInfo : sourceInfos) {
             if (!sourceInfo.source.creation) {
                 continue;
@@ -437,12 +451,14 @@ public class MultiDirectorySession extends BaseSession {
     }
 
     @Override
-    protected List<String> updateEntryWithoutReferences(DocumentModel docModel) {
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+    protected List<String> doUpdateEntryWithoutReferences(DocumentModel docModel) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected void deleteEntryWithoutReferences(String id) {
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+    protected void doDeleteEntryWithoutReferences(String entryId) {
         throw new UnsupportedOperationException();
     }
 
@@ -452,9 +468,9 @@ public class MultiDirectorySession extends BaseSession {
     }
 
     @Override
-    public void deleteEntry(String id) {
+    public void deleteEntry(String idOrSysId) {
         checkPermission(SecurityConstants.WRITE);
-        checkDeleteConstraints(id);
+        checkDeleteConstraints(idOrSysId);
         init();
         for (SourceInfo sourceInfo : sourceInfos) {
             for (SubDirectoryInfo dirInfo : sourceInfo.subDirectoryInfos) {
@@ -465,16 +481,16 @@ public class MultiDirectorySession extends BaseSession {
                         // stop the deletion loop to other subdirectories
                         // Do not raise exception, because creation is not managed
                         // by the platform
-                        DocumentModel docModel = dirInfo.getSession().getEntry(id);
+                        DocumentModel docModel = dirInfo.getSession().getEntry(idOrSysId);
                         if (docModel == null) {
                             log.warn(
                                     "MultiDirectory: {} : The entry id: {} could not be deleted on subdirectory: {} because it does not exist",
-                                    getName(), id, dirInfo.dirName);
+                                    getName(), idOrSysId, dirInfo.dirName);
                         } else {
-                            dirInfo.getSession().deleteEntry(id);
+                            dirInfo.getSession().deleteEntry(idOrSysId);
                         }
                     } else {
-                        dirInfo.getSession().deleteEntry(id);
+                        dirInfo.getSession().deleteEntry(idOrSysId);
                     }
                 }
             }
@@ -497,17 +513,18 @@ public class MultiDirectorySession extends BaseSession {
             map.put(e.getValue(), fieldMap.get(e.getKey()));
         }
         if (map.size() > 1) {
+            var session = dirInfo.getSession();
             if (canCreateIfOptional && dirInfo.isOptional && dirEntry == null) {
                 // if entry does not exist, create it
-                dirInfo.getSession().createEntry(map);
+                session.createEntry(map);
             } else {
-                final DocumentModel entry = BaseSession.createEntryModel(dirInfo.dirSchemaName, id, null);
+                final DocumentModel entry = session.createEntryModel(id, null);
 
                 // Make sure a null string in the field map is set to an empty string in the entry property, to avoid
                 // non-dirty false detection and guarantee that setting a field to blank is actually saved.
                 // Such a null string field can be sent from the JSF UI.
                 setProperties(entry, dirInfo.dirSchemaName, map);
-                dirInfo.getSession().updateEntry(entry);
+                session.updateEntry(entry);
             }
         }
     }
@@ -664,8 +681,8 @@ public class MultiDirectorySession extends BaseSession {
                 }
                 final Map<String, Object> map = e.getValue();
                 seen.put(id, sourceInfo.source.name);
-                final DocumentModel entry = BaseSession.createEntryModel(schemaName, id, map,
-                        readOnlyEntries.contains(id));
+                final DocumentModel entry = createEntryModel(id, map);
+                entry.putContextData(DirectoryConstants.READONLY_ENTRY_FLAG, readOnlyEntries.contains(id));
                 results.add(entry);
             }
         }
@@ -676,7 +693,8 @@ public class MultiDirectorySession extends BaseSession {
     }
 
     @Override
-    public DocumentModelList query(QueryBuilder queryBuilder, boolean fetchReferences) {
+    @SuppressWarnings("deprecation") // annotation to remove
+    protected DocumentModelList doQuery(DirectoryQueryBuilder queryBuilder) {
         if (!hasPermission(SecurityConstants.READ)) {
             return new DocumentModelListImpl();
         }
@@ -706,7 +724,7 @@ public class MultiDirectorySession extends BaseSession {
                             + "The second one will be ignored.", id, otherSource, sourceInfo.source.name);
                     continue;
                 }
-                DocumentModel entry = getEntry(id, fetchReferences);
+                DocumentModel entry = getEntry(id, queryBuilder.fetchReferences());
                 results.add(entry);
             }
         }
@@ -729,7 +747,8 @@ public class MultiDirectorySession extends BaseSession {
     }
 
     @Override
-    public List<String> queryIds(QueryBuilder queryBuilder) {
+    @SuppressWarnings("deprecation") // annotation to remove
+    protected List<String> doQueryIds(DirectoryQueryBuilder queryBuilder) {
         if (!hasPermission(SecurityConstants.READ)) {
             return Collections.emptyList();
         }
@@ -798,20 +817,14 @@ public class MultiDirectorySession extends BaseSession {
         return results;
     }
 
-    @Override
-    public DocumentModel createEntry(DocumentModel entry) {
-        Map<String, Object> fieldMap = entry.getProperties(schemaName);
-        return createEntry(fieldMap);
-    }
-
     @SuppressWarnings("resource") // dirInfo session must not be closed
     @Override
-    public boolean hasEntry(String id) {
+    public boolean hasEntry(String idOrSysId) {
         init();
         for (SourceInfo sourceInfo : sourceInfos) {
             for (SubDirectoryInfo dirInfo : sourceInfo.subDirectoryInfos) {
                 Session session = dirInfo.getSession();
-                if (session.hasEntry(id)) {
+                if (session.hasEntry(idOrSysId)) {
                     return true;
                 }
             }

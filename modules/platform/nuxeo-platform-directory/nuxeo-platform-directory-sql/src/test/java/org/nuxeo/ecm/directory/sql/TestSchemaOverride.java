@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2021 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2021-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Kevin Leturc <kleturc@nuxeo.com>
  */
-
 package org.nuxeo.ecm.directory.sql;
 
 import static org.junit.Assert.assertEquals;
@@ -48,13 +47,14 @@ public class TestSchemaOverride {
     protected DirectoryService directoryService;
 
     @Test
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
     public void testSchemaOverrideWhenPolicyIsOnMissingColumn() throws Exception {
         var descriptor = directoryService.getDirectoryDescriptor("userDirectory");
         assertEquals(CREATE_TABLE_POLICY_ON_MISSING_COLUMNS, descriptor.getCreateTablePolicy());
 
         // check that the directory is correctly initialized
         var directory = directoryService.getDirectory("userDirectory");
-        var entries = directory.getSession().query(new QueryBuilder(), false);
+        var entries = directory.getSession().query(new QueryBuilder());
         assertEquals(3, entries.size());
 
         // deploy the user schema override
@@ -62,7 +62,7 @@ public class TestSchemaOverride {
 
         // check that we can still query the directory
         directory = directoryService.getDirectory("userDirectory");
-        entries = directory.getSession().query(new QueryBuilder(), false);
+        entries = directory.getSession().query(new QueryBuilder());
         assertEquals(3, entries.size());
     }
 }

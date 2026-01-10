@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import static org.nuxeo.audit.api.LogEntryConstants.LOG_EVENT_ID;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_EXTENDED;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_ID;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_LOG_DATE;
+import static org.nuxeo.audit.api.LogEntryConstants.LOG_PRINCIPAL;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_PRINCIPAL_NAME;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_REPOSITORY_ID;
 import static org.nuxeo.common.utils.DateUtils.formatISODateTime;
@@ -46,9 +47,12 @@ import java.util.Map.Entry;
 import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.ecm.core.api.Blob;
+import org.nuxeo.ecm.core.api.NuxeoPrincipal;
 import org.nuxeo.ecm.core.io.marshallers.json.ExtensibleEntityJsonWriter;
 import org.nuxeo.ecm.core.io.marshallers.json.enrichers.AbstractJsonEnricher;
 import org.nuxeo.ecm.core.io.registry.reflect.Setup;
+import org.nuxeo.ecm.platform.usermanager.UserManager;
+import org.nuxeo.runtime.api.Framework;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -100,6 +104,9 @@ public class LogEntryJsonWriter extends ExtensibleEntityJsonWriter<LogEntry> {
      */
     public static final String EXTENDED_INFO_JSON_STRING_AS_JSON = "extendedInfoJsonStringAsJson";
 
+    /** @since 2025.9 */
+    public static final String FETCH_PRINCIPAL = "principal";
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public LogEntryJsonWriter() {
@@ -111,6 +118,10 @@ public class LogEntryJsonWriter extends ExtensibleEntityJsonWriter<LogEntry> {
         jg.writeNumberField(LOG_ID, logEntry.getId());
         jg.writeStringField(LOG_CATEGORY, logEntry.getCategory());
         jg.writeStringField(LOG_PRINCIPAL_NAME, logEntry.getPrincipalName());
+        if (ctx.getFetched(ENTITY_TYPE).contains(FETCH_PRINCIPAL)
+                && getPrincipal(logEntry.getPrincipalName()) instanceof NuxeoPrincipal principal) {
+            writeEntityField(LOG_PRINCIPAL, principal, jg);
+        }
         jg.writeStringField(LOG_COMMENT, logEntry.getComment());
         jg.writeStringField(LOG_DOC_LIFE_CYCLE, logEntry.getDocLifeCycle());
         jg.writeStringField(LOG_DOC_PATH, logEntry.getDocPath());
@@ -121,6 +132,15 @@ public class LogEntryJsonWriter extends ExtensibleEntityJsonWriter<LogEntry> {
         jg.writeStringField(LOG_EVENT_DATE, formatISODateTime(nowIfNull(logEntry.getEventDate())));
         jg.writeStringField(LOG_LOG_DATE, formatISODateTime(nowIfNull(logEntry.getLogDate())));
         writeExtendedInfos(jg, logEntry);
+    }
+
+    protected NuxeoPrincipal getPrincipal(String principalName) {
+        var userManager = Framework.getService(UserManager.class);
+        // allows tests to not deploy userManager to use this writer
+        if (Framework.isTestModeSet() && userManager == null) {
+            return null;
+        }
+        return userManager.getPrincipal(principalName);
     }
 
     protected void writeExtendedInfos(JsonGenerator jg, LogEntry logEntry) throws IOException {

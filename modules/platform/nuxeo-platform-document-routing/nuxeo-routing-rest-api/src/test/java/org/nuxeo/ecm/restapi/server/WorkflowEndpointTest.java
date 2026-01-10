@@ -49,6 +49,7 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.nuxeo.audit.test.AuditFeature;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.DocumentModelList;
@@ -105,7 +106,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
  * @since 7.2
  */
 @RunWith(FeaturesRunner.class)
-@Features({ WorkflowFeature.class, RestServerFeature.class, LogCaptureFeature.class })
+@Features({ AuditFeature.class, WorkflowFeature.class, RestServerFeature.class, LogCaptureFeature.class })
 @RepositoryConfig(cleanup = Granularity.METHOD, init = RestServerInit.class)
 @Deploy("org.nuxeo.ecm.platform.restapi.server.routing")
 @Deploy("org.nuxeo.ecm.platform.routing.default")

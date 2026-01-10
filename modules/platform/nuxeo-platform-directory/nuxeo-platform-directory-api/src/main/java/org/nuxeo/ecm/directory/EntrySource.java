@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2007 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2007-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
  *
  * Contributors:
  *     Nuxeo - initial API and implementation
- * $Id$
  */
-
 package org.nuxeo.ecm.directory;
 
 import org.nuxeo.ecm.core.api.DocumentModel;
@@ -29,6 +27,11 @@ import org.nuxeo.ecm.core.api.DocumentModel;
  */
 public interface EntrySource {
 
-    DocumentModel getEntryFromSource(String entryId, boolean fetchReferences);
+    /**
+     * @apiNote This method handles a {@link org.nuxeo.ecm.directory.api.DirectoryConstants#SYSTEM_ID_PROPERTY system
+     *          id} when the directory has {@link org.nuxeo.ecm.directory.api.DirectoryConstants#EXTERNAL_ID_TYPE
+     *          external-id} type
+     */
+    DocumentModel getEntryFromSource(String idOrSysId, boolean fetchReferences);
 
 }

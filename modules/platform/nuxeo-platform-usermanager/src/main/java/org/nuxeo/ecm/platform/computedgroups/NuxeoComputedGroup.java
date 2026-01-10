@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2007 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
  *
  * Contributors:
  *     Thierry Delprat
- * *
  */
-
 package org.nuxeo.ecm.platform.computedgroups;
 
 import java.util.ArrayList;
@@ -46,7 +44,7 @@ public class NuxeoComputedGroup implements ComputedGroup {
 
     protected DocumentModel model;
 
-    protected GroupConfig config = GroupConfig.DEFAULT;
+    protected GroupConfig config;
 
     public NuxeoComputedGroup(String name, GroupConfig config) {
         this(name, null, config);
@@ -59,7 +57,6 @@ public class NuxeoComputedGroup implements ComputedGroup {
         model.setProperty(config.schemaName, config.labelField, label);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<String> getMemberUsers() {
         if (members == null) {
@@ -86,7 +83,6 @@ public class NuxeoComputedGroup implements ComputedGroup {
         return label == null ? getName() : label;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<String> getParentGroups() {
         if (parents == null) {
@@ -102,7 +98,6 @@ public class NuxeoComputedGroup implements ComputedGroup {
         return parents;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<String> getMemberGroups() {
         if (subGroups == null) {

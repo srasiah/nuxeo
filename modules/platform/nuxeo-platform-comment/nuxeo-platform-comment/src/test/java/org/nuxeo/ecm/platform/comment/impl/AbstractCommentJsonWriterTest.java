@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import jakarta.inject.Inject;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.api.CoreInstance;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
@@ -48,12 +47,10 @@ import org.nuxeo.ecm.platform.comment.api.Comment;
 import org.nuxeo.ecm.platform.comment.api.CommentImpl;
 import org.nuxeo.ecm.platform.comment.api.CommentManager;
 import org.nuxeo.runtime.test.runner.Features;
-import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
 /**
  * @since 10.3
  */
-@RunWith(FeaturesRunner.class)
 @Features(CommentFeature.class)
 public abstract class AbstractCommentJsonWriterTest
         extends AbstractJsonWriterTest.External<CommentJsonWriter, Comment> {
@@ -120,6 +117,20 @@ public abstract class AbstractCommentJsonWriterTest
     }
 
     @Test
+    public void shouldWriteCompletePrincipalWhenAuthorFetcherIsProvided() throws IOException {
+        RenderingContext ctx = RenderingContext.CtxBuilder.session(session).fetch("comment", "author").get();
+        JsonAssert json = jsonAssert(comment, ctx);
+        json.isObject();
+        assertThat(json.getNode().size(), greaterThanOrEqualTo(11));
+        json.has("entity-type").isEquals("comment");
+        json.has("id").isText();
+        var authorJson = json.has("author").isObject();
+        authorJson.has("entity-type").isEquals("user");
+        authorJson.has("id").isText();
+        authorJson.has("properties").isObject().has("username").isEquals("Administrator");
+    }
+
+    @Test
     public void shouldWriteCompleteRepliesSummaryWhenRepliesFetcherIsProvided() throws IOException {
         RenderingContext ctx = RenderingContext.CtxBuilder.session(session).fetch("comment", "repliesSummary").get();
         JsonAssert json = jsonAssert(comment, ctx);
@@ -131,7 +142,7 @@ public abstract class AbstractCommentJsonWriterTest
     public void shouldWriteRepliesSummaryWithoutLastReplyWhenRepliesFetcherIsProvidedButThereAreNoReplies()
             throws IOException {
         RenderingContext ctx = RenderingContext.CtxBuilder.session(session).fetch("comment", "repliesSummary").get();
-        JsonAssert json = jsonAssert(replies.get(0), ctx);
+        JsonAssert json = jsonAssert(replies.getFirst(), ctx);
         assertCommentProperties(json);
         assertRepliesSummary(json, false);
     }
@@ -154,12 +165,12 @@ public abstract class AbstractCommentJsonWriterTest
         json.has("entityId").isEmptyStringOrNull();
         json.has("origin").isEmptyStringOrNull();
         json.has("numberOfReplies").isEquals(3);
-        json.has("lastReplyDate").isEquals(replies.get(replies.size() - 1).getCreationDate().toString());
+        json.has("lastReplyDate").isEquals(replies.getLast().getCreationDate().toString());
     }
 
     @Test
     public void shouldWriteCorrectInfoWhenNoFetcherAndCommentIsEntityWithoutReplies() throws IOException {
-        Comment lastReply = replies.get(replies.size() - 1);
+        Comment lastReply = replies.getLast();
         lastReply.setModificationDate(Instant.now());
 
         RenderingContext ctx = RenderingContext.CtxBuilder.session(session).get();
@@ -214,7 +225,7 @@ public abstract class AbstractCommentJsonWriterTest
     @Test
     public void shouldGetCommentsWhenIHaveRightPermissions() throws IOException {
         CoreSession jamesSession = CoreInstance.getCoreSession(docModel.getRepositoryName(), "james");
-        Comment lastReply = replies.get(replies.size() - 1);
+        Comment lastReply = replies.getLast();
         lastReply.setModificationDate(Instant.now());
 
         RenderingContext ctx = RenderingContext.CtxBuilder.session(jamesSession).get();

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2012 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,8 @@
  * Contributors:
  *     Thomas Roger <troger@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.api;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import org.nuxeo.ecm.core.api.security.SecurityConstants;
@@ -34,11 +30,10 @@ public class SystemPrincipal implements NuxeoPrincipal {
 
     private static final long serialVersionUID = -3381784063138281706L;
 
-    private static final char[] SYS_PASSWORD = null;
+    @SuppressWarnings("deprecation")
+    private static final List<String> SYS_GROUPS = List.of(SecurityConstants.ADMINISTRATORS);
 
-    private static final List<String> SYS_GROUPS = Collections.unmodifiableList(Arrays.asList(SecurityConstants.ADMINISTRATORS));
-
-    private static final List<String> SYS_ROLES = Collections.unmodifiableList(new ArrayList<String>());
+    private static final List<String> SYS_ROLES = List.of();
 
     private String origUserName;
 
@@ -58,21 +53,8 @@ public class SystemPrincipal implements NuxeoPrincipal {
     }
 
     @Override
-    public boolean equals(Object other) {
-        if (other instanceof SystemPrincipal) {
-            if (origUserName == null) {
-                return ((SystemPrincipal) other).origUserName == null;
-            } else {
-                return origUserName.equals(((SystemPrincipal) other).origUserName);
-            }
-        } else {
-            return false;
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        return hash;
+    public String getName() {
+        return LoginComponent.SYSTEM_USERNAME;
     }
 
     @Override
@@ -87,7 +69,6 @@ public class SystemPrincipal implements NuxeoPrincipal {
 
     @Override
     public void setEmail(String email) {
-
     }
 
     @Override
@@ -98,11 +79,6 @@ public class SystemPrincipal implements NuxeoPrincipal {
     @Override
     public String getLastName() {
         return "System";
-    }
-
-    @Override
-    public String getName() {
-        return LoginComponent.SYSTEM_USERNAME;
     }
 
     @Override
@@ -122,10 +98,7 @@ public class SystemPrincipal implements NuxeoPrincipal {
 
     @Override
     public String getPassword() {
-        if (SYS_PASSWORD == null) {
-            return null;
-        }
-        return new String(SYS_PASSWORD);
+        return null;
     }
 
     @Override
@@ -196,11 +169,6 @@ public class SystemPrincipal implements NuxeoPrincipal {
     }
 
     @Override
-    public String toString() {
-        return getName();
-    }
-
-    @Override
     public boolean isAdministrator() {
         return true;
     }
@@ -218,5 +186,28 @@ public class SystemPrincipal implements NuxeoPrincipal {
     @Override
     public boolean isTransient() {
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof SystemPrincipal other) {
+            if (origUserName == null) {
+                return other.origUserName == null;
+            } else {
+                return origUserName.equals(other.origUserName);
+            }
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return getName();
     }
 }

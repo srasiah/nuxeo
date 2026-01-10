@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2019-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Salem Aouana
  */
-
 package org.nuxeo.ecm.platform.oauth2.tokens;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
@@ -110,7 +109,8 @@ public class OAuth2TokenServiceImpl extends DefaultComponent implements OAuth2To
         return Framework.doPrivileged(() -> {
             DirectoryService ds = Framework.getService(DirectoryService.class);
             try (Session session = ds.open(TOKEN_DIR)) {
-                List<DocumentModel> documents = session.query(queryBuilder, false);
+                @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+                List<DocumentModel> documents = session.query(queryBuilder);
                 return documents.stream().map(NuxeoOAuth2Token::new).collect(Collectors.toList());
             }
         });

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Thomas Roger <troger@nuxeo.com>
  */
-
 package org.nuxeo.ecm.multi.tenant;
 
 import static org.nuxeo.ecm.core.api.security.SecurityConstants.EVERYONE;
@@ -195,7 +194,7 @@ public class MultiTenantServiceImpl extends DefaultComponent implements MultiTen
             List<ACE> newACEs = new ArrayList<>();
             newACEs.addAll(acl.subList(0, tenantAdministratorsGroupACEIndex));
             newACEs.addAll(acl.subList(tenantAdministratorsGroupACEIndex + 3, acl.size()));
-            acl.setACEs(newACEs.toArray(new ACE[newACEs.size()]));
+            acl.setACEs(newACEs.toArray(ACE[]::new));
         }
         doc.setACP(acp, true);
     }
@@ -225,17 +224,17 @@ public class MultiTenantServiceImpl extends DefaultComponent implements MultiTen
     }
 
     @Override
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
     public List<DocumentModel> getTenants() {
         DirectoryService directoryService = Framework.getService(DirectoryService.class);
         try (Session session = directoryService.open(TENANTS_DIRECTORY)) {
-            return session.query(new QueryBuilder(), false);
+            return session.query(new QueryBuilder());
         }
     }
 
     @Override
     public boolean isTenantAdministrator(Principal principal) {
-        if (principal instanceof MultiTenantPrincipal) {
-            MultiTenantPrincipal p = (MultiTenantPrincipal) principal;
+        if (principal instanceof MultiTenantPrincipal p) {
             return p.getTenantId() != null && p.isMemberOf(POWER_USERS_GROUP);
         }
         return false;

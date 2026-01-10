@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2011 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  *
  * Contributors:
  *     Nuxeo - initial API and implementation
- *
- * $Id$
  */
-
 package org.nuxeo.ecm.core.api;
 
 import java.io.Serializable;
@@ -74,6 +71,17 @@ public interface NuxeoGroup extends Serializable {
      * @param groups a list of groups
      */
     void setParentGroups(List<String> groups);
+
+    /**
+     * Returns a unique identifier to use to reference this group externally.
+     *
+     * @return A unique identifier
+     * @since 2025.9
+     * @see #getName()
+     */
+    default String getId() {
+        return getName();
+    }
 
     /**
      * Gets the name of the group.

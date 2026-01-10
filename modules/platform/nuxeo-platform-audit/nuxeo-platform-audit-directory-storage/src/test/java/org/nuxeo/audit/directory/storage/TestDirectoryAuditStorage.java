@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,7 +138,8 @@ public class TestDirectoryAuditStorage {
         Directory directory = storage.getAuditDirectory();
         String schemaName = directory.getSchema();
         try (Session session = directory.getSession()) {
-            DocumentModelList auditEntries = session.query(new QueryBuilder(), false);
+            @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+            DocumentModelList auditEntries = session.query(new QueryBuilder());
             assertEquals(2, auditEntries.size());
 
             String jsonEntry1 = jsonEntries.get(0);

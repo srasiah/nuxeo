@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017-2021 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,15 @@
  *
  * Contributors:
  *     Funsho David
- *
  */
-
 package org.nuxeo.directory.mongodb;
 
 import static org.nuxeo.directory.mongodb.MongoDBSerializationHelper.MONGODB_ID;
 import static org.nuxeo.directory.mongodb.MongoDBSerializationHelper.MONGODB_SEQ;
 import static org.nuxeo.ecm.directory.BaseDirectoryDescriptor.CREATE_TABLE_POLICY_ALWAYS;
 import static org.nuxeo.ecm.directory.BaseDirectoryDescriptor.CREATE_TABLE_POLICY_ON_MISSING_COLUMNS;
+import static org.nuxeo.ecm.directory.api.DirectoryConstants.EXTERNAL_ID_TYPE;
+import static org.nuxeo.ecm.directory.api.DirectoryConstants.SYSTEM_SCHEMA;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -41,7 +41,6 @@ import org.nuxeo.runtime.mongodb.MongoDBConnectionService;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.Indexes;
 
 /**
  * MongoDB implementation of a {@link Directory}
@@ -122,18 +121,18 @@ public class MongoDBDirectory extends AbstractDirectory {
         boolean collectionExists = true;
 
         switch (policy) {
-        case CREATE_TABLE_POLICY_ALWAYS:
-            dropCollection = true;
-            collectionExists = false;
-            break;
-        case CREATE_TABLE_POLICY_ON_MISSING_COLUMNS:
-            // As MongoDB does not have the notion of columns, only load data if collection doesn't exist
-            if (!hasCollection(getName())) {
+            case CREATE_TABLE_POLICY_ALWAYS:
+                dropCollection = true;
                 collectionExists = false;
-            }
-            break;
-        default:
-            break;
+                break;
+            case CREATE_TABLE_POLICY_ON_MISSING_COLUMNS:
+                // As MongoDB does not have the notion of columns, only load data if collection doesn't exist
+                if (!hasCollection(getName())) {
+                    collectionExists = false;
+                }
+                break;
+            default:
+                break;
         }
         if (dropCollection) {
             collection.drop();
@@ -148,6 +147,9 @@ public class MongoDBDirectory extends AbstractDirectory {
         var schemaManager = Framework.getService(SchemaManager.class);
         var mongoDBIndexCreator = new MongoDBIndexCreator(schemaManager, collection);
         mongoDBIndexCreator.createIndexes(schemaManager.getSchema(descriptor.schemaName));
+        if (types.contains(EXTERNAL_ID_TYPE)) {
+            mongoDBIndexCreator.createIndexes(schemaManager.getSchema(SYSTEM_SCHEMA));
+        }
     }
 
     @Override

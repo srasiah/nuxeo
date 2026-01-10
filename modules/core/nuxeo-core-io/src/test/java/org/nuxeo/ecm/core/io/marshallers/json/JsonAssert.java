@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json;
 
 import java.io.IOException;
@@ -28,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
@@ -41,10 +41,14 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class JsonAssert {
 
-    private JsonNode jsonNode;
+    protected static final Pattern UUID_REGEX = Pattern.compile("^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$");
+
+    protected final JsonNode jsonNode;
 
     private JsonAssert(String json) throws IOException {
-        jsonNode = JsonFactoryProvider.get().createJsonParser(json).readValueAsTree();
+        try (var parser = JsonFactoryProvider.get().createParser(json)) {
+            jsonNode = parser.readValueAsTree();
+        }
     }
 
     private JsonAssert(JsonNode jsonNode) {
@@ -104,7 +108,7 @@ public class JsonAssert {
         Iterator<String> tokens = Arrays.asList(
                 jsonPath.replaceAll("(" + pattern + ")", SEPARATOR + "$1" + SEPARATOR).split(SEPARATOR)).iterator();
         JsonNode jn = jsonNode;
-        String read = "";
+        StringBuilder read = new StringBuilder();
         // iterates on tokens and navigate i json nodes
         while (tokens.hasNext()) { // ends when all token are read
             String token = tokens.next();
@@ -112,57 +116,57 @@ public class JsonAssert {
                 continue;
             }
             switch (token) {
-            case ".": // simple separator, ignore it
-                read += token;
-                break;
-            case "[": // an index in a rray is expected, checks its an array an navigate in the array element
-                read += token;
-                if (!tokens.hasNext()) {
-                    throw new IOException("Invalid json parameter value : [ must be followed by a index and by ] :"
-                            + read);
-                }
-                // get the index
-                Integer index = null;
-                try {
-                    index = Integer.valueOf(tokens.next());
-                    read += index;
-                } catch (NumberFormatException e) {
-                    throw new IOException("Invalid json parameter value : [ must be followed by a index and by ] :"
-                            + read);
-                }
-                if (index < 0) {
-                    throw new IOException("Invalid json parameter value : [ must be followed by a index and by ] :"
-                            + read);
-                }
-                if (!tokens.hasNext() || !"]".equals(tokens.next())) {
-                    throw new IOException("Invalid json parameter value : [ must be followed by a index and by ] :"
-                            + read);
-                }
-                read += "]";
-                // checks its an array
-                if (!jn.isArray()) {
-                    throw new IOException(read + " is not a array");
-                }
-                // checks the index exists
-                if (!jn.has(index)) {
-                    return null;
-                }
-                // navigate
-                jn = jn.get(index);
-                break;
-            default: // a property, navigate in the property if the current its an abject
-                // checks its an array
-                if (!jn.isObject()) {
-                    throw new IOException(read + " is not an object");
-                }
-                // checks the property exists
-                if (!jn.has(token)) {
-                    return null;
-                }
-                read += token;
-                // navigates
-                jn = jn.get(token);
-                break;
+                case ".": // simple separator, ignore it
+                    read.append(token);
+                    break;
+                case "[": // an index in a rray is expected, checks its an array an navigate in the array element
+                    read.append(token);
+                    if (!tokens.hasNext()) {
+                        throw new IOException(
+                                "Invalid json parameter value : [ must be followed by a index and by ] :" + read);
+                    }
+                    // get the index
+                    Integer index = null;
+                    try {
+                        index = Integer.valueOf(tokens.next());
+                        read.append(index);
+                    } catch (NumberFormatException e) {
+                        throw new IOException(
+                                "Invalid json parameter value : [ must be followed by a index and by ] :" + read);
+                    }
+                    if (index < 0) {
+                        throw new IOException(
+                                "Invalid json parameter value : [ must be followed by a index and by ] :" + read);
+                    }
+                    if (!tokens.hasNext() || !"]".equals(tokens.next())) {
+                        throw new IOException(
+                                "Invalid json parameter value : [ must be followed by a index and by ] :" + read);
+                    }
+                    read.append(']');
+                    // checks its an array
+                    if (!jn.isArray()) {
+                        throw new IOException(read + " is not a array");
+                    }
+                    // checks the index exists
+                    if (!jn.has(index)) {
+                        return null;
+                    }
+                    // navigate
+                    jn = jn.get(index);
+                    break;
+                default: // a property, navigate in the property if the current its an abject
+                    // checks its an array
+                    if (!jn.isObject()) {
+                        throw new IOException(read + " is not an object");
+                    }
+                    // checks the property exists
+                    if (!jn.has(token)) {
+                        return null;
+                    }
+                    read.append(token);
+                    // navigates
+                    jn = jn.get(token);
+                    break;
             }
         }
         // returns the new assertion
@@ -288,6 +292,18 @@ public class JsonAssert {
     public JsonAssert notEquals(String expected) {
         isText();
         Assert.assertNotEquals(notEqualsMsg(expected), expected, jsonNode.textValue());
+        return this;
+    }
+
+    /**
+     * Checks the current is an uuid.
+     *
+     * @return The current json assertion for chaining.
+     * @since 2025.9
+     */
+    public JsonAssert isUUID() {
+        isText();
+        Assert.assertTrue("not a uuid value", UUID_REGEX.matcher(jsonNode.textValue()).matches());
         return this;
     }
 
@@ -661,7 +677,8 @@ public class JsonAssert {
         return contains(JsonNode::asInt, expecteds);
     }
 
-    protected <T> JsonAssert contains(Function<JsonNode, T> f, @SuppressWarnings("unchecked") T... expecteds) {
+    @SuppressWarnings("unchecked")
+    protected <T> JsonAssert contains(Function<JsonNode, T> f, T... expecteds) {
         length(expecteds.length);
         Iterator<JsonNode> it = jsonNode.elements();
         Map<T, Integer> expectedMap = new HashMap<>();
@@ -705,7 +722,8 @@ public class JsonAssert {
      */
     public JsonAssert childrenContains(String path, String... values) throws IOException {
         List<String> founds = getAll(path, jsonNode);
-        Assert.assertEquals("found more or less element thant expected : found=" + founds, values.length, founds.size());
+        Assert.assertEquals("found more or less element thant expected : found=" + founds, values.length,
+                founds.size());
         Map<String, Integer> expectedMap = new HashMap<>();
         for (String value : values) {
             Integer count = expectedMap.get(value);
@@ -731,7 +749,7 @@ public class JsonAssert {
     /**
      * utility for {@link #childrenContains(String, String...)}
      */
-    private List<String> getAll(String path, JsonNode node) throws IOException {
+    private List<String> getAll(String path, JsonNode node) {
         List<String> result = new ArrayList<>();
         if (!node.isArray()) {
             int index = path.indexOf('.');

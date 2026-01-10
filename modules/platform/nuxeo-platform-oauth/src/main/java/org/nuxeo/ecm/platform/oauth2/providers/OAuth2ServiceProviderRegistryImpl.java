@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,9 @@ import org.apache.logging.log4j.Logger;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.query.sql.model.Predicates;
 import org.nuxeo.ecm.core.query.sql.model.QueryBuilder;
-import org.nuxeo.ecm.directory.BaseSession;
 import org.nuxeo.ecm.directory.DirectoryException;
 import org.nuxeo.ecm.directory.Session;
+import org.nuxeo.ecm.directory.api.DirectoryQueryBuilder;
 import org.nuxeo.ecm.directory.api.DirectoryService;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.ComponentContext;
@@ -59,7 +59,9 @@ public class OAuth2ServiceProviderRegistryImpl extends DefaultComponent implemen
                 return null;
             }
             List<DocumentModel> providers = queryProviders(
-                    new QueryBuilder().predicate(Predicates.eq("serviceName", serviceName)).limit(1));
+                    new DirectoryQueryBuilder().fetchReferences(true)
+                                               .predicate(Predicates.eq("serviceName", serviceName))
+                                               .limit(1));
             return providers.isEmpty() ? null : providers.getFirst();
         } catch (DirectoryException e) {
             log.error("Unable to read provider from Directory backend", e);
@@ -75,7 +77,7 @@ public class OAuth2ServiceProviderRegistryImpl extends DefaultComponent implemen
 
     @Override
     public List<OAuth2ServiceProvider> getProviders() {
-        List<DocumentModel> providers = queryProviders(new QueryBuilder().limit(0));
+        List<DocumentModel> providers = queryProviders(new DirectoryQueryBuilder().fetchReferences(true).limit(0));
         return providers.stream().map(this::buildProvider).collect(Collectors.toList());
     }
 
@@ -95,7 +97,7 @@ public class OAuth2ServiceProviderRegistryImpl extends DefaultComponent implemen
         }
         DirectoryService ds = Framework.getService(DirectoryService.class);
         try (Session session = ds.open(DIRECTORY_NAME)) {
-            DocumentModel creationEntry = BaseSession.createEntryModel(SCHEMA, null, null);
+            DocumentModel creationEntry = session.createEntryModel();
             DocumentModel entry = Framework.doPrivileged(() -> session.createEntry(creationEntry));
             entry.setProperty(SCHEMA, "serviceName", serviceName);
             entry.setProperty(SCHEMA, "description", description);
@@ -149,11 +151,12 @@ public class OAuth2ServiceProviderRegistryImpl extends DefaultComponent implemen
         }
     }
 
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
     protected List<DocumentModel> queryProviders(QueryBuilder query) {
         DirectoryService ds = Framework.getService(DirectoryService.class);
         return Framework.doPrivileged(() -> {
             try (Session session = ds.open(DIRECTORY_NAME)) {
-                return session.query(query, true);
+                return session.query(query);
             } catch (DirectoryException e) {
                 log.error("Error while fetching provider directory", e);
                 return List.of();

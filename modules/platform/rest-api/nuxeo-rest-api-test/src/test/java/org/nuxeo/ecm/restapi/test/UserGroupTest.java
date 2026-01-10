@@ -86,6 +86,12 @@ public class UserGroupTest extends BaseUserTest {
             () -> restServerFeature.getRestApiUrl());
 
     @Rule
+    public final HttpClientTestRule powerUserHttpClient = HttpClientTestRule.builder()
+                                                                            .url(() -> restServerFeature.getRestApiUrl())
+                                                                            .credentials("user0", "user0")
+                                                                            .build();
+
+    @Rule
     public final HttpClientTestRule nonAdminHttpClient = HttpClientTestRule.builder()
                                                                            .url(() -> restServerFeature.getRestApiUrl())
                                                                            .credentials("user1", "user1")
@@ -104,7 +110,12 @@ public class UserGroupTest extends BaseUserTest {
         httpClient.buildGetRequest("/user/user1")
                   .executeAndConsume(new JsonNodeHandler(),
                           // Then it returns the Json
-                          node -> assertEqualsUser("user1", "John", "Lennon", node));
+                          node -> {
+                              assertEqualsUser("user1", "John", "Lennon", node);
+                              assertFalse(node.get("isAdministrator").asBoolean());
+                              assertNotNull(node.get("properties"));
+                              assertNotNull(node.get("properties").get("groups"));
+                          });
     }
 
     @Test
@@ -267,7 +278,7 @@ public class UserGroupTest extends BaseUserTest {
         // When i GET on the API
         httpClient.buildGetRequest("/group/" + group.getName()).executeAndConsume(new JsonNodeHandler(), node -> {
             // Then i GET the Group
-            assertEquals(5, node.size());
+            assertEquals(6, node.size());
             assertEqualsGroup(group.getName(), group.getLabel(), node);
         });
     }
@@ -287,7 +298,7 @@ public class UserGroupTest extends BaseUserTest {
                       .addQueryParameter(FETCH_PROPERTIES + "." + NuxeoGroupJsonWriter.ENTITY_TYPE,
                               "memberUsers,memberGroups,parentGroups")
                       .executeAndConsume(new JsonNodeHandler(), node -> {
-                          assertEquals(8, node.size());
+                          assertEquals(9, node.size());
                           JsonNode memberUsers = node.get("memberUsers");
                           assertTrue(memberUsers.isArray());
                           assertEquals(2, memberUsers.size());
@@ -753,6 +764,59 @@ public class UserGroupTest extends BaseUserTest {
                   .entity(getPrincipalAsJson(user))
                   .executeAndConsume(new JsonNodeHandler(SC_FORBIDDEN),
                           node -> assertEquals("group does not exist: unknownGroup", node.get("message").textValue()));
+    }
+
+    // NXP-22771
+    @Test
+    public void itDoesNotReturnAdminStatusAndGroupsForNonAdmin() {
+        // When I GET the administrator user
+        nonAdminHttpClient.buildGetRequest("/user/Administrator")
+                          .executeAndConsume(new JsonNodeHandler(),
+                                  // Then it does not tell the user is administrator
+                                  // And it does not show its groups
+                                  node -> {
+                                      assertEqualsUser("Administrator", "", "", node);
+                                      assertNull(node.get("isAdministrator"));
+                                      assertNotNull(node.get("properties"));
+                                      assertNull(node.get("properties").get("groups"));
+                                  });
+        // When I GET the user2
+        nonAdminHttpClient.buildGetRequest("/user/user2")
+                          .executeAndConsume(new JsonNodeHandler(),
+                                  // Then it does not tell the user is not administrator
+                                  // But it does show its groups
+                                  node -> {
+                                      assertEqualsUser("user2", "Georges", "Harrisson", node);
+                                      assertNull(node.get("isAdministrator"));
+                                      assertNotNull(node.get("properties"));
+                                      assertNotNull(node.get("properties").get("groups"));
+                                  });
+    }
+
+    @Test
+    public void itReturnsPowerUserGroupsForPowerUser() {
+        // As a power user, when I GET myself
+        powerUserHttpClient.buildGetRequest("/user/user0")
+                           .executeAndConsume(new JsonNodeHandler(),
+                                   // Then it does not tell I am not an administrator
+                                   // But it does show my groups
+                                   node -> {
+                                       assertEqualsUser("user0", "Steve", "Jobs", node);
+                                       assertNull(node.get("isAdministrator"));
+                                       assertNotNull(node.get("properties"));
+                                       assertNotNull(node.get("properties").get("groups"));
+                                   });
+        // As a power user, When I GET the administrator user
+        powerUserHttpClient.buildGetRequest("/user/Administrator")
+                           .executeAndConsume(new JsonNodeHandler(),
+                                   // Then it does not tell the user is administrator
+                                   // And it does not show its groups
+                                   node -> {
+                                       assertEqualsUser("Administrator", "", "", node);
+                                       assertNull(node.get("isAdministrator"));
+                                       assertNotNull(node.get("properties"));
+                                       assertNull(node.get("properties").get("groups"));
+                                   });
     }
 
     // NXP-33128

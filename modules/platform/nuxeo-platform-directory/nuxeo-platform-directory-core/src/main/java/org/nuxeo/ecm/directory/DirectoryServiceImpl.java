@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import static org.nuxeo.ecm.directory.localconfiguration.DirectoryConfigurationC
 import java.time.Duration;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.common.utils.DurationUtils;
@@ -140,7 +141,7 @@ public class DirectoryServiceImpl extends DefaultComponent implements DirectoryS
 
         if (configuration != null && configuration.getDirectorySuffix() != null) {
             String suffix = configuration.getDirectorySuffix().trim();
-            if (!"".equals(suffix)) {
+            if (StringUtils.isNotEmpty(suffix)) {
                 return directoryName + DELIMITER_BETWEEN_DIRECTORY_NAME_AND_SUFFIX + suffix;
             }
             log.warn("The local configuration detected is an empty value, we consider it as no configuration set.");

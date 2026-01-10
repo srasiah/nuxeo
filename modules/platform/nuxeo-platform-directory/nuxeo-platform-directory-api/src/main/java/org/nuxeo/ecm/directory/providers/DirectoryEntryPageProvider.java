@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,11 +52,11 @@ public class DirectoryEntryPageProvider extends AbstractPageProvider<DirectoryEn
 
         try (Session session = directory.getSession()) {
             var orders = getSortInfos().stream().map(OrderByExprs::from).collect(Collectors.toList());
+            @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
             DocumentModelList result = session.query(new QueryBuilder().orders(orders)
                                                                        .limit(getPageSize())
                                                                        .offset(getCurrentPageOffset())
-                                                                       .countTotal(true),
-                    false);
+                                                                       .countTotal(true));
             setResultsCount(result.totalSize());
             return result.stream()
                          .map(dir -> new DirectoryEntry(directory.getName(), dir))

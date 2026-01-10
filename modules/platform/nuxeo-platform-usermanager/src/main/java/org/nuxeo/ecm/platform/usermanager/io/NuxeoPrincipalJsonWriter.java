@@ -36,7 +36,6 @@ import org.nuxeo.ecm.core.api.NuxeoPrincipal;
 import org.nuxeo.ecm.core.api.model.Property;
 import org.nuxeo.ecm.core.io.marshallers.json.ExtensibleEntityJsonWriter;
 import org.nuxeo.ecm.core.io.marshallers.json.OutputStreamWithJsonWriter;
-import org.nuxeo.ecm.core.io.marshallers.json.document.DocumentPropertyJsonWriter;
 import org.nuxeo.ecm.core.io.marshallers.json.enrichers.AbstractJsonEnricher;
 import org.nuxeo.ecm.core.io.registry.Writer;
 import org.nuxeo.ecm.core.io.registry.reflect.Setup;
@@ -63,7 +62,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
  * {
  *   "entity-type":"user",
  *   "id":"USERNAME",
- *   "properties":{   <- depending on the user schema / format is managed by {@link DocumentPropertyJsonWriter }
+ *   "properties":{   <- depending on the user schema / format is managed by {@link org.nuxeo.ecm.core.io.marshallers.json.document.DocumentPropertyJsonWriter }
  *     "firstName":"FIRSTNAME",
  *     "lastName":"LASTNAME",
  *     "username":"USERNAME",
@@ -111,18 +110,26 @@ public class NuxeoPrincipalJsonWriter extends ExtensibleEntityJsonWriter<NuxeoPr
 
     @Override
     protected void writeEntityBody(NuxeoPrincipal principal, JsonGenerator jg) throws IOException {
-        jg.writeStringField("id", principal.getName());
-        writeProperties(jg, principal);
-        writeExtendedGroups(jg, principal);
+        var currentPrincipal = NuxeoPrincipal.getCurrent();
+        var isCurrentUserAdministrator = currentPrincipal != null && currentPrincipal.isAdministrator();
+        var showGroups = isCurrentUserAdministrator || !principal.isAdministrator();
+        jg.writeStringField("id", principal.getId());
+        jg.writeStringField("name", principal.getName());
+        writeProperties(jg, principal, showGroups);
+        if (showGroups) {
+            writeExtendedGroups(jg, principal);
+        }
         DocumentModel model = principal.getModel();
         if (model != null && Boolean.TRUE.equals(model.getContextData(USER_HAS_PARTIAL_CONTENT))) {
             jg.writeBooleanField("isPartial", true);
         }
-        jg.writeBooleanField("isAdministrator", principal.isAdministrator());
+        if (isCurrentUserAdministrator) {
+            jg.writeBooleanField("isAdministrator", principal.isAdministrator());
+        }
         jg.writeBooleanField("isAnonymous", principal.isAnonymous());
     }
 
-    private void writeProperties(JsonGenerator jg, NuxeoPrincipal principal) throws IOException {
+    private void writeProperties(JsonGenerator jg, NuxeoPrincipal principal, boolean showGroups) throws IOException {
         DocumentModel doc = principal.getModel();
         if (doc == null) {
             return;
@@ -136,7 +143,9 @@ public class NuxeoPrincipalJsonWriter extends ExtensibleEntityJsonWriter<NuxeoPr
         jg.writeObjectFieldStart("properties");
         for (Property property : properties) {
             String localName = property.getField().getName().getLocalName();
-            if (!localName.equals(getPasswordField())) {
+            boolean isPasswordField = localName.equals(getPasswordField());
+            boolean isGroupFieldAndHidden = !showGroups && localName.equals(userManager.getUserConfig().groupsKey);
+            if (!isPasswordField && !isGroupFieldAndHidden) {
                 jg.writeFieldName(localName);
                 OutputStream out = new OutputStreamWithJsonWriter(jg);
                 propertyWriter.write(property, Property.class, Property.class, APPLICATION_JSON_TYPE, out);

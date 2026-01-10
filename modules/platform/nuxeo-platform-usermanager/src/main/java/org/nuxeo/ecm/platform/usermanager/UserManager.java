@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,7 +65,6 @@ public interface UserManager extends Authenticator, EventListener, Serializable 
      *
      * @param username is the name of the entry in the user directory
      * @param fetchReferences controls if the references (groups) of the user will be fetched
-     *
      * @since 11.1
      */
     NuxeoPrincipal getPrincipal(String username, boolean fetchReferences);
@@ -405,7 +404,7 @@ public interface UserManager extends Authenticator, EventListener, Serializable 
      * @since 5.4.2
      * @param perm the permission
      * @param acp The access control policy of the document
-     * @return the list of user ids
+     * @return the array of user ids
      */
     String[] getUsersForPermission(String perm, ACP acp);
 
@@ -422,6 +421,15 @@ public interface UserManager extends Authenticator, EventListener, Serializable 
      * @since 11.4
      */
     List<String> getDescendantGroups(String groupId);
+
+    /**
+     * Returns the contributed {@link UserConfig}.
+     *
+     * @since 2025.9
+     */
+    default UserConfig getUserConfig() {
+        return new UserConfig();
+    }
 
     /**
      * Returns the contributed {@link GroupConfig}.

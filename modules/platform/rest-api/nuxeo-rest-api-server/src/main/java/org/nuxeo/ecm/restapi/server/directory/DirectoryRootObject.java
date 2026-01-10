@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,19 @@
  */
 package org.nuxeo.ecm.restapi.server.directory;
 
-import java.util.ArrayList;
+import static org.apache.commons.lang3.function.Predicates.truePredicate;
+
 import java.util.List;
+import java.util.function.Predicate;
 
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.QueryParam;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.nuxeo.ecm.directory.Directory;
+import org.nuxeo.ecm.directory.api.DirectoryConstants;
 import org.nuxeo.ecm.directory.api.DirectoryService;
 import org.nuxeo.ecm.webengine.model.WebObject;
 import org.nuxeo.ecm.webengine.model.impl.DefaultObject;
@@ -52,20 +56,13 @@ public class DirectoryRootObject extends DefaultObject {
      */
     @GET
     public List<Directory> getDirectoryNames(@QueryParam("types") List<String> types) {
-        DirectoryService directoryService = Framework.getService(DirectoryService.class);
-        List<Directory> result = new ArrayList<>();
-        for (Directory dir : directoryService.getDirectories()) {
-            if (dir.getTypes().contains(DirectoryService.SYSTEM_DIRECTORY_TYPE)) {
-                continue;
-            } else if (types == null || types.isEmpty()) {
-                result.add(dir);
-            } else {
-                if (types.stream().filter(dir.getTypes()::contains).findFirst().isPresent()) {
-                    result.add(dir);
-                }
-            }
-        }
-        return result;
+        return Framework.getService(DirectoryService.class)
+                        .getDirectories()
+                        .stream()
+                        .filter(Predicate.not(dir -> dir.getTypes().contains(DirectoryConstants.SYSTEM_DIRECTORY_TYPE)))
+                        .filter(CollectionUtils.isEmpty(types) ? truePredicate()
+                                : dir -> CollectionUtils.containsAny(types, dir.getTypes()))
+                        .toList();
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2014 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,17 @@ public interface NuxeoPrincipal extends Principal, Serializable {
      * @since 10.3
      */
     String TRANSIENT_USERNAME_UNIQUE_PROP = "nuxeo.transient.username.unique";
+
+    /**
+     * Returns a unique identifier to use to reference this principal externally.
+     *
+     * @return A unique identifier
+     * @since 2025.9
+     * @see #getName()
+     */
+    default String getId() {
+        return getName();
+    }
 
     /**
      * Gets the first name of this principal.

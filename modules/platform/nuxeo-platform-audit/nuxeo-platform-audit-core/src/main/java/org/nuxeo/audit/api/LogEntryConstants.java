@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,13 @@ public final class LogEntryConstants {
     public static final String LOG_LOG_DATE = "logDate";
 
     public static final String LOG_PRINCIPAL_NAME = "principalName";
+
+    /**
+     * Fields for principal when corresponding fetcher is given.
+     * 
+     * @since 2025.9
+     */
+    public static final String LOG_PRINCIPAL = "principal";
 
     public static final String LOG_REPOSITORY_ID = "repositoryId";
 

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,6 @@ import org.nuxeo.ecm.core.query.sql.model.OrderByExprs;
 import org.nuxeo.ecm.core.query.sql.model.Predicates;
 import org.nuxeo.ecm.core.query.sql.model.QueryBuilder;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.directory.BaseSession;
 import org.nuxeo.ecm.directory.Directory;
 import org.nuxeo.ecm.directory.DirectoryException;
 import org.nuxeo.ecm.directory.Session;
@@ -132,7 +131,7 @@ public class TestMemoryDirectory {
 
     @Test
     public void testCreateFromModel() {
-        entry = BaseSession.createEntryModel(null, SCHEMA_NAME, null, null);
+        entry = dir.createEntryModel();
         entry.setProperty(SCHEMA_NAME, "i", "yo");
 
         assertNull(dir.getEntry("yo"));
@@ -174,7 +173,8 @@ public class TestMemoryDirectory {
         Map<String, Object> e2 = new HashMap<>();
         e2.put("i", "2");
         entry = dir.createEntry(e2);
-        DocumentModelList l = dir.query(new QueryBuilder(), false);
+        @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+        DocumentModelList l = dir.query(new QueryBuilder());
         assertEquals(2, l.size());
         assertEquals("1", l.get(0).getId());
         assertEquals("2", l.get(1).getId());
@@ -192,7 +192,7 @@ public class TestMemoryDirectory {
         String id = "no-such-entry";
         Map<String, Object> map = new HashMap<>();
         map.put("i", id);
-        DocumentModel entry = BaseSession.createEntryModel(null, SCHEMA_NAME, id, map);
+        DocumentModel entry = dir.createEntryModel(id, map);
         try {
             dir.updateEntry(entry);
         } catch (DirectoryException de) {
@@ -248,7 +248,7 @@ public class TestMemoryDirectory {
         entries = dir.query(filter);
         assertEquals(1, entries.size());
 
-        e = entries.get(0);
+        e = entries.getFirst();
         assertEquals("1", e.getId());
         assertEquals("BCD", e.getProperty(SCHEMA_NAME, "b"));
 
@@ -256,7 +256,7 @@ public class TestMemoryDirectory {
         filter.put("bobo", "bibi");
         entries = dir.query(filter);
         assertEquals(1, entries.size());
-        assertEquals("1", entries.get(0).getId());
+        assertEquals("1", entries.getFirst().getId());
 
         // two criteria
         filter.clear();
@@ -265,7 +265,7 @@ public class TestMemoryDirectory {
         entries = dir.query(filter);
         assertEquals(1, entries.size());
 
-        e = entries.get(0);
+        e = entries.getFirst();
         assertEquals("1", e.getId());
         assertNull(e.getProperty(SCHEMA_NAME, "pw"));
 
@@ -317,6 +317,7 @@ public class TestMemoryDirectory {
     }
 
     @Test
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
     public void testQueryWithBuilder() {
         Map<String, Object> map;
         map = new HashMap<>();
@@ -362,7 +363,7 @@ public class TestMemoryDirectory {
             // cannot filter on password
             queryBuilder = new QueryBuilder().predicate(Predicates.eq("pw", "secreet"));
             try {
-                session.query(queryBuilder, false);
+                session.query(queryBuilder);
                 fail("should throw");
             } catch (DirectoryException e) {
                 assertEquals("Cannot filter on password", e.getMessage());
@@ -377,7 +378,7 @@ public class TestMemoryDirectory {
             // no such column
             queryBuilder = new QueryBuilder().predicate(Predicates.eq("notAProperty", "foo"));
             try {
-                session.query(queryBuilder, false);
+                session.query(queryBuilder);
                 fail("should throw");
             } catch (QueryParseException e) {
                 assertEquals("No column: notAProperty for directory: mydir", e.getMessage());
@@ -397,7 +398,8 @@ public class TestMemoryDirectory {
 
     protected static void checkQueryResult(Session session, QueryBuilder queryBuilder, int expectedTotalSize,
             String... expected) {
-        DocumentModelList list = session.query(queryBuilder, false);
+        @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+        DocumentModelList list = session.query(queryBuilder);
         List<String> ids = session.queryIds(queryBuilder);
         assertIds(list, ids, expected);
         if (queryBuilder.countTotal()) {
@@ -433,17 +435,17 @@ public class TestMemoryDirectory {
         // simple query
         list = dir.getProjection(Map.of("a", "AAA"), "b");
         assertEquals(1, list.size());
-        assertEquals("BCD", list.get(0));
+        assertEquals("BCD", list.getFirst());
 
         // add unknown field
         list = dir.getProjection(Map.of("a", "AAA", "bobo", "bibi"), "a");
         assertEquals(1, list.size());
-        assertEquals("AAA", list.get(0));
+        assertEquals("AAA", list.getFirst());
 
         // two criteria
         list = dir.getProjection(Map.of("a", "AAA", "b", "BCD"), "a");
         assertEquals(1, list.size());
-        assertEquals("AAA", list.get(0));
+        assertEquals("AAA", list.getFirst());
 
         // query not matching although each criterion matches one entry
         list = dir.getProjection(Map.of("a", "AAA", "b", "BCD", "pw", "guess"), "a");
@@ -615,8 +617,8 @@ public class TestMemoryDirectory {
         assertNotNull(dir);
         List<Directory> dirs = service.getDirectories();
         assertEquals(1, dirs.size());
-        assertNotNull(dirs.get(0));
-        assertEquals(dir, dirs.get(0));
+        assertNotNull(dirs.getFirst());
+        assertEquals(dir, dirs.getFirst());
 
         service.unregisterDirectoryDescriptor(descr);
         dir = service.getDirectory("mydir");

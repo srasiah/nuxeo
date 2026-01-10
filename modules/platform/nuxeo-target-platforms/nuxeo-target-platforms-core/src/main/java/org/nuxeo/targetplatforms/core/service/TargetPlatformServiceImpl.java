@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,6 @@ import org.apache.logging.log4j.Logger;
 import org.nuxeo.common.utils.DateUtils;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.query.sql.model.QueryBuilder;
-import org.nuxeo.ecm.directory.BaseSession;
 import org.nuxeo.ecm.directory.Session;
 import org.nuxeo.ecm.directory.api.DirectoryService;
 import org.nuxeo.runtime.api.Framework;
@@ -441,7 +440,7 @@ public class TargetPlatformServiceImpl extends DefaultComponent implements Targe
                     doc.setProperty(DirectoryUpdater.SCHEMA, prop, value);
                     session.updateEntry(doc);
                 } else {
-                    DocumentModel entry = BaseSession.createEntryModel(DirectoryUpdater.SCHEMA, null, null);
+                    DocumentModel entry = session.createEntryModel();
                     entry.setProperty(DirectoryUpdater.SCHEMA, prop, value);
                     entry.setProperty(DirectoryUpdater.SCHEMA, "id", id);
                     session.createEntry(entry);

@@ -21,7 +21,8 @@ package org.nuxeo.ecm.platform.auth.saml.processor.action;
 import java.util.List;
 import java.util.function.Function;
 
-import org.jetbrains.annotations.NotNull;
+import jakarta.validation.constraints.NotNull;
+
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.platform.auth.saml.processor.binding.SAMLOutboundBinding;
 import org.opensaml.profile.action.AbstractProfileAction;

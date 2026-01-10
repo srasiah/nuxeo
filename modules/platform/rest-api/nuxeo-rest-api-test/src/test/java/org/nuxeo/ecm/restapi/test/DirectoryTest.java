@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ import org.nuxeo.ecm.core.io.registry.context.RenderingContext.CtxBuilder;
 import org.nuxeo.ecm.core.test.annotations.Granularity;
 import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.directory.Session;
+import org.nuxeo.ecm.directory.api.DirectoryConstants;
 import org.nuxeo.ecm.directory.api.DirectoryEntry;
 import org.nuxeo.ecm.directory.api.DirectoryService;
 import org.nuxeo.ecm.directory.io.DirectoryEntryJsonWriter;
@@ -151,7 +152,7 @@ public class DirectoryTest {
 
         // It should not retrieve system directories
         httpClient.buildGetRequest("/directory")
-                  .addQueryParameter("types", DirectoryService.SYSTEM_DIRECTORY_TYPE)
+                  .addQueryParameter("types", DirectoryConstants.SYSTEM_DIRECTORY_TYPE)
                   .executeAndConsume(new JsonNodeHandler(), node -> {
                       assertEquals(DirectoryListJsonWriter.ENTITY_TYPE, node.get("entity-type").asText());
                       assertEquals(0, node.get("entries").size());

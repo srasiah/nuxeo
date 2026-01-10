@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  *
  * Contributors:
  *     Funsho David
- *
  */
 package org.nuxeo.directory.test;
 
@@ -23,8 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.util.List;
 import java.util.Map;
@@ -79,6 +78,7 @@ public class TestIntIdField {
      * @since 11.1
      */
     @Test
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
     public void testQueryBuilderOnIntId() {
         try (Session session = directoryService.open(INT_ID_DIRECTORY)) {
             String key = "label";
@@ -89,28 +89,28 @@ public class TestIntIdField {
             QueryBuilder queryBuilder = new QueryBuilder().predicate(Predicates.eq(key, value));
             List<String> ids = session.queryIds(queryBuilder);
             assertEquals(1, ids.size());
-            assertEquals("1", ids.get(0));
-            DocumentModelList entries = session.query(queryBuilder, false);
+            assertEquals("1", ids.getFirst());
+            DocumentModelList entries = session.query(queryBuilder);
             assertEquals(1, entries.size());
-            assertEquals("toto", entries.get(0).getPropertyValue("label"));
+            assertEquals("toto", entries.getFirst().getPropertyValue("label"));
 
             // query with id predicate
             queryBuilder = new QueryBuilder().predicate(Predicates.eq("id", 1));
             ids = session.queryIds(queryBuilder);
             assertEquals(1, ids.size());
-            assertEquals("1", ids.get(0));
-            entries = session.query(queryBuilder, false);
+            assertEquals("1", ids.getFirst());
+            entries = session.query(queryBuilder);
             assertEquals(1, entries.size());
-            assertEquals("toto", entries.get(0).getPropertyValue("label"));
+            assertEquals("toto", entries.getFirst().getPropertyValue("label"));
 
             // ids are stored with their declared type, but we can query them with String type
             queryBuilder = new QueryBuilder().predicate(Predicates.eq("id", "1"));
             ids = session.queryIds(queryBuilder);
             assertEquals(1, ids.size());
-            assertEquals("1", ids.get(0));
-            entries = session.query(queryBuilder, false);
+            assertEquals("1", ids.getFirst());
+            entries = session.query(queryBuilder);
             assertEquals(1, entries.size());
-            assertEquals("toto", entries.get(0).getPropertyValue("label"));
+            assertEquals("toto", entries.getFirst().getPropertyValue("label"));
         }
     }
 
@@ -126,12 +126,8 @@ public class TestIntIdField {
             assertNotNull(entry);
             assertEquals("toto", entry.getPropertyValue("label"));
 
-            try {
-                session.createEntry(Map.of("id", 1, "label", "toto"));
-                fail("An exception should have been thrown");
-            } catch (DirectoryException e) {
-                assertEquals("Entry with id 1 already exists in directory testIdDirectory", e.getMessage());
-            }
+            var e = assertThrows(DirectoryException.class, () -> session.createEntry(Map.of("id", 1, "label", "toto")));
+            assertEquals("Entry with id 1 already exists in directory testIdDirectory", e.getMessage());
 
             entry.setPropertyValue("label", "titi");
             session.updateEntry(entry);

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2010 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,15 @@
  */
 package org.nuxeo.ecm.automation.io.rest;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.ecm.automation.AutomationService;
 import org.nuxeo.ecm.automation.OperationDocumentation;
 import org.nuxeo.ecm.automation.OperationDocumentation.Param;
@@ -124,7 +127,7 @@ public class JsonWriter {
             jg.writeEndArray();
             jg.writeEndObject();
         }
-        return out.toString("UTF-8");
+        return out.toString(UTF_8);
     }
 
     private static void writeOperations(JsonGenerator jg, AutomationInfo info) throws IOException {
@@ -192,7 +195,7 @@ public class JsonWriter {
         jg.writeStringField("category", op.category);
         jg.writeStringField("requires", op.requires);
         jg.writeStringField("description", op.description);
-        if (op.since != null && op.since.length() > 0) {
+        if (StringUtils.isNotEmpty(op.since)) {
             jg.writeStringField("since", op.since);
         }
         jg.writeStringField("url", url);
@@ -234,6 +237,8 @@ public class JsonWriter {
     public static void writeLogin(JsonGenerator jg, LoginInfo login) throws IOException {
         jg.writeStartObject();
         jg.writeStringField("entity-type", "login");
+        jg.writeStringField("id", login.getId());
+        jg.writeStringField("name", login.getUsername());
         jg.writeStringField("username", login.getUsername());
         jg.writeBooleanField("isAdministrator", login.isAdministrator());
         jg.writeArrayFieldStart("groups");
@@ -252,23 +257,17 @@ public class JsonWriter {
     public static void writePrimitive(JsonGenerator jg, Object value) throws IOException {
         jg.writeStartObject();
         jg.writeStringField("entity-type", "primitive");
-        if (value != null) {
-            Class<?> type = value.getClass();
-            if (type == String.class) {
-                jg.writeStringField("value", (String) value);
-            } else if (type == Boolean.class) {
-                jg.writeBooleanField("value", (Boolean) value);
-            } else if (type == Long.class) {
-                jg.writeNumberField("value", ((Number) value).longValue());
-            } else if (type == Double.class) {
-                jg.writeNumberField("value", ((Number) value).doubleValue());
-            } else if (type == Integer.class) {
-                jg.writeNumberField("value", ((Number) value).intValue());
-            } else if (type == Float.class) {
-                jg.writeNumberField("value", ((Number) value).floatValue());
+        switch (value) {
+            case String string -> jg.writeStringField("value", string);
+            case Boolean booleanValue -> jg.writeBooleanField("value", booleanValue);
+            case Long longValue -> jg.writeNumberField("value", longValue);
+            case Double doubleValue -> jg.writeNumberField("value", doubleValue);
+            case Integer integerValue -> jg.writeNumberField("value", integerValue);
+            case Float floatValue -> jg.writeNumberField("value", floatValue);
+            case null -> jg.writeNullField("value");
+            default -> {
+                // nothing
             }
-        } else {
-            jg.writeNullField("value");
         }
         jg.writeEndObject();
         jg.flush();

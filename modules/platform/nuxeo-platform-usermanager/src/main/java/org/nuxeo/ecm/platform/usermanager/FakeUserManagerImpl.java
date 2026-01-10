@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -235,6 +235,7 @@ public class FakeUserManagerImpl implements UserManager {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public NuxeoPrincipal getPrincipal(String username, boolean fetchReferences) {
         NuxeoPrincipalImpl principal = new NuxeoPrincipalImpl(SecurityConstants.ADMINISTRATOR, false, true);
         if (fetchReferences) {
@@ -480,6 +481,11 @@ public class FakeUserManagerImpl implements UserManager {
 
     @Override
     public List<String> getDescendantGroups(String groupId) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public UserConfig getUserConfig() {
         throw new UnsupportedOperationException();
     }
 

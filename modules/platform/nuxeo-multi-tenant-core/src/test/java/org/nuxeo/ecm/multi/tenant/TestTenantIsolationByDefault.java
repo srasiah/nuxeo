@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,9 +75,10 @@ public class TestTenantIsolationByDefault {
         assertNotNull(acl);
 
         try (Session session = directoryService.open(TENANTS_DIRECTORY)) {
-            DocumentModelList docs = session.query(new QueryBuilder(), false);
+            @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+            DocumentModelList docs = session.query(new QueryBuilder());
             assertEquals(1, docs.size());
-            DocumentModel doc = docs.get(0);
+            DocumentModel doc = docs.getFirst();
             assertEquals(domain.getName(), doc.getPropertyValue("tenant:id"));
             assertEquals(domain.getTitle(), doc.getPropertyValue("tenant:label"));
         }

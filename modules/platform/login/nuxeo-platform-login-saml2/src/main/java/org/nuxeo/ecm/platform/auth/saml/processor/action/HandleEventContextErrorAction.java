@@ -21,9 +21,10 @@ package org.nuxeo.ecm.platform.auth.saml.processor.action;
 import static org.nuxeo.ecm.platform.auth.saml.SAMLAuthenticationProvider.ERROR_AUTH;
 import static org.nuxeo.ecm.platform.auth.saml.SAMLUtils.setLoginError;
 
+import jakarta.validation.constraints.NotNull;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.NotNull;
 import org.opensaml.profile.action.AbstractConditionalProfileAction;
 import org.opensaml.profile.context.PreviousEventContext;
 import org.opensaml.profile.context.ProfileRequestContext;

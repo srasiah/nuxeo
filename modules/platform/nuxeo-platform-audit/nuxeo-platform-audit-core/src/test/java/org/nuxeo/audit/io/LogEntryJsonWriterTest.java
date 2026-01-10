@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,11 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.io.marshallers.json.AbstractJsonWriterTest;
 import org.nuxeo.ecm.core.io.marshallers.json.JsonAssert;
+import org.nuxeo.ecm.core.io.registry.context.RenderingContext;
+import org.nuxeo.ecm.platform.test.UserManagerFeature;
+import org.nuxeo.runtime.test.runner.Features;
 
+@Features(UserManagerFeature.class) // for testWhenPrincipalFetcherIsProvided test
 public class LogEntryJsonWriterTest extends AbstractJsonWriterTest.External<LogEntryJsonWriter, LogEntry> {
 
     public LogEntryJsonWriterTest() {
@@ -71,6 +75,7 @@ public class LogEntryJsonWriterTest extends AbstractJsonWriterTest.External<LogE
         json.has("id").isEquals(1L);
         json.has("category").isEquals("eventDocumentCategory");
         json.has("principalName").isEquals("test");
+        json.hasNot("principal");
         json.has("comment").isEquals("a comment");
         json.has("docLifeCycle").isEquals("default");
         json.has("docPath").isEquals("/some-doc");
@@ -169,4 +174,16 @@ public class LogEntryJsonWriterTest extends AbstractJsonWriterTest.External<LogE
         params.hasNot("Blob");
     }
 
+    @Test
+    public void testWhenPrincipalFetcherIsProvided() throws IOException {
+        var logEntry = LogEntry.builder("eventIdForTests", new Date()).principalName("Administrator").build();
+        RenderingContext ctx = RenderingContext.CtxBuilder.fetch("logEntry", "principal").get();
+        JsonAssert json = jsonAssert(logEntry, ctx);
+        json.has("entity-type").isEquals("logEntry");
+        json.has("principalName").isEquals("Administrator");
+        var principalJson = json.has("principal").isObject();
+        principalJson.has("entity-type").isEquals("user");
+        principalJson.has("id").isText();
+        principalJson.has("properties").isObject().has("username").isEquals("Administrator");
+    }
 }

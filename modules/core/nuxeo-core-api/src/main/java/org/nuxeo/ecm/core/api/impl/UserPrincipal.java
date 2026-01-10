@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,6 +71,16 @@ public class UserPrincipal implements NuxeoPrincipal, Serializable {
     }
 
     @Override
+    public String getName() {
+        return userName;
+    }
+
+    @Override
+    public void setName(String name) {
+        userName = name;
+    }
+
+    @Override
     public String getEmail() {
         return email;
     }
@@ -108,16 +118,6 @@ public class UserPrincipal implements NuxeoPrincipal, Serializable {
     @Override
     public void setLastName(String lastName) {
         this.lastName = lastName;
-    }
-
-    @Override
-    public void setName(String name) {
-        userName = name;
-    }
-
-    @Override
-    public String getName() {
-        return userName;
     }
 
     @Override
@@ -233,11 +233,9 @@ public class UserPrincipal implements NuxeoPrincipal, Serializable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof UserPrincipal)) {
+        if (!(o instanceof UserPrincipal that)) {
             return false;
         }
-
-        UserPrincipal that = (UserPrincipal) o;
         return new EqualsBuilder().append(userName, that.userName)
                                   .append(groups, that.groups)
                                   .append(roles, that.roles)

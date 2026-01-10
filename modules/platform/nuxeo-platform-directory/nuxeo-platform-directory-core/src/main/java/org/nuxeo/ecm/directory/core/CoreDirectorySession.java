@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,14 +35,13 @@ import org.nuxeo.ecm.core.api.DataModel;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.api.IdRef;
-import org.nuxeo.ecm.core.query.sql.model.QueryBuilder;
 import org.nuxeo.ecm.core.schema.types.Field;
 import org.nuxeo.ecm.directory.BaseSession;
 import org.nuxeo.ecm.directory.DirectoryException;
 import org.nuxeo.ecm.directory.PasswordHelper;
 import org.nuxeo.ecm.directory.Reference;
+import org.nuxeo.ecm.directory.api.DirectoryQueryBuilder;
 
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Collections2;
 
@@ -83,35 +82,28 @@ public class CoreDirectorySession extends BaseSession {
     }
 
     @Override
-    public DocumentModel getEntry(String id, boolean fetchReferences) {
+    public DocumentModel getEntry(String idOrSysId, boolean fetchReferences) {
         if (UUID_FIELD.equals(getIdField())) {
-            IdRef ref = new IdRef(id);
+            IdRef ref = new IdRef(idOrSysId);
             if (coreSession.exists(ref)) {
-                DocumentModel document = coreSession.getDocument(new IdRef(id));
+                DocumentModel document = coreSession.getDocument(new IdRef(idOrSysId));
                 return docType.equals(document.getType()) ? document : null;
             } else {
                 return null;
             }
         }
 
-        StringBuilder sbQuery = new StringBuilder("SELECT * FROM ");
-        sbQuery.append(docType);
-        sbQuery.append(" WHERE ");
-        sbQuery.append(getDirectory().getField(schemaIdField).getName().getPrefixedName());
-        sbQuery.append(" = '");
-        sbQuery.append(id);
-        sbQuery.append("' AND ecm:path STARTSWITH '");
-        sbQuery.append(createPath);
-        sbQuery.append("'");
+        String sbQuery = "SELECT * FROM %s WHERE %s = '%s' AND ecm:path STARTSWITH '%s'".formatted(docType,
+                getPrefixedFieldName(schemaIdField), idOrSysId, createPath);
 
-        DocumentModelList listDoc = coreSession.query(sbQuery.toString());
+        DocumentModelList listDoc = coreSession.query(sbQuery);
         // TODO : deal with references
         if (!listDoc.isEmpty()) {
             // Should have only one
             if (listDoc.size() > 1) {
                 log.warn("Found more than one result in getEntry, the first result only will be returned");
             }
-            DocumentModel docResult = listDoc.get(0);
+            DocumentModel docResult = listDoc.getFirst();
             if (isReadOnly()) {
                 BaseSession.setReadOnlyEntry(docResult);
             }
@@ -120,7 +112,8 @@ public class CoreDirectorySession extends BaseSession {
         return null;
     }
 
-    private String getPrefixedFieldName(String fieldName) {
+    @Override
+    protected String getPrefixedFieldName(String fieldName) {
         if (UUID_FIELD.equals(fieldName)) {
             return fieldName;
         }
@@ -129,19 +122,22 @@ public class CoreDirectorySession extends BaseSession {
     }
 
     @Override
-    public DocumentModel createEntryWithoutReferences(Map<String, Object> fieldMap) {
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+    public DocumentModel doCreateEntryWithoutReferences(Map<String, Object> fieldMap) {
         // TODO once references are implemented
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected List<String> updateEntryWithoutReferences(DocumentModel docModel) {
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+    protected List<String> doUpdateEntryWithoutReferences(DocumentModel docModel) {
         // TODO once references are implemented
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected void deleteEntryWithoutReferences(String id) {
+    @SuppressWarnings("deprecation") // deprecated since 2021.x, remove the annotation
+    protected void doDeleteEntryWithoutReferences(String entryId) {
         // TODO once references are implemented
         throw new UnsupportedOperationException();
     }
@@ -181,7 +177,8 @@ public class CoreDirectorySession extends BaseSession {
         return docModel;
     }
 
-    protected void setReferenceTargetIds(DocumentModel docModel, DocumentModel targetHolderDoc, String referenceFieldName) {
+    protected void setReferenceTargetIds(DocumentModel docModel, DocumentModel targetHolderDoc,
+            String referenceFieldName) {
         for (Reference reference : directory.getReferences(referenceFieldName)) {
             List<String> targetIds = toStringList(targetHolderDoc.getProperty(schemaName, referenceFieldName));
             reference.setTargetIdsForSource(docModel.getId(), targetIds);
@@ -189,6 +186,7 @@ public class CoreDirectorySession extends BaseSession {
     }
 
     @Override
+    @SuppressWarnings("deprecation") // for DataModel
     public void updateEntry(DocumentModel docModel) {
         if (isReadOnly()) {
             log.warn("The directory: {} is in read-only mode, could not update entry.", directory::getName);
@@ -244,15 +242,15 @@ public class CoreDirectorySession extends BaseSession {
     }
 
     @Override
-    public void deleteEntry(String id) {
+    public void deleteEntry(String idOrSysId) {
         if (isReadOnly()) {
             log.warn("The directory: {} is in read-only mode, could not delete entry.", directory::getName);
         } else {
-            if (id == null) {
+            if (idOrSysId == null) {
                 throw new DirectoryException("Can not update entry with a null id ");
             } else {
-                checkDeleteConstraints(id);
-                DocumentModel docModel = getEntry(id);
+                checkDeleteConstraints(idOrSysId);
+                DocumentModel docModel = getEntry(idOrSysId);
                 if (docModel != null) {
                     coreSession.removeDocument(docModel.getRef());
                 }
@@ -291,19 +289,12 @@ public class CoreDirectorySession extends BaseSession {
             }
 
         }
-        if (hasFilter && filter.size() > 0 && fulltext.size() > 0) {
+        if (hasFilter && !filter.isEmpty() && !fulltext.isEmpty()) {
             sbQuery.append(" AND ");
         }
-        if (fulltext.size() > 0) {
+        if (!fulltext.isEmpty()) {
 
-            Collection<String> fullTextValues = Collections2.transform(fulltext, new Function<String, String>() {
-
-                @Override
-                public String apply(String key) {
-                    return (String) filter.get(key);
-                }
-
-            });
+            Collection<String> fullTextValues = Collections2.transform(fulltext, key -> (String) filter.get(key));
             sbQuery.append("ecm:fulltext");
             sbQuery.append(" = ");
             sbQuery.append("'");
@@ -312,7 +303,7 @@ public class CoreDirectorySession extends BaseSession {
         }
 
         if ((createPath != null && !createPath.isEmpty())) {
-            if (filter.size() > 0 || fulltext.size() > 0) {
+            if (!filter.isEmpty() || !fulltext.isEmpty()) {
                 sbQuery.append(" AND ");
             }
             sbQuery.append(" ecm:path STARTSWITH '");
@@ -334,12 +325,14 @@ public class CoreDirectorySession extends BaseSession {
     }
 
     @Override
-    public DocumentModelList query(QueryBuilder queryBuilder, boolean fetchReferences) {
+    @SuppressWarnings("deprecation") // annotation to remove
+    protected DocumentModelList doQuery(DirectoryQueryBuilder queryBuilder) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public List<String> queryIds(QueryBuilder queryBuilder) {
+    @SuppressWarnings("deprecation") // annotation to remove
+    protected List<String> doQueryIds(DirectoryQueryBuilder queryBuilder) {
         throw new UnsupportedOperationException();
     }
 
@@ -374,7 +367,7 @@ public class CoreDirectorySession extends BaseSession {
     }
 
     @Override
-    public boolean hasEntry(String id) {
-        return getEntry(id) != null;
+    public boolean hasEntry(String idOrSysId) {
+        return getEntry(idOrSysId) != null;
     }
 }
