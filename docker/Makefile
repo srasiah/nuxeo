@@ -178,13 +178,24 @@ build-and-push-benchmark: build-benchmark
 
 # === Docker Push Targets ===
 push: push-base push-benchmark
+push-platform: push-base-platform push-benchmark-platform
 
 push-base:
+	@echo "📤 Pushing base image $(DOCKER_BASE_IMAGE)..."
+	$(CONTAINER_ENGINE) push $(DOCKER_BASE_IMAGE)
+	@echo "✅ Base image pushed successfully"
+
+push-base-platform:
 	@echo "📤 Pushing base image $(DOCKER_BASE_IMAGE)..."
 	$(CONTAINER_ENGINE) push $(DOCKER_BASE_IMAGE) --platform $(TARGETPLATFORM)
 	@echo "✅ Base image pushed successfully"
 
 push-benchmark:
+	@echo "📤 Pushing benchmark image $(DOCKER_BENCHMARK_IMAGE)..."
+	$(CONTAINER_ENGINE) push $(DOCKER_BENCHMARK_IMAGE)
+	@echo "✅ Benchmark image pushed successfully"
+
+push-benchmark-platform:
 	@echo "📤 Pushing benchmark image $(DOCKER_BENCHMARK_IMAGE)..."
 	$(CONTAINER_ENGINE) push $(DOCKER_BENCHMARK_IMAGE) --platform $(TARGETPLATFORM)
 	@echo "✅ Benchmark image pushed successfully"
