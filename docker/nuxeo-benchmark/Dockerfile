@@ -17,4 +17,14 @@ LABEL org.nuxeo.benchmark.version=$VERSION
 LABEL org.label-schema.name="Nuxeo Benchmark Server"
 LABEL org.opencontainers.image.title="Nuxeo Benchmark Server"
 
-RUN --mount=type=bind,source=./target/packages,target=/tmp/local-packages /install-packages.sh --offline /tmp/local-packages/*.zip
+
+# Prepare local package directory
+RUN mkdir -p /tmp/local-packages/
+
+# Copy offline packages (both sources)
+COPY ./marketplace/*.zip /tmp/local-packages/
+COPY ./target/packages/*.zip /tmp/local-packages/
+
+# Install packages offline
+RUN /install-packages.sh --offline /tmp/local-packages/*.zip \
+ && rm -rf /tmp/local-packages
