@@ -30,14 +30,12 @@
       <artifactId>nuxeo-audit-opensearch1-package</artifactId>
       <type>zip</type>
     </dependency>
-
-    <!--
+ 
     <dependency>
       <groupId>org.nuxeo.packages</groupId>
       <artifactId>nuxeo-importer-package</artifactId>
       <type>zip</type>
     </dependency>
-  -->
 
 
     <dependency>
@@ -58,6 +56,20 @@
       <artifactId>nuxeo-csv-package</artifactId>
       <type>zip</type>
     </dependency>
+
+    <!--Test-->
+    <dependency>
+      <groupId>org.nuxeo.packages</groupId>
+      <artifactId>nuxeo-openid-login-package</artifactId>
+      <type>zip</type>
+    </dependency>
+
+     <dependency>
+      <groupId>org.nuxeo.packages</groupId>
+      <artifactId>nuxeo-saml2-login-package</artifactId>
+      <type>zip</type>
+    </dependency>
+
   </dependencies>
 
   <build>
