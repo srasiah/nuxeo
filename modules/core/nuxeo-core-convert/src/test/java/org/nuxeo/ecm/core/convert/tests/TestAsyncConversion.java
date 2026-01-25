@@ -19,7 +19,10 @@
 package org.nuxeo.ecm.core.convert.tests;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.nuxeo.ecm.core.convert.service.ConversionServiceImpl.CONFIG_EP;
+import static org.nuxeo.runtime.model.Descriptor.UNIQUE_DESCRIPTOR_ID;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,8 +39,11 @@ import org.nuxeo.ecm.core.api.blobholder.BlobHolder;
 import org.nuxeo.ecm.core.api.blobholder.SimpleBlobHolder;
 import org.nuxeo.ecm.core.convert.ConvertFeature;
 import org.nuxeo.ecm.core.convert.api.ConversionService;
+import org.nuxeo.ecm.core.convert.extension.ConvertCacheDescriptor;
 import org.nuxeo.ecm.core.event.EventService;
 import org.nuxeo.ecm.core.transientstore.TransientStoreFeature;
+import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.runtime.model.impl.ComponentManagerImpl;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -97,4 +103,16 @@ public class TestAsyncConversion {
         assertEquals(blob.getMimeType(), resultBlob.getMimeType());
     }
 
+    // NXP-33363
+    // test is present here because it is the only place where we disable it
+    @Test
+    public void testCacheIsDisabled() {
+        var componentManager = (ComponentManagerImpl) Framework.getRuntime().getComponentManager();
+        ConvertCacheDescriptor cacheDescriptor = componentManager.getDescriptors()
+                                                                 .getDescriptor(
+                                                                         "org.nuxeo.ecm.core.convert.service.ConversionServiceImpl",
+                                                                         CONFIG_EP, UNIQUE_DESCRIPTOR_ID);
+        assertNotNull(cacheDescriptor);
+        assertFalse(cacheDescriptor.isEnabled());
+    }
 }

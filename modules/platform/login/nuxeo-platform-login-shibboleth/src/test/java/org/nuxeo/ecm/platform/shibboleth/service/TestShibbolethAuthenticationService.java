@@ -32,6 +32,7 @@ import org.nuxeo.ecm.core.test.DefaultRepositoryInit;
 import org.nuxeo.ecm.core.test.annotations.Granularity;
 import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.platform.shibboleth.ShibbolethFeature;
+import org.nuxeo.ecm.platform.web.common.MockHttpServletRequest;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -69,41 +70,48 @@ public class TestShibbolethAuthenticationService {
 
         String encodedRedirectUrl = URLEncoder.encode(redirectURL, UTF_8);
         assertEquals("https://host/Shibboleth.sso/Logout?return=" + encodedRedirectUrl, logoutURL);
+
+        // NXP-33228
+        var request = MockHttpServletRequest.init();
+        logoutURL = service.getLogoutURL(request.mock());
+
+        encodedRedirectUrl = URLEncoder.encode("http://localhost:8080/nuxeo/home.html", UTF_8);
+        assertEquals("https://host/Shibboleth.sso/Logout?return=" + encodedRedirectUrl, logoutURL);
     }
 
     @Test
     public void testUidHeader() {
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setHeader("uid", "test");
-        request.setHeader("uid1", "test1");
-        request.setHeader("uid2", "test2");
+        var request = MockHttpServletRequest.init();
+        request.whenGetHeaderThenReturn("uid", "test");
+        request.whenGetHeaderThenReturn("uid1", "test1");
+        request.whenGetHeaderThenReturn("uid2", "test2");
 
-        request.setHeader("shib-identity-provider", "url1");
-        assertEquals("test1", service.getUserID(request));
+        request.whenGetHeaderThenReturn("shib-identity-provider", "url1");
+        assertEquals("test1", service.getUserID(request.mock()));
 
-        request.setHeader("shib-identity-provider", "url2");
-        assertEquals("test2", service.getUserID(request));
+        request.whenGetHeaderThenReturn("shib-identity-provider", "url2");
+        assertEquals("test2", service.getUserID(request.mock()));
 
-        request.setHeader("shib-identity-provider", "another.url");
-        assertEquals("test", service.getUserID(request));
+        request.whenGetHeaderThenReturn("shib-identity-provider", "another.url");
+        assertEquals("test", service.getUserID(request.mock()));
     }
 
     @Test
     public void testUserMetadata() {
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setHeader("uid", "FrÃ©dÃ©ric");
-        request.setHeader("uid1", "value1");
-        request.setHeader("uid2", "value2");
+        var request = MockHttpServletRequest.init();
+        request.whenGetHeaderThenReturn("uid", "FrÃ©dÃ©ric");
+        request.whenGetHeaderThenReturn("uid1", "value1");
+        request.whenGetHeaderThenReturn("uid2", "value2");
 
         String idField = "username";
 
-        request.setHeader("shib-identity-provider", "url1");
-        assertEquals("value1", service.getUserMetadata(idField, request).get(idField));
+        request.whenGetHeaderThenReturn("shib-identity-provider", "url1");
+        assertEquals("value1", service.getUserMetadata(idField, request.mock()).get(idField));
 
-        request.setHeader("shib-identity-provider", "url2");
-        assertEquals("value2", service.getUserMetadata(idField, request).get(idField));
+        request.whenGetHeaderThenReturn("shib-identity-provider", "url2");
+        assertEquals("value2", service.getUserMetadata(idField, request.mock()).get(idField));
 
-        request.setHeader("shib-identity-provider", "anotherUrl");
-        assertEquals("Frédéric", service.getUserMetadata(idField, request).get(idField));
+        request.whenGetHeaderThenReturn("shib-identity-provider", "anotherUrl");
+        assertEquals("Frédéric", service.getUserMetadata(idField, request.mock()).get(idField));
     }
 }

@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.nuxeo</groupId>
   <artifactId>nuxeo-ecm</artifactId>
-  <version>2025.9-SNAPSHOT</version>
+  <version>2025.10-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Nuxeo ECM Projects</name>
   <description>Nuxeo ECM Platform and related components.</description>
@@ -56,7 +56,7 @@
     <!-- <license.useMissingFile>true</license.useMissingFile> -->
     <!-- <license.missingFile>src/main/license/THIRD-PARTY.properties</license.missingFile> -->
 
-    <nuxeo.platform.version>2025.9-SNAPSHOT</nuxeo.platform.version>
+    <nuxeo.platform.version>2025.10-SNAPSHOT</nuxeo.platform.version>
     <nuxeo.distribution.name>lts</nuxeo.distribution.name>
     <nuxeo.platform.javadoc.version>${project.version}</nuxeo.platform.javadoc.version>
 
@@ -67,9 +67,9 @@
     <ant.assembly.version>2.1.7</ant.assembly.version>
     <nuxeo.ftest.version>1.8.10</nuxeo.ftest.version>
 
-    <tomcat.version>10.1.47</tomcat.version>
+    <tomcat.version>10.1.48</tomcat.version>
     <opensearch1.version>1.3.20</opensearch1.version>
-    <netty.version>4.2.6.Final</netty.version>
+    <netty.version>4.2.7.Final</netty.version>
     <netty.boringssl.version>2.0.74.Final</netty.boringssl.version>
     <apacheds.version>1.5.1</apacheds.version>
     <apachedshared.version>0.9.7</apachedshared.version>
@@ -89,14 +89,14 @@
     <google.api.client.version>2.8.1</google.api.client.version>
     <google.api.drive.version>v2-rev20201130-1.31.0</google.api.drive.version>
     <box.api.version>1.1.0</box.api.version>
-    <pdfbox.version>3.0.5</pdfbox.version>
+    <pdfbox.version>3.0.6</pdfbox.version>
     <pdfbox.jbig2.version>3.0.4</pdfbox.jbig2.version>
-    <aws.version>2.35.3</aws.version>
-    <gcp.version>2.58.1</gcp.version>
+    <aws.version>2.35.11</aws.version>
+    <gcp.version>2.59.0</gcp.version>
     <jackson1.version>1.9.13</jackson1.version>
     <jackson.bom.version>2.20.0</jackson.bom.version>
     <bouncycastle.version>1.82</bouncycastle.version>
-    <avro.version>1.12.0</avro.version>
+    <avro.version>1.12.1</avro.version>
     <restlet.version>2.4.4</restlet.version>
     <jmock.version>2.13.1</jmock.version>
     <wro4j.version>2.1.1</wro4j.version>
@@ -143,12 +143,12 @@
     <quartz.mongodb.version>2.3.0</quartz.mongodb.version>
 
     <kafka.version>3.9.1</kafka.version>
-    <confluent.version>7.9.3</confluent.version>
+    <confluent.version>7.9.4</confluent.version>
     <metrics.version>5.0.5</metrics.version>
-    <amqp.client.version>5.26.0</amqp.client.version>
+    <amqp.client.version>5.27.0</amqp.client.version>
     <opencensus.version>0.31.1</opencensus.version>
     <prometheus.client.version>0.16.0</prometheus.client.version>
-    <protobuf.java.version>4.32.1</protobuf.java.version>
+    <protobuf.java.version>4.33.0</protobuf.java.version>
     <opensaml.version>5.1.6</opensaml.version>
     <quartz.version>2.5.0</quartz.version>
   </properties>
@@ -3151,7 +3151,7 @@
       <dependency>
         <groupId>com.google.errorprone</groupId>
         <artifactId>error_prone_annotations</artifactId>
-        <version>2.42.0</version>
+        <version>2.43.0</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>
@@ -3746,7 +3746,7 @@
       <dependency>
         <groupId>software.amazon.awssdk.crt</groupId>
         <artifactId>aws-crt</artifactId>
-        <version>0.39.0</version>
+        <version>0.39.4</version>
       </dependency>
       <dependency>
         <groupId>com.google.cloud</groupId>
@@ -3795,7 +3795,7 @@
       <dependency>
         <groupId>com.azure</groupId>
         <artifactId>azure-storage-blob</artifactId>
-        <version>12.31.3</version>
+        <version>12.32.0</version>
       </dependency>
 
       <dependency>
@@ -3841,7 +3841,7 @@
       <dependency>
         <groupId>io.github.classgraph</groupId>
         <artifactId>classgraph</artifactId>
-        <version>4.8.181</version>
+        <version>4.8.184</version>
       </dependency>
 
       <!-- dmk adaptor -->
@@ -4086,7 +4086,7 @@
       <dependency>
         <groupId>com.squareup.okio</groupId>
         <artifactId>okio-jvm</artifactId>
-        <version>3.16.0</version>
+        <version>3.16.2</version>
       </dependency>
       <dependency>
         <groupId>org.apache.thrift</groupId>
@@ -4147,7 +4147,7 @@
       <dependency>
         <groupId>com.google.code.externalsortinginjava</groupId>
         <artifactId>externalsortinginjava</artifactId>
-        <version>0.6.2</version>
+        <version>0.6.5</version>
       </dependency>
 
       <dependency>
@@ -4427,7 +4427,7 @@
           <!-- For addons packaging UI resources -->
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-antrun-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.2.0</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -4826,7 +4826,7 @@
         <plugin>
           <groupId>org.owasp</groupId>
           <artifactId>dependency-check-maven</artifactId>
-          <version>12.1.6</version>
+          <version>12.1.8</version>
           <!-- run manually with mvn -nsu -Pdistrib org.owasp:dependency-check-maven:aggregate -->
           <!-- report file is in target/dependency-check-report.html -->
           <configuration>
@@ -5045,7 +5045,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>
-          <version>3.6.1</version>
+          <version>3.6.2</version>
         </plugin>
         <plugin>
           <groupId>io.fabric8</groupId>

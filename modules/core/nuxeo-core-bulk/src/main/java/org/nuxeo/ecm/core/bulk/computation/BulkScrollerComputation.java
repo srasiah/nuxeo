@@ -370,7 +370,7 @@ public class BulkScrollerComputation extends AbstractComputation {
             shardKey = commandId;
         } else {
             // Records are dispatched randomly on all partitions to be processed concurrently
-            shardKey = commandId + ":" + bucketNumber;
+            shardKey = bucketNumber + ":" + commandId.substring(0, 8);
         }
         Record record = Record.of(shardKey, BulkCodecs.getBucketCodec().encode(bucket));
         if (produceImmediate || (produceImmediateThreshold > 0 && documentCount > produceImmediateThreshold)) {

@@ -43,7 +43,7 @@ public class ConvertCacheDescriptor implements Descriptor {
 
     public static final long DEFAULT_DISK_CACHE_IN_KB = 10 * 1024;
 
-    @XNode("@enable")
+    @XNode("@enabled")
     protected Boolean enabled;
 
     @XNode("directory")
