@@ -19,15 +19,20 @@
 package org.nuxeo.ecm.blob.azure;
 
 import static org.nuxeo.ecm.core.blob.BlobProviderDescriptor.ALLOW_BYTE_RANGE;
+import static org.nuxeo.ecm.core.blob.KeyStrategy.VER_SEP;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Calendar;
 import java.util.HashSet;
 
 import org.apache.commons.io.output.NullOutputStream;
@@ -39,17 +44,24 @@ import org.nuxeo.ecm.core.blob.AbstractBlobGarbageCollector;
 import org.nuxeo.ecm.core.blob.AbstractBlobStore;
 import org.nuxeo.ecm.core.blob.BlobContext;
 import org.nuxeo.ecm.core.blob.BlobStore;
+import org.nuxeo.ecm.core.blob.BlobUpdateContext;
 import org.nuxeo.ecm.core.blob.BlobWriteContext;
 import org.nuxeo.ecm.core.blob.ByteRange;
 import org.nuxeo.ecm.core.blob.KeyStrategy;
 import org.nuxeo.ecm.core.blob.KeyStrategyDigest;
+import org.nuxeo.ecm.core.blob.KeyStrategyDocId;
 import org.nuxeo.ecm.core.blob.binary.BinaryGarbageCollector;
 
+import com.azure.core.http.rest.Response;
 import com.azure.core.util.Context;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.models.BlobImmutabilityPolicy;
 import com.azure.storage.blob.models.BlobRange;
+import com.azure.storage.blob.models.BlockBlobItem;
 import com.azure.storage.blob.models.ListBlobsOptions;
+import com.azure.storage.blob.models.ParallelTransferOptions;
+import com.azure.storage.blob.options.BlobUploadFromFileOptions;
 
 /**
  * @since 2023.6
@@ -68,6 +80,8 @@ public class AzureBlobStore extends AbstractBlobStore {
 
     protected boolean allowByteRange;
 
+    protected final boolean useVersion;
+
     public AzureBlobStore(String blobProviderId, String name, AzureBlobStoreConfiguration config,
             KeyStrategy keyStrategy) {
         super(blobProviderId, name, keyStrategy);
@@ -76,6 +90,7 @@ public class AzureBlobStore extends AbstractBlobStore {
         this.prefix = config.prefix;
         this.allowByteRange = config.getBooleanProperty(ALLOW_BYTE_RANGE);
         this.gc = new AzureBlobGarbageCollector();
+        useVersion = keyStrategy instanceof KeyStrategyDocId && config.isContainerVersioningEnabled;
     }
 
     public class AzureBlobGarbageCollector extends AbstractBlobGarbageCollector {
@@ -140,21 +155,36 @@ public class AzureBlobStore extends AbstractBlobStore {
     public String copyOrMoveBlob(String key, BlobStore sourceStore, String sourceKey, boolean move) throws IOException {
         BlobStore unwrappedSourceStore = sourceStore.unwrap();
         if (unwrappedSourceStore instanceof AzureBlobStore sourceAzureBlobStore) {
-            BlobClient sourceBlobClient = sourceAzureBlobStore.client.getBlobClient(sourceAzureBlobStore.prefix + key);
+            var srcAzureKey = new AzureBlobKey(sourceAzureBlobStore.config, sourceKey);
+            BlobClient sourceBlobClient = srcAzureKey.blobClient();
             if (!sourceBlobClient.exists()) {
                 return null;
             }
-            String sourceBlobSasURL = AzureBlobProvider.generateSASUrl(sourceBlobClient, null, null,
-                    60L * 60L /* 1 hour */);
-            BlobClient destBlobClient = client.getBlobClient(prefix + key);
-            // if the digest is not already known then save to Azure
-            if (!destBlobClient.exists()) {
-                destBlobClient.copyFromUrl(sourceBlobSasURL);
+            String sourceBlobSasURL = AzureBlobProvider.generateSASUrl(srcAzureKey, null, null,
+                    Duration.ofHours(1).toSeconds());
+            var destAzureKey = new AzureBlobKey(config, key);
+            BlobClient destBlobClient = destAzureKey.blobClient();
+            if (getKeyStrategy().useDeDuplication()) {
+                if (destBlobClient.exists()) {
+                    log.debug("No need to copy, blob with digest: {} is already in Azure", key);
+                    return key;
+                }
             }
-            if (move) {
-                sourceStore.deleteBlob(sourceKey);
+            String resultKey = null;
+            BlockBlobItem blockBlobItem = destBlobClient.getBlockBlobClient().uploadFromUrl(sourceBlobSasURL);
+            if (blockBlobItem != null) {
+                if (useVersion) {
+                    resultKey = key + VER_SEP + blockBlobItem.getVersionId();
+                } else {
+                    resultKey = key;
+                }
             }
-            return key;
+            if (resultKey != null) {
+                if (move) {
+                    sourceStore.deleteBlob(sourceKey);
+                }
+                return resultKey;
+            }
         }
         return copyOrMoveBlobGeneric(key, sourceStore, sourceKey, move);
     }
@@ -176,18 +206,19 @@ public class AzureBlobStore extends AbstractBlobStore {
                 }
                 file = tmp;
             }
-            BlobClient blobClient = client.getBlobClient(prefix + key);
             // if the digest is not already known then save to Azure
-            if (!blobClient.exists()) {
-                File pathFile = file.toFile();
-                try (InputStream is = new FileInputStream(pathFile)) {
-                    blobClient.upload(is, pathFile.length());
-                }
+            var azureKey = new AzureBlobKey(config, key);
+            String resultKey;
+            if (getKeyStrategy().useDeDuplication() && azureKey.blobClient().exists()) {
+                log.debug("No need to generic copy, blob with digest: {} is already in Azure", azureKey);
+                resultKey = key;
+            } else {
+                resultKey = writeFile(azureKey, file);
             }
             if (atomicMove) {
                 sourceStore.deleteBlob(sourceKey);
             }
-            return key;
+            return resultKey;
         } finally {
             if (tmp != null) {
                 try {
@@ -199,6 +230,25 @@ public class AzureBlobStore extends AbstractBlobStore {
         }
     }
 
+    protected String writeFile(AzureBlobKey azureKey, Path file) {
+        String resultKey;
+        ParallelTransferOptions parallelTransferOptions = new ParallelTransferOptions();
+        parallelTransferOptions.setBlockSizeLong(config.blockSize)
+                               .setMaxConcurrency(config.maxConcurrency)
+                               .setMaxSingleUploadSizeLong(config.maxSingleUploadSize);
+        BlobUploadFromFileOptions options = new BlobUploadFromFileOptions(file.toString());
+        options.setParallelTransferOptions(parallelTransferOptions);
+        try {
+            Response<BlockBlobItem> blockBlob = azureKey.blobClient()
+                                                        .uploadFromFileWithResponse(options, config.uploadTimeout,
+                                                                null);
+            resultKey = useVersion ? azureKey.key() + VER_SEP + blockBlob.getValue().getVersionId() : azureKey.key();
+        } catch (UncheckedIOException e) {
+            throw new NuxeoException("Failed to write blob: " + azureKey.key(), e);
+        }
+        return resultKey;
+    }
+
     @Override
     public boolean exists(String key) {
         BlobClient blobClient = client.getBlobClient(prefix + key);
@@ -207,8 +257,7 @@ public class AzureBlobStore extends AbstractBlobStore {
 
     @Override
     public boolean hasVersioning() {
-        // Maybe later
-        return false;
+        return useVersion;
     }
 
     @Override
@@ -231,12 +280,12 @@ public class AzureBlobStore extends AbstractBlobStore {
         if (allowByteRange) {
             MutableObject<String> keyHolder = new MutableObject<>(key);
             byteRange = getByteRangeFromKey(keyHolder);
-            key = keyHolder.getValue();
+            key = keyHolder.get();
         } else {
             byteRange = null;
         }
         log.debug("fetching blob: {} from Azure", key);
-        BlobClient blobClient = client.getBlobClient(prefix + key);
+        BlobClient blobClient = new AzureBlobKey(config, key).blobClient();
         if (!blobClient.exists()) {
             return false;
         }
@@ -265,8 +314,8 @@ public class AzureBlobStore extends AbstractBlobStore {
                 // we may be able to use the blob's underlying file, if not pure streaming
                 File blobFile = blobContext.blob.getFile();
                 if (blobFile != null) { // otherwise use blob file directly
-                    if (blobWriteContext.writeObserver != null) { // but we must still run the writes through the write
-                                                                  // observer
+                    // but we must still run the writes through the write observer
+                    if (blobWriteContext.writeObserver != null) {
                         transfer(blobWriteContext, NullOutputStream.INSTANCE);
                     }
                     file = blobFile.toPath();
@@ -284,14 +333,19 @@ public class AzureBlobStore extends AbstractBlobStore {
             }
             // if the digest is not already known then save to Azure
             log.debug("Storing blob with digest: {} to Azure", key);
-            BlobClient blobClient = client.getBlobClient(prefix + key);
-            if (!blobClient.exists()) {
-                File pathFile = file.toFile();
-                try (InputStream is = new FileInputStream(pathFile)) {
-                    blobClient.upload(is, pathFile.length());
+            var azureBlobKey = new AzureBlobKey(config, key);
+            if (azureBlobKey.isVersioned()) {
+                // should never happen
+                throw new NuxeoException("Invalid versioned key '%s'".formatted(azureBlobKey));
+            }
+            BlobClient blobClient = azureBlobKey.blobClient();
+            if (getKeyStrategy().useDeDuplication()) {
+                if (blobClient.exists()) {
+                    log.debug("Blob with digest: {} is already in Azure", key);
+                    return key;
                 }
             }
-            return key;
+            return writeFile(azureBlobKey, file);
         } finally {
             if (tmp != null) {
                 try {
@@ -305,8 +359,47 @@ public class AzureBlobStore extends AbstractBlobStore {
     }
 
     @Override
+    public void writeBlobProperties(BlobUpdateContext blobUpdateContext) throws IOException {
+        String key = blobUpdateContext.key;
+        var azureKey = new AzureBlobKey(config, key);
+        if (config.retentionEnabled) {
+            if (!azureKey.isVersioned()) {
+                throw new IOException("Cannot set legal hold or retention on non-versioned blob");
+            }
+            BlobClient blobClient = azureKey.blobClient();
+            if (!blobClient.exists()) {
+                log.debug("Blob azure://{}/{} does not exist", config.containerName, azureKey);
+                return;
+            }
+            if (blobUpdateContext.updateLegalHold != null) {
+                blobClient.setLegalHold(blobUpdateContext.updateLegalHold.hold);
+            }
+            if (blobUpdateContext.updateRetainUntil != null) {
+                Calendar retainUntil = blobUpdateContext.updateRetainUntil.retainUntil;
+                OffsetDateTime retainUntilTime = retainUntil == null ? null
+                        : retainUntil.toInstant().atOffset(ZoneOffset.UTC);
+                BlobImmutabilityPolicy policy = new BlobImmutabilityPolicy().setPolicyMode(config.retentionMode)
+                                                                            .setExpiryTime(retainUntilTime);
+                blobClient.setImmutabilityPolicy(policy);
+            }
+        }
+    }
+
+    @Override
     public void deleteBlob(String key) {
-        client.getBlobClient(prefix + key).deleteIfExists();
+        var azureKey = new AzureBlobKey(config, key);
+        var blobClient = azureKey.blobClient();
+        if (useVersion) {
+            if (!blobClient.exists()) {
+                return;
+            }
+            if (Boolean.TRUE.equals(blobClient.getProperties().isCurrentVersion())) {
+                // weird azure behavior https://github.com/azure/azure-sdk-for-net/issues/52818
+                // if the version is the current one then first delete blob not its version
+                config.client.getBlobClient(azureKey.bucketKey()).deleteIfExists();
+            }
+        }
+        blobClient.deleteIfExists();
     }
 
     @Override
@@ -317,9 +410,9 @@ public class AzureBlobStore extends AbstractBlobStore {
     @Override
     public void clear() {
         ListBlobsOptions options = new ListBlobsOptions().setPrefix(prefix);
-        client.listBlobs(options, null).iterator().forEachRemaining(item -> {
-            client.getBlobClient(item.getName()).delete();
-        });
+        client.listBlobs(options, null)
+              .iterator()
+              .forEachRemaining(item -> client.getBlobClient(item.getName()).delete());
     }
 
 }

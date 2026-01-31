@@ -18,7 +18,7 @@
  */
 package org.nuxeo.ecm.core.security;
 
-import static org.nuxeo.ecm.core.model.BaseSession.isRetentionStricMode;
+import static org.nuxeo.ecm.core.model.BaseSession.isRetentionStrictMode;
 
 import java.util.Arrays;
 
@@ -53,8 +53,7 @@ public class RetentionAndHoldSecurityPolicy extends AbstractSecurityPolicy {
     @Override
     public boolean isRestrictingPermission(String permission) {
         // the important aspect is that we don't restrict BROWSE
-        return permission.equals(SecurityConstants.REMOVE)
-                && isRetentionStricMode();
+        return permission.equals(SecurityConstants.REMOVE) && isRetentionStrictMode();
     }
 
     @Override

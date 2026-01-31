@@ -71,12 +71,13 @@ public abstract class AbstractTestBlobScroll {
     @Inject
     protected ScrollService scrollService;
 
-    protected String getProviderId() {
+    protected static String getProviderId() {
         return "test";
     }
 
     protected abstract String getScrollName();
 
+    @SuppressWarnings("DataFlowIssue")
     @Test
     public void testBlobScroll() {
         Map<String, Long> expected = new TreeMap<>();
@@ -97,12 +98,12 @@ public abstract class AbstractTestBlobScroll {
             do {
                 assertTrue(scroll.hasNext());
                 List<String> next = scroll.next();
-                assertTrue("Unexpected scolled blobs", i + next.size() <= NB_FILE);
+                assertTrue("Unexpected scrolled blobs", i + next.size() <= NB_FILE);
                 actual.addAll(next);
                 i += next.size();
             } while (i < NB_FILE);
             Collections.sort(actual);
-            assertEquals("Unexpected scolled blobs", expected,
+            assertEquals("Unexpected scrolled blobs", expected,
                     actual.stream()
                           .collect(Collectors.toMap(AbstractBlobScroll::getBlobKey, AbstractBlobScroll::getBlobSize)));
             assertFalse(scroll.hasNext());
@@ -115,7 +116,7 @@ public abstract class AbstractTestBlobScroll {
             List<String> actual = scroll.next();
             assertEquals(NB_FILE, actual.size());
             Collections.sort(actual);
-            assertEquals("Unexpected scolled blobs", expected,
+            assertEquals("Unexpected scrolled blobs", expected,
                     actual.stream()
                           .collect(Collectors.toMap(AbstractBlobScroll::getBlobKey, AbstractBlobScroll::getBlobSize)));
             assertFalse(scroll.hasNext());

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,23 @@
  * Contributors:
  *     Guillaume Renard
  */
-package org.nuxeo.ecm.blob.azure;
+package org.nuxeo.ecm.blob;
 
-import static org.nuxeo.ecm.blob.azure.AzureBlobProvider.STORE_SCROLL_NAME;
-
-import org.nuxeo.ecm.core.blob.AbstractTestBlobScroll;
-import org.nuxeo.runtime.test.runner.Features;
+import org.nuxeo.ecm.core.blob.BlobManager;
+import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.runtime.test.runner.ConditionalIgnore;
 
 /**
- * @since 2023.6
+ * @since 2025.11
  */
-@Features(AzureBlobProviderFeature.class)
-public class TestAzureBlobScroll extends AbstractTestBlobScroll {
+public class IgnoreIfStorageRetentionDisabled implements ConditionalIgnore.Condition {
 
     @Override
-    protected String getScrollName() {
-        return STORE_SCROLL_NAME;
+    public boolean shouldIgnore() {
+        var bp = Framework.getService(BlobManager.class).getBlobProvider("test");
+        if (bp instanceof CloudBlobProvider<?> cloudBlobProvider) {
+            return !cloudBlobProvider.config.retentionEnabled;
+        }
+        return true;
     }
-
 }

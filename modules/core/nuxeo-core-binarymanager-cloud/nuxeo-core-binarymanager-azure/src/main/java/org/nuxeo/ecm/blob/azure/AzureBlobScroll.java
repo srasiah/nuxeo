@@ -18,6 +18,8 @@
  */
 package org.nuxeo.ecm.blob.azure;
 
+import static org.nuxeo.ecm.core.blob.KeyStrategy.VER_SEP;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -27,6 +29,7 @@ import org.nuxeo.ecm.core.blob.scroll.AbstractBlobScroll;
 
 import com.azure.core.http.rest.PagedResponse;
 import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.BlobListDetails;
 import com.azure.storage.blob.models.ListBlobsOptions;
 
 /**
@@ -50,6 +53,11 @@ public class AzureBlobScroll extends AbstractBlobScroll<AzureBlobProvider> {
         this.prefix = this.store.prefix;
         this.prefixLength = this.prefix.length();
         ListBlobsOptions options = new ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(size);
+        if (store.useVersion) {
+            var details = new BlobListDetails();
+            details.setRetrieveVersions(true);
+            options.setDetails(details);
+        }
         this.iterator = this.store.client.listBlobsByHierarchy("/", options, null).iterableByPage().iterator();
     }
 
@@ -69,7 +77,11 @@ public class AzureBlobScroll extends AbstractBlobScroll<AzureBlobProvider> {
                 // ignore sub directories
                 continue;
             }
-            addTo(result, blob.getName().substring(prefixLength), () -> blob.getProperties().getContentLength());
+            var key = blob.getName().substring(prefixLength);
+            if (store.useVersion) {
+                key += VER_SEP + blob.getVersionId();
+            }
+            addTo(result, key, () -> blob.getProperties().getContentLength());
         }
         return result;
     }

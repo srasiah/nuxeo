@@ -48,14 +48,35 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  */
 public class JSONManagedBlobDecoder implements JSONBlobDecoder {
 
+    /** @since 2025.10 */
+    public static final String DIGEST = "digest";
+
+    /** @since 2025.10 */
+    public static final String ENCODING = "encoding";
+
+    /** @since 2025.10 */
+    public static final String KEY = "key";
+
+    /** @since 2025.10 */
+    public static final String LENGTH = "length";
+
+    /** @since 2025.10 */
+    public static final String MIME_TYPE = "mime-type";
+
+    /** @since 2025.10 */
+    public static final String NAME = "name";
+
+    /** @since 2025.10 */
+    public static final String PROVIDER_ID = "providerId";
+
     @Override
     public Blob getBlobFromJSON(ObjectNode jsonObject) {
 
-        if (!(jsonObject.has("providerId") && jsonObject.has("key"))) {
+        if (!(jsonObject.has(PROVIDER_ID) && jsonObject.has(KEY))) {
             return null;
         }
 
-        String providerId = jsonObject.get("providerId").textValue();
+        String providerId = jsonObject.get(PROVIDER_ID).textValue();
         BlobProvider blobProvider = Framework.getService(BlobManager.class).getBlobProvider(providerId);
         if (blobProvider == null) {
             return null;
@@ -68,7 +89,22 @@ public class JSONManagedBlobDecoder implements JSONBlobDecoder {
 
         try {
             BlobInfo blobInfo = new BlobInfo();
-            blobInfo.key = providerId + ":" + jsonObject.get("key").textValue();
+            blobInfo.key = providerId + ":" + jsonObject.get(KEY).textValue();
+            if (jsonObject.has(ENCODING)) {
+                blobInfo.encoding = jsonObject.get(ENCODING).textValue();
+            }
+            if (jsonObject.has(LENGTH)) {
+                blobInfo.length = jsonObject.get(LENGTH).longValue();
+            }
+            if (jsonObject.has(MIME_TYPE)) {
+                blobInfo.mimeType = jsonObject.get(MIME_TYPE).textValue();
+            }
+            if (jsonObject.has(NAME)) {
+                blobInfo.filename = jsonObject.get(NAME).textValue();
+            }
+            if (jsonObject.has(DIGEST)) {
+                blobInfo.digest = jsonObject.get(DIGEST).textValue();
+            }
             return blobProvider.readBlob(blobInfo);
         } catch (IOException e) {
             throw new NuxeoException(e);

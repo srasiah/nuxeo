@@ -23,8 +23,8 @@ import static org.nuxeo.ecm.core.storage.gcp.GoogleStorageBlobStoreConfiguration
 import java.io.IOException;
 import java.util.Map;
 
+import org.nuxeo.ecm.blob.CloudBlobProvider;
 import org.nuxeo.ecm.core.blob.BlobStore;
-import org.nuxeo.ecm.core.blob.BlobStoreBlobProvider;
 import org.nuxeo.ecm.core.blob.CachingBlobStore;
 import org.nuxeo.ecm.core.blob.CachingConfiguration;
 import org.nuxeo.ecm.core.blob.DigestConfiguration;
@@ -41,13 +41,11 @@ import org.nuxeo.ecm.core.blob.TransactionalBlobStore;
  *
  * @since 2023.5
  */
-public class GoogleStorageBlobProvider extends BlobStoreBlobProvider {
+public class GoogleStorageBlobProvider extends CloudBlobProvider<GoogleStorageBlobStoreConfiguration> {
 
     public static final String STORE_SCROLL_NAME = "googleStorageBlobScroll";
 
     protected DigestConfiguration digestConfiguration;
-
-    protected GoogleStorageBlobStoreConfiguration config;
 
     @Override
     public void close() {
@@ -56,7 +54,6 @@ public class GoogleStorageBlobProvider extends BlobStoreBlobProvider {
 
     @Override
     protected BlobStore getBlobStore(String blobProviderId, Map<String, String> properties) throws IOException {
-        config = new GoogleStorageBlobStoreConfiguration(properties);
         digestConfiguration = new DigestConfiguration(SYSTEM_PROPERTY_PREFIX, properties);
         KeyStrategy keyStrategy = getKeyStrategy();
         BlobStore store = new GoogleStorageBlobStore(blobProviderId, "googleStorage", config, keyStrategy);

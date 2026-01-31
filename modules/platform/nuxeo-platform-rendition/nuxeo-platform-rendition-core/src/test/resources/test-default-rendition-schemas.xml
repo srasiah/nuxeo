@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component name="org.nuxeo.dam.core.types">
 
-  <extension target="org.nuxeo.ecm.core.schema.TypeService" point="schema">
-    <schema name="custom-folderish" src="schemas/custom-folderish.xsd" />
-  </extension>
-
   <extension target="org.nuxeo.ecm.core.schema.TypeService" point="doctype">
 
-    <doctype name="CustomFolderish" extends="Document">
+    <doctype name="CustomFolderish" extends="File">
       <facet name="Folderish"/>
       <schema name="common" />
       <schema name="dublincore" />
@@ -18,6 +14,33 @@
       <schema name="common" />
       <schema name="dublincore" />
     </doctype>
+
+  </extension>
+
+  <extension target="org.nuxeo.ecm.core.lifecycle.LifeCycleService" point="lifecycle">
+
+    <lifecycle name="custom" defaultInitial="draft">
+      <transitions>
+        <transition name="start" destinationState="started" />
+      </transitions>
+      <states>
+        <state name="draft" initial="true">
+          <transitions>
+            <transition>start</transition>
+          </transitions>
+        </state>
+        <state name="started" />
+      </states>
+    </lifecycle>
+
+  </extension>
+
+  <extension target="org.nuxeo.ecm.core.lifecycle.LifeCycleService"
+    point="types">
+
+    <types>
+      <type name="CustomFolderish">custom</type>
+    </types>
 
   </extension>
 

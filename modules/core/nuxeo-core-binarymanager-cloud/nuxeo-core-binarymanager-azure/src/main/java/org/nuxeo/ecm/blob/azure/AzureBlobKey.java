@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,20 +18,28 @@
  */
 package org.nuxeo.ecm.blob.azure;
 
-import static org.nuxeo.ecm.blob.azure.AzureBlobProvider.STORE_SCROLL_NAME;
+import org.nuxeo.ecm.blob.CloudBlobKey;
 
-import org.nuxeo.ecm.core.blob.AbstractTestBlobScroll;
-import org.nuxeo.runtime.test.runner.Features;
+import com.azure.storage.blob.BlobClient;
 
 /**
- * @since 2023.6
+ * @since 2025.11
  */
-@Features(AzureBlobProviderFeature.class)
-public class TestAzureBlobScroll extends AbstractTestBlobScroll {
+public record AzureBlobKey(AzureBlobStoreConfiguration config, String key)
+        implements CloudBlobKey<AzureBlobStoreConfiguration> {
 
     @Override
-    protected String getScrollName() {
-        return STORE_SCROLL_NAME;
+    public String bucketPrefix() {
+        return config.prefix;
     }
 
+    public String blobName() {
+        // Azure terminology
+        return bucketKey();
+    }
+
+    public BlobClient blobClient() {
+        return isVersioned() ? config.client.getBlobVersionClient(blobName(), versionId())
+                : config.client.getBlobClient(blobName());
+    }
 }

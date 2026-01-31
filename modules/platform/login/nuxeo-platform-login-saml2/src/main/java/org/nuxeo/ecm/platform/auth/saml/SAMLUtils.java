@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2023-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 package org.nuxeo.ecm.platform.auth.saml;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
+import static org.nuxeo.ecm.platform.auth.saml.SAMLConstants.HTTP_SESSION_SAML_SESSION;
 import static org.nuxeo.ecm.platform.ui.web.auth.NXAuthConstants.LOGIN_ERROR;
 
 import java.util.Optional;
@@ -45,7 +46,12 @@ import org.opensaml.saml.saml2.core.NameIDType;
  */
 public final class SAMLUtils {
 
-    public static final String SAML_SESSION_KEY = "SAML_SESSION";
+    /**
+     * @deprecated since 2025.10, use {@link org.nuxeo.ecm.platform.auth.saml.SAMLConstants#HTTP_SESSION_SAML_SESSION}
+     *             instead.
+     */
+    @Deprecated(since = "2025.10", forRemoval = true)
+    public static final String SAML_SESSION_KEY = HTTP_SESSION_SAML_SESSION;
 
     private SAMLUtils() {
         // utility class
@@ -57,7 +63,7 @@ public final class SAMLUtils {
 
     @SuppressWarnings("unchecked")
     public static <T extends SAMLObject> T buildSAMLObject(QName qName) {
-        return (T) ConfigurationService.get(XMLObjectProviderRegistry.class)
+        return (T) ConfigurationService.ensure(XMLObjectProviderRegistry.class)
                                        .getBuilderFactory()
                                        .ensureBuilder(qName)
                                        .buildObject(qName);
@@ -80,7 +86,7 @@ public final class SAMLUtils {
     public static Optional<Cookie> getSAMLHttpCookie(HttpServletRequest request) {
         return Stream.ofNullable(request.getCookies())
                      .flatMap(Stream::of)
-                     .filter(c -> SAML_SESSION_KEY.equals(c.getName()))
+                     .filter(c -> HTTP_SESSION_SAML_SESSION.equals(c.getName()))
                      .findFirst();
     }
 
@@ -92,7 +98,7 @@ public final class SAMLUtils {
         if (credential.getSessionIndexes() == null || credential.getSessionIndexes().isEmpty()) {
             return Optional.empty();
         }
-        String sessionId = credential.getSessionIndexes().get(0);
+        String sessionId = credential.getSessionIndexes().getFirst();
         String nameValue = credential.getNameID().getValue();
         String nameFormat = defaultIfBlank(credential.getNameID().getFormat(), NameIDType.UNSPECIFIED);
         return Optional.of(new SAMLSessionCookie(sessionId, nameValue, nameFormat));
@@ -101,7 +107,7 @@ public final class SAMLUtils {
     public record SAMLSessionCookie(String sessionId, String nameValue, String nameFormat) {
 
         public Cookie toCookie(HttpServletRequest request) {
-            return CookieHelper.createCookie(request, SAML_SESSION_KEY,
+            return CookieHelper.createCookie(request, HTTP_SESSION_SAML_SESSION,
                     String.join("|", sessionId, nameValue, nameFormat));
         }
 

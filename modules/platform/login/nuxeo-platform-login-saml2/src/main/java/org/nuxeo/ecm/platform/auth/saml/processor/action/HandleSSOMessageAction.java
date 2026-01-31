@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2023-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
  *     Kevin Leturc <kevin.leturc@hyland.com>
  */
 package org.nuxeo.ecm.platform.auth.saml.processor.action;
+
+import static org.nuxeo.ecm.platform.auth.saml.SAMLConstants.HTTP_ATTRIBUTE_SAML_CREDENTIAL;
 
 import jakarta.validation.constraints.NotNull;
 
@@ -40,18 +42,18 @@ public class HandleSSOMessageAction extends AbstractConditionalProfileAction {
     protected void doExecute(@NotNull ProfileRequestContext profileRequestContext) {
         var request = HttpServletRequestResponseContext.getRequest();
 
-        var inboundMessageContext = profileRequestContext.getInboundMessageContext();
-        var assertionsContentContext = inboundMessageContext.getSubcontext(SAMLAssertionsContentContext.class, true);
+        var inboundMessageContext = profileRequestContext.ensureInboundMessageContext();
+        var assertionsContentContext = inboundMessageContext.ensureSubcontext(SAMLAssertionsContentContext.class);
 
-        var nameID = inboundMessageContext.getSubcontext(SAMLSubjectNameIdentifierContext.class, true)
+        var nameID = inboundMessageContext.ensureSubcontext(SAMLSubjectNameIdentifierContext.class)
                                           .getSAML2SubjectNameID();
         var sessionIndexes = assertionsContentContext.getSessionIndexes();
-        var remoteEntityId = inboundMessageContext.getSubcontext(SAMLPeerEntityContext.class).getEntityId();
-        var relayState = inboundMessageContext.getSubcontext(SAMLBindingContext.class).getRelayState();
+        var remoteEntityId = inboundMessageContext.ensureSubcontext(SAMLPeerEntityContext.class).getEntityId();
+        var relayState = inboundMessageContext.ensureSubcontext(SAMLBindingContext.class).getRelayState();
         var attributes = assertionsContentContext.getAttributes();
-        var localEntityId = inboundMessageContext.getSubcontext(SAMLSelfEntityContext.class).getEntityId();
+        var localEntityId = inboundMessageContext.ensureSubcontext(SAMLSelfEntityContext.class).getEntityId();
         var credential = new SAMLCredential(nameID, sessionIndexes, remoteEntityId, relayState, attributes,
                 localEntityId);
-        request.setAttribute("SAMLCredential", credential);
+        request.setAttribute(HTTP_ATTRIBUTE_SAML_CREDENTIAL, credential);
     }
 }

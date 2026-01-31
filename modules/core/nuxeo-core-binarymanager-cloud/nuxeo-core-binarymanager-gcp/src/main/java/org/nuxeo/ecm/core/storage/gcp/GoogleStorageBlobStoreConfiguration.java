@@ -23,7 +23,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.nuxeo.ecm.core.blob.BlobProviderDescriptor.ALLOW_BYTE_RANGE;
 import static org.nuxeo.ecm.core.blob.BlobProviderDescriptor.RECORD;
-import static org.nuxeo.ecm.core.model.BaseSession.isRetentionStricMode;
+import static org.nuxeo.ecm.core.model.BaseSession.isRetentionStrictMode;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -145,7 +145,7 @@ public class GoogleStorageBlobStoreConfiguration extends CloudBlobStoreConfigura
             } else {
                 // Google storage does not have a default object retention policy unlike s3
                 // we can only rely on Nuxeo platform setting
-                retentionMode = isRetentionStricMode() ? BlobInfo.Retention.Mode.LOCKED
+                retentionMode = isRetentionStrictMode() ? BlobInfo.Retention.Mode.LOCKED
                         : BlobInfo.Retention.Mode.UNLOCKED;
             }
         } else {

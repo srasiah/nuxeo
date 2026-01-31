@@ -35,12 +35,12 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.common.utils.RFC2231;
+import org.nuxeo.ecm.blob.CloudBlobProvider;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.blob.BlobManager;
 import org.nuxeo.ecm.core.blob.BlobStatus;
 import org.nuxeo.ecm.core.blob.BlobStore;
-import org.nuxeo.ecm.core.blob.BlobStoreBlobProvider;
 import org.nuxeo.ecm.core.blob.CachingBlobStore;
 import org.nuxeo.ecm.core.blob.KeyStrategy;
 import org.nuxeo.ecm.core.blob.ManagedBlob;
@@ -65,7 +65,7 @@ import software.amazon.awssdk.transfer.s3.S3TransferManager;
  *
  * @since 11.1
  */
-public class S3BlobProvider extends BlobStoreBlobProvider implements S3ManagedTransfer {
+public class S3BlobProvider extends CloudBlobProvider<S3BlobStoreConfiguration> implements S3ManagedTransfer {
 
     private static final Logger log = LogManager.getLogger(S3BlobProvider.class);
 
@@ -74,11 +74,8 @@ public class S3BlobProvider extends BlobStoreBlobProvider implements S3ManagedTr
      */
     public static final String STORE_SCROLL_NAME = "s3BlobScroll";
 
-    public S3BlobStoreConfiguration config;
-
     @Override
     protected BlobStore getBlobStore(String blobProviderId, Map<String, String> properties) throws IOException {
-        config = getConfiguration(properties);
         log.info("Registering S3 blob provider {}", blobProviderId);
         KeyStrategy keyStrategy = getKeyStrategy();
 
@@ -123,6 +120,7 @@ public class S3BlobProvider extends BlobStoreBlobProvider implements S3ManagedTr
         return allow;
     }
 
+    @Deprecated(since = "2025.11", forRemoval = true)
     protected S3BlobStoreConfiguration getConfiguration(Map<String, String> properties) throws IOException {
         return new S3BlobStoreConfiguration(properties);
     }

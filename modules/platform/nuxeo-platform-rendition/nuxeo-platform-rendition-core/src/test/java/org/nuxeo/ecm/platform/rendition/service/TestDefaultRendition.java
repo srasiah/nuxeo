@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
+import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -67,7 +68,7 @@ public class TestDefaultRendition {
     protected HotDeployer hotDeployer;
 
     @Test
-    public void testDefaultRenditionOnContainer() throws Exception {
+    public void testDefaultRenditionOnContainer() throws IOException {
         DocumentModel folder01 = session.createDocumentModel("/", "dummy-folder", "Folder");
         folder01 = session.createDocument(folder01);
         TestRenditionProvider.createBlobDoc(folder01.getPathAsString(), "dummy-file01", "dummy-file01.txt", "File",
@@ -112,7 +113,7 @@ public class TestDefaultRendition {
     }
 
     @Test
-    public void testDefaultRenditionOnFolderishAndCollectionContainers() throws Exception {
+    public void testDefaultRenditionOnFolderishAndCollectionContainers() throws IOException {
         DocumentModel customFolderish01 = session.createDocumentModel("/", "dummy-custom-folderish", "CustomFolderish");
         customFolderish01 = session.createDocument(customFolderish01);
         TestRenditionProvider.createBlobDoc(customFolderish01.getPathAsString(), "dummy-file01", "dummy-file01.txt",
@@ -159,7 +160,7 @@ public class TestDefaultRendition {
     }
 
     @Test
-    public void testDefaultRendition() throws Exception {
+    public void testDefaultRendition() {
         DocumentModel file = TestRenditionProvider.createBlobDoc("File", session);
         Renderable renderable = file.getAdapter(Renderable.class);
         assertNotNull(renderable);
@@ -198,6 +199,22 @@ public class TestDefaultRendition {
         assertNull(folderDownloadRen);
         assertEquals("application/zip", folderPublishRen.getBlob().getMimeType());
         assertEquals("application/pdf", fileRen.getBlob().getMimeType());
+    }
+
+    // NXP-33347
+    @Test
+    public void testStoredDefaultRenditionFolderishCustomLifecycle() throws IOException {
+        DocumentModel doc = TestRenditionProvider.createBlobDoc("CustomFolderish", session);
+        Renderable renderable = doc.getAdapter(Renderable.class);
+        assertNotNull(renderable);
+
+        // Get "publish" default rendition for document with file schema, expecting "mainBlob"
+        Rendition ren = renditionService.getDefaultRendition(doc, "publish", true, null);
+        assertNotNull(ren);
+        assertEquals("mainBlob", ren.getName());
+        Blob blob = ren.getBlob();
+        assertEquals("text/plain", blob.getMimeType());
+        assertEquals("Dummy text", blob.getString());
     }
 
 }

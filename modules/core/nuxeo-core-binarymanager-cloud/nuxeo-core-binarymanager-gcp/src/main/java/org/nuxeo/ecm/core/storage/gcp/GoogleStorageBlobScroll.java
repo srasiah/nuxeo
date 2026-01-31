@@ -18,6 +18,8 @@
  */
 package org.nuxeo.ecm.core.storage.gcp;
 
+import static org.nuxeo.ecm.core.blob.KeyStrategy.VER_SEP;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -57,7 +59,13 @@ public class GoogleStorageBlobScroll extends AbstractBlobScroll<GoogleStorageBlo
     @Override
     public List<String> next() {
         if (blobs == null) {
-            blobs = this.store.bucket.list(BlobListOption.fields(BlobField.ID, BlobField.SIZE),
+            BlobListOption fieldsOption;
+            if (store.useVersion) {
+                fieldsOption = BlobListOption.fields(BlobField.ID, BlobField.SIZE, BlobField.GENERATION);
+            } else {
+                fieldsOption = BlobListOption.fields(BlobField.ID, BlobField.SIZE);
+            }
+            blobs = this.store.bucket.list(fieldsOption, BlobListOption.versions(store.useVersion),
                     BlobListOption.prefix(this.store.bucketPrefix), BlobListOption.pageSize(size));
         } else {
             if (!blobs.hasNextPage()) {
@@ -67,7 +75,11 @@ public class GoogleStorageBlobScroll extends AbstractBlobScroll<GoogleStorageBlo
         }
         List<String> result = new ArrayList<>();
         for (Blob blob : blobs.getValues()) {
-            addTo(result, blob.getName().substring(prefixLength), () -> blob.getSize());
+            var key = blob.getName().substring(prefixLength);
+            if (store.useVersion) {
+                key += VER_SEP + blob.getGeneration().toString();
+            }
+            addTo(result, key, blob::getSize);
         }
         return result;
     }

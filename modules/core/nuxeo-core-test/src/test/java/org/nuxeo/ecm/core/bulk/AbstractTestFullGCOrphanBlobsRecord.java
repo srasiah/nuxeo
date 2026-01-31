@@ -69,7 +69,8 @@ public abstract class AbstractTestFullGCOrphanBlobsRecord extends AbstractTestFu
 
         // We are testing record provider
         // blob versioning is enabled and blob key has the ${docId}@{versionId} pattern
-        assertTrue(blobKey.startsWith(blobProvider.blobProviderId + ":" + doc.getId() + KeyStrategy.VER_SEP));
+        assertTrue("Unexpected blobKey: %s".formatted(blobKey),
+                blobKey.startsWith(blobProvider.blobProviderId + ":" + doc.getId() + KeyStrategy.VER_SEP));
 
         BulkStatus status = triggerAndWaitGC(RECORDS_PARAM);
         assertNotNull(status);

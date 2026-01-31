@@ -18,7 +18,11 @@
  */
 package org.nuxeo.ecm.blob.azure;
 
+import static org.nuxeo.ecm.core.blob.BlobProviderDescriptor.RECORD;
+import static org.nuxeo.ecm.core.model.BaseSession.isRetentionStrictMode;
+
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
@@ -28,6 +32,7 @@ import org.nuxeo.ecm.blob.CloudBlobStoreConfiguration;
 
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
+import com.azure.storage.blob.models.BlobImmutabilityPolicyMode;
 import com.azure.storage.common.StorageSharedKeyCredential;
 
 /**
@@ -57,6 +62,57 @@ public class AzureBlobStoreConfiguration extends CloudBlobStoreConfiguration {
 
     public static final String DELIMITER = "/";
 
+    // Upload properties
+
+    /**
+     * @since 2025.10
+     */
+    public static final long BLOCK_SIZE_DEFAULT = (long) (4 * 1024 * 1024); // 4 MiB
+
+    /**
+     * @since 2025.10
+     */
+    public static final String BLOCK_SIZE_PROPERTY = "upload.blockSize";
+
+    /**
+     * @since 2025.10
+     */
+    public static final int MAX_CONCURRENCY_DEFAULT = 2;
+
+    /**
+     * @since 2025.10
+     */
+    public static final String MAX_CONCURRENCY_PROPERTY = "upload.maxConcurrency";
+
+    /**
+     * @since 2025.10
+     */
+    public static final long MAX_SINGLE_UPLOAD_SIZE_DEFAULT = (long) 8 * 1024 * 1024; // 8 MiB
+
+    /**
+     * @since 2025.10
+     */
+    public static final String MAX_SINGLE_UPLOAD_SIZE_PROPERTY = "upload.maxSingleUploadSize";
+
+    /**
+     * @since 2025.10
+     */
+    public static final Duration UPLOAD_TIMEOUT_DEFAULT = Duration.ofHours(2);
+
+    /**
+     * @since 2025.10
+     */
+    public static final String UPLOAD_TIMEOUT_PROPERTY = "upload.timeout";
+
+    protected final long blockSize;
+
+    protected final int maxConcurrency;
+
+    protected final long maxSingleUploadSize;
+
+    protected final Duration uploadTimeout;
+    // End upload properties
+
     protected final String cdnHost;
 
     protected final String containerName;
@@ -64,6 +120,10 @@ public class AzureBlobStoreConfiguration extends CloudBlobStoreConfiguration {
     protected String prefix;
 
     protected BlobContainerClient client;
+
+    public final BlobImmutabilityPolicyMode retentionMode;
+
+    public final boolean isContainerVersioningEnabled;
 
     public AzureBlobStoreConfiguration(Map<String, String> properties) throws IOException {
         super(SYSTEM_PROPERTY_PREFIX, properties);
@@ -76,10 +136,8 @@ public class AzureBlobStoreConfiguration extends CloudBlobStoreConfiguration {
         String accountName = getProperty(ACCOUNT_NAME_PROPERTY);
         // accountName and containerName are conf properties, not user inputs, no need to sanitize
         String endpoint = String.format("https://%s.blob.core.windows.net/%s", accountName, containerName);
-        client = new BlobContainerClientBuilder().endpoint(endpoint)
-                                                 .credential(new StorageSharedKeyCredential(accountName,
-                                                         getProperty(ACCOUNT_KEY_PROPERTY)))
-                                                 .buildClient();
+        var credentials = new StorageSharedKeyCredential(accountName, getProperty(ACCOUNT_KEY_PROPERTY));
+        client = new BlobContainerClientBuilder().endpoint(endpoint).credential(credentials).buildClient();
         client.createIfNotExists();
         prefix = StringUtils.defaultIfBlank(properties.get(PREFIX_PROPERTY), "");
         String delimiter = DELIMITER;
@@ -95,6 +153,35 @@ public class AzureBlobStoreConfiguration extends CloudBlobStoreConfiguration {
                 prefix += delimiter;
             }
         }
+        blockSize = getOptionalLongProperty(BLOCK_SIZE_PROPERTY).orElse(BLOCK_SIZE_DEFAULT);
+        maxConcurrency = getOptionalIntegerProperty(MAX_CONCURRENCY_PROPERTY).orElse(MAX_CONCURRENCY_DEFAULT);
+        maxSingleUploadSize = getOptionalLongProperty(MAX_SINGLE_UPLOAD_SIZE_PROPERTY).orElse(
+                MAX_SINGLE_UPLOAD_SIZE_DEFAULT);
+        uploadTimeout = getOptionalDurationProperty(UPLOAD_TIMEOUT_PROPERTY).orElse(UPLOAD_TIMEOUT_DEFAULT);
+        if (Boolean.parseBoolean(properties.get(RECORD))) {
+            retentionEnabled = client.getProperties().isImmutableStorageWithVersioningEnabled();
+            if (!retentionEnabled) {
+                log.warn("Blob provider is configured for records but retention is not enabled on Azure container {}",
+                        containerName);
+                retentionMode = null;
+            } else {
+                // Azure does not have a default object retention policy unlike s3
+                // we can only rely on Nuxeo platform setting
+                retentionMode = isRetentionStrictMode() ? BlobImmutabilityPolicyMode.LOCKED
+                        : BlobImmutabilityPolicyMode.UNLOCKED;
+            }
+        } else {
+            retentionEnabled = false;
+            retentionMode = null;
+        }
+        // Checking if versioning is enabled at resource manager level
+        // It requires subscription id which is not provided
+        // Let's fall back on immutability on storage container which implies versioning
+        isContainerVersioningEnabled = retentionEnabled;
+    }
+
+    public AzureBlobStoreConfiguration withNamespace(String ns) throws IOException {
+        return new AzureBlobStoreConfiguration(propertiesWithNamespace(ns));
     }
 
 }

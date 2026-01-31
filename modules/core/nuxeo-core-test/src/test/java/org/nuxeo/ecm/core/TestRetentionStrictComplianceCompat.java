@@ -47,14 +47,14 @@ public class TestRetentionStrictComplianceCompat {
     @Test
     @WithFrameworkProperty(name = PROP_RETENTION_COMPLIANCE_MODE_ENABLED, value = "true")
     public void testIsCompliantStrict() {
-        assertTrue(BaseSession.isRetentionStricMode());
+        assertTrue(BaseSession.isRetentionStrictMode());
     }
 
     @SuppressWarnings("deprecation")
     @Test
     @WithFrameworkProperty(name = PROP_RETENTION_COMPLIANCE_MODE_ENABLED, value = "false")
     public void testIsNotCompliantNotStrict() {
-        assertFalse(BaseSession.isRetentionStricMode());
+        assertFalse(BaseSession.isRetentionStrictMode());
     }
 
     @SuppressWarnings("deprecation")
@@ -62,12 +62,12 @@ public class TestRetentionStrictComplianceCompat {
     @WithFrameworkProperty(name = PROP_RETENTION_STRICT_MODE_ENABLED, value = "false")
     @WithFrameworkProperty(name = PROP_RETENTION_COMPLIANCE_MODE_ENABLED, value = "false")
     public void testIsNotCompliantNotStrictNotStrict() {
-        assertFalse(BaseSession.isRetentionStricMode());
+        assertFalse(BaseSession.isRetentionStrictMode());
     }
 
     @Test
     public void testIsNotStrict() {
-        assertFalse(BaseSession.isRetentionStricMode());
+        assertFalse(BaseSession.isRetentionStrictMode());
     }
 
     @SuppressWarnings("deprecation")
@@ -75,13 +75,13 @@ public class TestRetentionStrictComplianceCompat {
     @WithFrameworkProperty(name = PROP_RETENTION_STRICT_MODE_ENABLED, value = "true")
     @WithFrameworkProperty(name = PROP_RETENTION_COMPLIANCE_MODE_ENABLED, value = "false")
     public void testIsStrictNotCompliantStrict() {
-        assertTrue(BaseSession.isRetentionStricMode());
+        assertTrue(BaseSession.isRetentionStrictMode());
     }
 
     @Test
     @WithFrameworkProperty(name = PROP_RETENTION_STRICT_MODE_ENABLED, value = "false")
     public void testIsNotStrictNotStrict() {
-        assertFalse(BaseSession.isRetentionStricMode());
+        assertFalse(BaseSession.isRetentionStrictMode());
     }
 
     @SuppressWarnings("deprecation")
@@ -89,12 +89,12 @@ public class TestRetentionStrictComplianceCompat {
     @WithFrameworkProperty(name = PROP_RETENTION_STRICT_MODE_ENABLED, value = "false")
     @WithFrameworkProperty(name = PROP_RETENTION_COMPLIANCE_MODE_ENABLED, value = "true")
     public void testIsNotStrictCompliantNotStrict() {
-        assertFalse(BaseSession.isRetentionStricMode());
+        assertFalse(BaseSession.isRetentionStrictMode());
     }
 
     @Test
     @WithFrameworkProperty(name = PROP_RETENTION_STRICT_MODE_ENABLED, value = "true")
     public void testIsStrictStrict() {
-        assertTrue(BaseSession.isRetentionStricMode());
+        assertTrue(BaseSession.isRetentionStrictMode());
     }
 }

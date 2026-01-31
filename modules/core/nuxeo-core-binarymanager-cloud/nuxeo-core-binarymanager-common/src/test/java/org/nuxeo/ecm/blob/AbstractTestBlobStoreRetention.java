@@ -18,18 +18,18 @@
  */
 package org.nuxeo.ecm.blob;
 
-import static java.util.Calendar.MILLISECOND;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assume.assumeTrue;
 import static org.nuxeo.ecm.core.api.CoreSession.RETAIN_UNTIL_INDETERMINATE;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Calendar;
+import java.util.GregorianCalendar;
 
 import jakarta.inject.Inject;
 
@@ -43,6 +43,7 @@ import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.blob.ManagedBlob;
 import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.runtime.test.runner.BlacklistComponent;
+import org.nuxeo.runtime.test.runner.ConditionalIgnore;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.TransactionalFeature;
@@ -53,6 +54,7 @@ import org.nuxeo.runtime.test.runner.TransactionalFeature;
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
 @BlacklistComponent("org.nuxeo.ecm.core.storage.cloud.requestcontroller.service.contrib")
+@ConditionalIgnore(condition = IgnoreIfStorageRetentionDisabled.class)
 public abstract class AbstractTestBlobStoreRetention<T extends CloudBlobStoreConfiguration, S extends CloudBlobKey<T>> {
 
     @Inject
@@ -77,9 +79,18 @@ public abstract class AbstractTestBlobStoreRetention<T extends CloudBlobStoreCon
 
     protected abstract void removeLegalHold() throws IOException;
 
+    protected Duration getRetentionDelay() {
+        return Duration.ofMillis(500);
+    }
+
+    protected Calendar getNextRetentionDelay() {
+        Instant instant = Instant.now().plus(getRetentionDelay());
+        ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(instant, ZoneId.systemDefault());
+        return GregorianCalendar.from(zonedDateTime);
+    }
+
     @Before
     public void setUp() {
-        assumeTrue("Cannot run test without retention enabled", getConfig().retentionEnabled);
         // Create a document with blob
         doc = session.createDocumentModel("/", "document", "File");
         doc.setPropertyValue("file:content", (Serializable) Blobs.createBlob("A retainable content"));
@@ -98,7 +109,9 @@ public abstract class AbstractTestBlobStoreRetention<T extends CloudBlobStoreCon
             // remove hold
             removeLegalHold();
             // to clean the bucket, wait for retention expired
-            await().atMost(2, SECONDS).pollInterval(200, MILLISECONDS).until(this::isRetentionExpired);
+            await().atMost(getRetentionDelay().multipliedBy(2).plus(Duration.ofSeconds(1)))
+                   .pollInterval(Duration.ofMillis(200))
+                   .until(this::isRetentionExpired);
 
         } catch (IOException e) {
             // Never mind
@@ -107,15 +120,13 @@ public abstract class AbstractTestBlobStoreRetention<T extends CloudBlobStoreCon
 
     @Test
     public void testRetainUntilShortWhileAndExtend() {
-        Calendar retainShortWhile = Calendar.getInstance();
-        retainShortWhile.add(MILLISECOND, 500);
+        Calendar retainShortWhile = getNextRetentionDelay();
         session.setRetainUntil(doc.getRef(), retainShortWhile, null);
         txFeature.nextTransaction();
         assertRetention(retainShortWhile.toInstant());
 
         // Extend retention expiration date
-        Calendar retainLongerWhile = Calendar.getInstance();
-        retainLongerWhile.add(MILLISECOND, 500);
+        Calendar retainLongerWhile = getNextRetentionDelay();
         session.setRetainUntil(doc.getRef(), retainLongerWhile, null);
         txFeature.nextTransaction();
         assertRetention(retainLongerWhile.toInstant());
@@ -138,8 +149,7 @@ public abstract class AbstractTestBlobStoreRetention<T extends CloudBlobStoreCon
         txFeature.nextTransaction();
         assertObjectHasLegalHold();
 
-        Calendar retainShortWhile = Calendar.getInstance();
-        retainShortWhile.add(MILLISECOND, 500);
+        Calendar retainShortWhile = getNextRetentionDelay();
         session.setRetainUntil(doc.getRef(), retainShortWhile, null);
         txFeature.nextTransaction();
         assertObjectHasNotLegalHold();
@@ -154,8 +164,7 @@ public abstract class AbstractTestBlobStoreRetention<T extends CloudBlobStoreCon
         session.setLegalHold(doc.getRef(), true, null);
         txFeature.nextTransaction();
 
-        Calendar retainShortWhile = Calendar.getInstance();
-        retainShortWhile.add(MILLISECOND, 500);
+        Calendar retainShortWhile = getNextRetentionDelay();
         session.setRetainUntil(doc.getRef(), retainShortWhile, null);
         txFeature.nextTransaction();
         assertObjectHasLegalHold();
@@ -177,8 +186,7 @@ public abstract class AbstractTestBlobStoreRetention<T extends CloudBlobStoreCon
         txFeature.nextTransaction();
         assertObjectHasLegalHold(); // due to retention indeterminate
 
-        Calendar retainShortWhile = Calendar.getInstance();
-        retainShortWhile.add(MILLISECOND, 500);
+        Calendar retainShortWhile = getNextRetentionDelay();
         session.setRetainUntil(doc.getRef(), retainShortWhile, null);
         txFeature.nextTransaction();
         assertObjectHasNotLegalHold();

@@ -409,7 +409,7 @@ public class SQLDocumentLive extends BaseDocument<Node> implements SQLDocument {
 
     protected void makeRecord(boolean flexible) {
         if (flexible) {
-            if (BaseSession.isRetentionStricMode()) {
+            if (BaseSession.isRetentionStrictMode()) {
                 throw new UnsupportedOperationException("Cannot make flexible record in strict mode");
             }
             if (isEnforcedRecord()) {

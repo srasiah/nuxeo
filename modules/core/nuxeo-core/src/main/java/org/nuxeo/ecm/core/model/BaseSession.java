@@ -80,15 +80,15 @@ public abstract class BaseSession implements Session<QueryFilter> {
             ConfigurationService configurationService = Framework.getService(ConfigurationService.class);
             String val = configurationService.getString(VERSION_ACL_DISABLED_PROP).orElse("false");
             switch (val) {
-            case "false":
-                return ENABLED;
-            case "true":
-                return DISABLED;
-            case "legacy":
-                return LEGACY;
-            default:
-                log.error("Invalid value for configuration property {}: '{}'", VERSION_ACL_DISABLED_PROP, val);
-                return ENABLED;
+                case "false":
+                    return ENABLED;
+                case "true":
+                    return DISABLED;
+                case "legacy":
+                    return LEGACY;
+                default:
+                    log.error("Invalid value for configuration property {}: '{}'", VERSION_ACL_DISABLED_PROP, val);
+                    return ENABLED;
             }
         }
     }
@@ -170,7 +170,7 @@ public abstract class BaseSession implements Session<QueryFilter> {
             return true;
         }
         Objects.requireNonNull(principal);
-        boolean governanceMode = !isRetentionStricMode();
+        boolean governanceMode = !isRetentionStrictMode();
         boolean recordCleaner = principal.isMemberOf(SecurityConstants.RECORDS_CLEANER_GROUP);
         return governanceMode && recordCleaner;
     }
@@ -185,7 +185,7 @@ public abstract class BaseSession implements Session<QueryFilter> {
      * @return true if the retention is in strict mode, false otherwise
      * @since 2023.1
      */
-    public static boolean isRetentionStricMode() {
+    public static boolean isRetentionStrictMode() {
         if (isBooleanPropertyFalse(PROP_RETENTION_STRICT_MODE_ENABLED)) {
             return false;
         } else if (isBooleanPropertyTrue(PROP_RETENTION_STRICT_MODE_ENABLED)) {
@@ -194,6 +194,14 @@ public abstract class BaseSession implements Session<QueryFilter> {
             // backward compat
             return isBooleanPropertyTrue(PROP_RETENTION_COMPLIANCE_MODE_ENABLED);
         }
+    }
+
+    /**
+     * @deprecated since 2025.11, use {@link #isRetentionStrictMode()} instead.
+     */
+    @Deprecated(since = "2025.11", forRemoval = true)
+    public static boolean isRetentionStricMode() {
+        return isRetentionStrictMode();
     }
 
     /**

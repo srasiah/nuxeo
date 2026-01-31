@@ -30,15 +30,16 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
+import org.nuxeo.ecm.blob.CloudBlobProvider;
 import org.nuxeo.ecm.core.blob.BlobManager;
 import org.nuxeo.ecm.core.blob.BlobStore;
-import org.nuxeo.ecm.core.blob.BlobStoreBlobProvider;
 import org.nuxeo.ecm.core.blob.CachingBlobStore;
 import org.nuxeo.ecm.core.blob.CachingConfiguration;
 import org.nuxeo.ecm.core.blob.DigestConfiguration;
 import org.nuxeo.ecm.core.blob.KeyStrategy;
 import org.nuxeo.ecm.core.blob.KeyStrategyDigest;
 import org.nuxeo.ecm.core.blob.ManagedBlob;
+import org.nuxeo.ecm.core.blob.TransactionalBlobStore;
 
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.sas.BlobSasPermission;
@@ -53,13 +54,11 @@ import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
  *
  * @since 2023.6
  */
-public class AzureBlobProvider extends BlobStoreBlobProvider {
+public class AzureBlobProvider extends CloudBlobProvider<AzureBlobStoreConfiguration> {
 
     public static final String STORE_SCROLL_NAME = "azureBlobScroll";
 
     protected DigestConfiguration digestConfiguration;
-
-    protected AzureBlobStoreConfiguration config;
 
     @Override
     public void close() {
@@ -68,17 +67,30 @@ public class AzureBlobProvider extends BlobStoreBlobProvider {
 
     @Override
     protected BlobStore getBlobStore(String blobProviderId, Map<String, String> properties) throws IOException {
-        config = new AzureBlobStoreConfiguration(properties);
         digestConfiguration = new DigestConfiguration(SYSTEM_PROPERTY_PREFIX, properties);
         KeyStrategy keyStrategy = getKeyStrategy();
-        if (!(keyStrategy instanceof KeyStrategyDigest ksd)) {
-            throw new UnsupportedOperationException("Azure Blob Provider only supports KeyStrategyDigest");
-        }
-        BlobStore store = new AzureBlobStore(blobProviderId, "azureStorage", config, ksd);
+        BlobStore store = new AzureBlobStore(blobProviderId, "azureStorage", config, keyStrategy);
         boolean caching = !config.getBooleanProperty("nocache");
         if (caching) {
             CachingConfiguration cachingConfiguration = new CachingConfiguration(SYSTEM_PROPERTY_PREFIX, properties);
             store = new CachingBlobStore(blobProviderId, "Cache", store, cachingConfiguration);
+        }
+        if (isTransactional()) {
+            BlobStore transientStore;
+            if (store.hasVersioning()) {
+                // if versioning is used, we don't need a separate transient store for transactions
+                transientStore = store;
+            } else {
+                // transient store is another Azure blob store wrapped in a caching store
+                AzureBlobStoreConfiguration transientConfig = config.withNamespace("tx");
+                transientStore = new AzureBlobStore(blobProviderId, "Azure_tmp", transientConfig, keyStrategy);
+                if (caching) {
+                    transientStore = new CachingBlobStore(blobProviderId, "Cache_tmp", transientStore,
+                            config.cachingConfiguration);
+                }
+            }
+            // transactional store
+            store = new TransactionalBlobStore(blobProviderId, store, transientStore);
         }
         return store;
     }
@@ -99,19 +111,19 @@ public class AzureBlobProvider extends BlobStoreBlobProvider {
         if (hint != BlobManager.UsageHint.DOWNLOAD || !config.directDownload) {
             return null;
         }
-        String bucketKey = config.prefix + stripBlobKeyPrefix(blob.getKey());
+        AzureBlobKey key = new AzureBlobKey(config, stripBlobKeyPrefix(blob.getKey()));
         long expiration = config.directDownloadExpire;
         if (StringUtils.isNotBlank(config.cdnHost)) {
-            return getURICDN(bucketKey, blob, expiration);
+            return getURICDN(key, blob, expiration);
         } else {
-            return getURIAzure(bucketKey, blob, expiration);
+            return getURIAzure(key, blob, expiration);
         }
     }
 
     /**
      * Gets a URI for the given blob for direct download via CDN.
      */
-    protected URI getURICDN(String key, ManagedBlob blob, long downloadExpireSeconds) throws IOException {
+    protected URI getURICDN(AzureBlobKey key, ManagedBlob blob, long downloadExpireSeconds) throws IOException {
         URI azure = getURIAzure(key, blob, downloadExpireSeconds);
         String cdn = azure.toString().replace(azure.getHost(), config.cdnHost);
         return URI.create(cdn);
@@ -120,14 +132,13 @@ public class AzureBlobProvider extends BlobStoreBlobProvider {
     /**
      * Gets a URI for the given blob for direct download.
      */
-    protected URI getURIAzure(String key, ManagedBlob blob, long downloadExpireSeconds) throws IOException {
-        BlobClient blobClient = config.client.getBlobClient(key);
-        String sasUrl = generateSASUrl(blobClient, encodeContentDisposition(blob.getFilename(), false, null),
+    protected URI getURIAzure(AzureBlobKey key, ManagedBlob blob, long downloadExpireSeconds) throws IOException {
+        String sasUrl = generateSASUrl(key, encodeContentDisposition(blob.getFilename(), false, null),
                 getContentTypeHeader(blob), downloadExpireSeconds);
         return URI.create(sasUrl);
     }
 
-    protected static String generateSASUrl(BlobClient sourceBlob, String contentDisposition, String contentType,
+    protected static String generateSASUrl(AzureBlobKey key, String contentDisposition, String contentType,
             long expirationSeconds) {
         OffsetDateTime expiryTime = OffsetDateTime.now().plusSeconds(expirationSeconds);
         BlobSasPermission permission = new BlobSasPermission().setReadPermission(true);
@@ -139,8 +150,11 @@ public class AzureBlobProvider extends BlobStoreBlobProvider {
         if (contentType != null) {
             sasValues.setContentType(contentType);
         }
-        String sasToken = sourceBlob.generateSas(sasValues);
-        return sourceBlob.getBlobUrl() + "?" + sasToken;
+        BlobClient blobClient = key.blobClient();
+        String sasToken = blobClient.generateSas(sasValues);
+        // Azure appends version id as query param, not query path
+        var sep = key.isVersioned() ? "&" : "?";
+        return blobClient.getBlobUrl() + sep + sasToken;
     }
 
 }

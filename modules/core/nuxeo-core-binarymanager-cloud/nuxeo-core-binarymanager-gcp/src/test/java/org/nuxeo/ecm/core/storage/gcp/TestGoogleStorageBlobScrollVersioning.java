@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2023-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,20 @@
  * Contributors:
  *     Guillaume Renard
  */
-package org.nuxeo.ecm.blob.azure;
+package org.nuxeo.ecm.core.storage.gcp;
 
-import static org.nuxeo.ecm.blob.azure.AzureBlobProvider.STORE_SCROLL_NAME;
+import static org.nuxeo.ecm.core.storage.gcp.GoogleStorageBlobProvider.STORE_SCROLL_NAME;
 
 import org.nuxeo.ecm.core.blob.AbstractTestBlobScroll;
+import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 
 /**
- * @since 2023.6
+ * @since 2025.10
  */
-@Features(AzureBlobProviderFeature.class)
-public class TestAzureBlobScroll extends AbstractTestBlobScroll {
+@Features(GoogleStorageBlobProviderFeature.class)
+@Deploy("org.nuxeo.ecm.core.storage.gcp.tests:OSGI-INF/test-google-storage-record.xml")
+public class TestGoogleStorageBlobScrollVersioning extends AbstractTestBlobScroll {
 
     @Override
     protected String getScrollName() {

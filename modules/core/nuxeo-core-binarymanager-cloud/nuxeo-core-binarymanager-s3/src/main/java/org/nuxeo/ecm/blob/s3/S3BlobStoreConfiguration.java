@@ -22,7 +22,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.nuxeo.ecm.core.blob.BlobProviderDescriptor.ALLOW_BYTE_RANGE;
 import static org.nuxeo.ecm.core.blob.BlobProviderDescriptor.RECORD;
-import static org.nuxeo.ecm.core.model.BaseSession.isRetentionStricMode;
+import static org.nuxeo.ecm.core.model.BaseSession.isRetentionStrictMode;
 import static software.amazon.awssdk.services.s3.model.ObjectLockRetentionMode.COMPLIANCE;
 import static software.amazon.awssdk.services.s3.model.ObjectLockRetentionMode.GOVERNANCE;
 
@@ -637,7 +637,7 @@ public class S3BlobStoreConfiguration extends CloudBlobStoreConfiguration {
             return Optional.ofNullable(olc.rule())
                            .map(ObjectLockRule::defaultRetention)
                            .map(DefaultRetention::mode)
-                           .orElse(isRetentionStricMode() ? COMPLIANCE : GOVERNANCE);
+                           .orElse(isRetentionStrictMode() ? COMPLIANCE : GOVERNANCE);
         } catch (S3Exception e) {
             if (e.statusCode() == HttpStatus.SC_NOT_FOUND) {
                 return null;

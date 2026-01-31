@@ -21,6 +21,8 @@ package org.nuxeo.ecm.core.blob;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+
 import org.junit.Test;
 import org.nuxeo.common.function.ThrowableRunnable;
 import org.nuxeo.runtime.test.runner.Features;
@@ -45,5 +47,26 @@ public abstract class TestAbstractBlobStoreRecord extends TestAbstractBlobStoreW
     @Test
     public void testCRUDInTransaction() {
         TransactionHelper.runInTransaction(ThrowableRunnable.asRunnable(this::testCRUD));
+    }
+
+    @Test
+    public void testWriteAndDeleteManyVersions() throws IOException {
+        // store 3 blob versions
+        String key1 = bs.writeBlob(blobContext(ID1, FOO));
+        assertKey(ID1, key1);
+        String key2 = bs.writeBlob(blobContext(ID1, BAR));
+        assertKey(ID1, key2);
+        String key3 = bs.writeBlob(blobContext(ID1, FOO + BAR));
+        assertKey(ID1, key3);
+
+        bs.deleteBlob(key1);
+        assertNoBlob(key1);
+        assertBlob(key2, BAR);
+        assertBlob(key3, FOO + BAR);
+
+        bs.deleteBlob(key3);
+        assertNoBlob(key1);
+        assertBlob(key2, BAR);
+        assertNoBlob(key3);
     }
 }
