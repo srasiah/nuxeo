@@ -18,6 +18,9 @@ VERSION                      ?= $(DOCKER_IMAGE_TAG)
 DOCKER_BASE_IMAGE            := $(DOCKER_BASE_IMAGE_NAME):$(DOCKER_IMAGE_TAG)
 DOCKER_BENCHMARK_IMAGE       := $(DOCKER_BENCHMARK_IMAGE_NAME):$(DOCKER_IMAGE_TAG)
 MAVEN_OPTS                   :='-Xmx4g -Xms2g -XX:+TieredCompilation -XX:TieredStopAtLevel=1'
+GIT_APT_TOKEN                := $(GIT_PAT_TOKEN)
+CI_API_V4_URL                := $(CI_API_V4_URL)
+CI_PROJECT_ID                := $(CI_PROJECT_ID)
 
 # ===== Container Engine Detection =====
 # Auto-detect podman or docker
@@ -112,6 +115,14 @@ build-distrib:
 	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
 	cd .. && mvn install -Pdistrib -DskipTests -Drevision=$(REVISION)
 	@echo "✅ Distribution build complete"
+
+# === Build Distribution ===
+deploy:
+	@echo "📦 Deploying Nuxeo distribution..."
+	@echo
+	@export MAVEN_OPTS='$(MAVEN_OPTS)' && \
+    cd .. && mvn clean deploy -Pdeploy -DskipTests -Drevision=$(REVISION) -DCI_API_V4_URL=$(CI_API_V4_URL) -DCI_PROJECT_ID=$(CI_PROJECT_ID)
+	@echo "✅ Deployment complete"
 
 # === Build Parent Distribution ===
 build-parent:
@@ -246,6 +257,8 @@ test:
 	@printf '%-30s %s\n' "VERSION:" "$(VERSION)"
 	@printf '%-30s %s\n' "MAVEN_OPTS:" "$(MAVEN_OPTS)"
 	@printf '%-30s %s\n' "MAVEN_COMMON:" "$(MAVEN_COMMON)"
+	@printf '%-30s %s\n' "CI_API_V4_URL:" "$(CI_API_V4_URL)"
+	@printf '%-30s %s\n' "CI_PROJECT_ID:" "$(CI_PROJECT_ID)"
 	@echo ""
 	@echo "$(CONTAINER_ENGINE_NAME) Status:"
 	@$(CONTAINER_ENGINE) version --format '  Version: {{.Server.Version}}' 2>/dev/null || $(CONTAINER_ENGINE) version --format '  Version: {{.Version}}' 2>/dev/null || echo "  ❌ $(CONTAINER_ENGINE_NAME) not available"
