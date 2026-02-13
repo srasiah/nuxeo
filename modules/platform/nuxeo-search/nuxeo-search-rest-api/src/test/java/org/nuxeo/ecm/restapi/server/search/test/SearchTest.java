@@ -26,6 +26,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
+import static org.nuxeo.ecm.platform.query.nxql.SearchServicePageProvider.SEARCH_INDEX_OVERRIDE_PARAM;
 
 import java.util.List;
 
@@ -435,6 +436,25 @@ public class SearchTest {
         httpClient.buildGetRequest(getSearchPageProviderPath("namedParamProviderComplex"))
                   .executeAndConsume(new JsonNodeHandler(),
                           node -> assertEquals(def.getName(), node.get("name").textValue()));
+    }
+
+    @Test
+    public void iCanOverrideSearchServicePPIndex() {
+        // default searchIndex
+        httpClient.buildGetRequest(getSearchPageProviderPath("TEST_SSPP_ALL_NOTE") + "/execute")
+                  .executeAndConsume(new JsonNodeHandler(),
+                          node -> assertTrue(JsonNodeHelper.getEntriesSize(node) > 0));
+        // explicit searchIndex
+        httpClient.buildGetRequest(getSearchPageProviderPath("TEST_SSPP_ALL_NOTE") + "/execute")
+                  .addQueryParameter(SEARCH_INDEX_OVERRIDE_PARAM, "repository")
+                  .executeAndConsume(new JsonNodeHandler(),
+                          node -> assertTrue(JsonNodeHelper.getEntriesSize(node) > 0));
+        // unknown searchIndex
+        httpClient.buildGetRequest(getSearchPageProviderPath("TEST_SSPP_ALL_NOTE") + "/execute")
+                  .addQueryParameter(SEARCH_INDEX_OVERRIDE_PARAM, "unknown")
+                  .executeAndConsume(new JsonNodeHandler(SC_BAD_REQUEST), node -> assertEquals(
+                          "java.lang.IllegalArgumentException: Invalid page provider configuration 'TEST_SSPP_ALL_NOTE': Configured indexes [unknown] not found for repository 'test'",
+                          JsonNodeHelper.getErrorMessage(node)));
     }
 
     @Test

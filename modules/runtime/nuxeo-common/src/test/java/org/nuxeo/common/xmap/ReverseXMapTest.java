@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import java.net.URL;
 import java.time.Duration;
 
 import org.junit.Test;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.common.xmap.Author.Gender;
 
 public class ReverseXMapTest {
@@ -96,6 +97,11 @@ public class ReverseXMapTest {
         assertEquals(Duration.ofMillis(1), author.durationMillis);
         assertEquals(Duration.ofDays(1).plusHours(2).plusMinutes(3).plusSeconds(4).plusMillis(5), author.durationAll);
         assertEquals(Duration.ofSeconds(1), author.durationJdk);
+
+        assertEquals(ByteSize.ofBytes(1), author.byteSize);
+        assertEquals(ByteSize.ofKibibytes(1), author.byteSizeKiB);
+        assertEquals(ByteSize.ofMebibytes(1), author.byteSizeMiB);
+        assertEquals(ByteSize.ofGibibytes(1), author.byteSizeGiB);
     }
 
 }

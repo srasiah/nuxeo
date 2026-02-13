@@ -20,10 +20,11 @@ package org.nuxeo.ecm.core.search;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 import static org.nuxeo.ecm.core.search.index.IndexingBackgroundAction.ACTION_NAME;
 
+import java.io.Serializable;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -50,12 +51,14 @@ import org.nuxeo.ecm.core.bulk.message.BulkCommand;
 import org.nuxeo.ecm.core.bulk.message.BulkCommand.Builder;
 import org.nuxeo.ecm.core.bulk.message.BulkStatus;
 import org.nuxeo.ecm.core.test.CoreSearchFeature;
+import org.nuxeo.runtime.test.runner.ConditionalIgnore;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.TransactionalFeature;
 
 @RunWith(FeaturesRunner.class)
 @Features(CoreSearchFeature.class)
+@ConditionalIgnore(condition = IgnoreIfSearchClientDoesNotHaveIndexingCapability.class)
 public class TestSearchBulkIndex {
 
     // field bigger than a record
@@ -111,7 +114,6 @@ public class TestSearchBulkIndex {
     @Test
     public void testIndexAction() throws InterruptedException {
         checkSearchOrder();
-        assumeTrue("Only for implementation that can init index", coreSearchFeature.dropAndInitIndex());
 
         BulkCommand command = new Builder(ACTION_NAME, "SELECT * FROM Document", "Administrator").batch(2)
                                                                                                  .bucket(2)
@@ -123,6 +125,28 @@ public class TestSearchBulkIndex {
         assertNotNull("Processing start time is null, status: " + status, status.getProcessingStartTime());
         assertNotNull("Processing end time is null, status: " + status, status.getProcessingEndTime());
         assertTrue("Processing duration is 0, status: " + status, status.getProcessingDurationMillis() > 0);
+    }
+
+    @Test
+    public void testIndexValidationAction() throws InterruptedException {
+        checkSearchOrder();
+        // invalid param
+        final BulkCommand invalidCommand = new Builder(ACTION_NAME, "SELECT * FROM Document", "Administrator").batch(
+                2).bucket(2).param("indexes", "some-index").build();
+        // expecting a list of indexes, not a string
+        assertThrows(IllegalArgumentException.class, () -> bulkService.submit(invalidCommand));
+
+        final BulkCommand invalidCommand2 = new Builder(ACTION_NAME, "SELECT * FROM Document", "Administrator").batch(
+                2).bucket(2).param("indexes", (Serializable) List.of("enhanced", "unexisting-index")).build();
+        // expecting valid indexes
+        assertThrows(IllegalArgumentException.class, () -> bulkService.submit(invalidCommand2));
+
+        BulkCommand command = new Builder(ACTION_NAME, "SELECT * FROM Document", "Administrator").batch(
+                2).bucket(2).param("indexes", (Serializable) List.of("enhanced")).build();
+        String commandId = bulkService.submit(command);
+        assertTrue("command timeout", bulkService.await(commandId, Duration.ofSeconds(60)));
+        BulkStatus status = bulkService.getStatus(commandId);
+        assertEquals(BulkStatus.State.COMPLETED, status.getState());
     }
 
     protected void checkSearchOrder() {

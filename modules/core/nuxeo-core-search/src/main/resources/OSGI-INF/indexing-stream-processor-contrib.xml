@@ -5,12 +5,13 @@
     <action name="indexing" defaultScroller="repository" inputStream="bulk/indexing" bucketSize="250" batchSize="25"
       enabled="${nuxeo.search.indexing.enabled:=true}" />
     <action name="indexingBackground" defaultScroller="repository" inputStream="bulk/indexingBackground"
-      bucketSize="1000" batchSize="25" exclusive="true" enabled="${nuxeo.search.indexing.enabled:=true}" />
+      bucketSize="1000" batchSize="25" exclusive="true" enabled="${nuxeo.search.indexing.enabled:=true}"
+      validationClass="org.nuxeo.ecm.core.search.index.IndexingBackgroundValidation" />
   </extension>
 
   <extension target="org.nuxeo.runtime.stream.service" point="streamProcessor">
     <!-- ongoing indexing almost real time -->
-    <streamProcessor name="indexing" class="org.nuxeo.ecm.core.search.index.IndexingProcessor"
+    <streamProcessor name="ongoingIndexing" class="org.nuxeo.ecm.core.search.index.IndexingProcessor"
       defaultConcurrency="${nuxeo.search.stream.indexing.defaultConcurrency:=4}"
       defaultPartitions="${nuxeo.search.stream.indexing.defaultPartitions:=12}"
       enabled="${nuxeo.search.indexing.enabled:=true}">
@@ -19,8 +20,8 @@
         batchThreshold="${nuxeo.search.stream.indexing.batch.threshold:=250ms}" />
     </streamProcessor>
 
-    <!-- ongoing indexing async -->
-    <streamProcessor name="indexingBulk" class="org.nuxeo.ecm.core.search.index.IndexingAction"
+    <!-- ongoing async bulk indexing commands -->
+    <streamProcessor name="indexing" class="org.nuxeo.ecm.core.search.index.IndexingAction"
       defaultConcurrency="${nuxeo.search.stream.indexingAsync.defaultConcurrency:=4}"
       defaultPartitions="${nuxeo.search.stream.indexingAsync.defaultPartitions:=8}"
       enabled="${nuxeo.search.indexing.enabled:=true}">
@@ -28,7 +29,7 @@
     </streamProcessor>
 
     <!-- full reindexing -->
-    <streamProcessor name="indexingBackgroundBulk" class="org.nuxeo.ecm.core.search.index.IndexingBackgroundAction"
+    <streamProcessor name="indexingBackground" class="org.nuxeo.ecm.core.search.index.IndexingBackgroundAction"
       defaultConcurrency="${nuxeo.search.stream.reindexing.defaultConcurrency:=4}"
       defaultPartitions="${nuxeo.search.stream.reindexing.defaultPartitions:=8}"
       enabled="${nuxeo.search.indexing.enabled:=true}">

@@ -169,6 +169,15 @@
       </aggregates>
     </searchServicePageProvider>
 
+    <searchServicePageProvider name="TEST_SSPP_ALL_NOTE">
+      <pattern>
+        SELECT * FROM Note WHERE
+        ecm:mixinType != 'HiddenInNavigation'
+        AND
+        ecm:isVersion = 0 AND ecm:isTrashed = 0
+      </pattern>
+    </searchServicePageProvider>
+
     <coreQueryPageProvider name="test_primitive_type_predicates">
       <whereClause>
         <predicate parameter="tcs:boolean" operator="=">

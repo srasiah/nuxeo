@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016-2021 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2016-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,14 @@ package org.nuxeo.ecm.core.storage.dbs;
 
 import static org.apache.commons.lang3.BooleanUtils.isNotFalse;
 import static org.apache.commons.lang3.BooleanUtils.isTrue;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
+import static org.apache.commons.lang3.ObjectUtils.getIfNull;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XNodeList;
 import org.nuxeo.ecm.core.api.NuxeoException;
@@ -51,6 +52,44 @@ public class DBSRepositoryDescriptor implements Cloneable, Descriptor {
     @XNode("@isDefault")
     protected Boolean isDefault;
 
+    @XNode("@headless")
+    protected Boolean headless;
+
+    @XNode("idType")
+    public String idType; // "varchar", "uuid", "sequence"
+
+    protected FulltextDescriptor fulltextDescriptor = new FulltextDescriptor();
+
+    /** @since 8.10 */
+    @XNode("cache@enabled")
+    protected Boolean cacheEnabled;
+
+    /** @since 8.10 */
+    @XNode("cache@ttl")
+    public Long cacheTTL;
+
+    /** @since 8.10 */
+    @XNode("cache@maxSize")
+    public Long cacheMaxSize;
+
+    /** @since 8.10 */
+    @XNode("cache@concurrencyLevel")
+    public Integer cacheConcurrencyLevel;
+
+    /** @since 8.10 */
+    @XNode("clustering/invalidatorClass")
+    public Class<? extends DBSClusterInvalidator> clusterInvalidatorClass;
+
+    /** @since 9.1 */
+    @XNode("changeTokenEnabled")
+    private Boolean changeTokenEnabled;
+
+    @XNode("pool")
+    public PoolConfiguration pool;
+
+    @XNode("createIndexes")
+    protected Boolean createIndexes;
+
     @Override
     public String getId() {
         return name;
@@ -60,26 +99,25 @@ public class DBSRepositoryDescriptor implements Cloneable, Descriptor {
         return isDefault;
     }
 
-    @XNode("@headless")
-    protected Boolean headless;
-
     /** @since 11.2 */
     public Boolean isHeadless() {
         return headless;
     }
 
-    @XNode("idType")
-    public String idType; // "varchar", "uuid", "sequence"
-
-    protected FulltextDescriptor fulltextDescriptor = new FulltextDescriptor();
-
     public FulltextDescriptor getFulltextDescriptor() {
         return fulltextDescriptor;
     }
 
+    /** @since 2025.11 */
     @XNode("fulltext@fieldSizeLimit")
+    public void setFulltextFieldSizeLimit(ByteSize fieldSizeLimit) {
+        fulltextDescriptor.setFulltextFieldByteSizeLimit(fieldSizeLimit);
+    }
+
+    /** @deprecated since 2025.11, use {@link #setFulltextFieldSizeLimit(ByteSize)} instead */
+    @Deprecated(since = "2025.11", forRemoval = true)
     public void setFulltextFieldSizeLimit(int fieldSizeLimit) {
-        fulltextDescriptor.setFulltextFieldSizeLimit(fieldSizeLimit);
+        setFulltextFieldSizeLimit(ByteSize.ofBytes(fieldSizeLimit));
     }
 
     @XNode("fulltext@disabled")
@@ -114,10 +152,6 @@ public class DBSRepositoryDescriptor implements Cloneable, Descriptor {
     }
 
     /** @since 8.10 */
-    @XNode("cache@enabled")
-    private Boolean cacheEnabled;
-
-    /** @since 8.10 */
     public boolean isCacheEnabled() {
         return isTrue(cacheEnabled);
     }
@@ -126,26 +160,6 @@ public class DBSRepositoryDescriptor implements Cloneable, Descriptor {
     protected void setCacheEnabled(boolean enabled) {
         cacheEnabled = Boolean.valueOf(enabled);
     }
-
-    /** @since 8.10 */
-    @XNode("cache@ttl")
-    public Long cacheTTL;
-
-    /** @since 8.10 */
-    @XNode("cache@maxSize")
-    public Long cacheMaxSize;
-
-    /** @since 8.10 */
-    @XNode("cache@concurrencyLevel")
-    public Integer cacheConcurrencyLevel;
-
-    /** @since 8.10 */
-    @XNode("clustering/invalidatorClass")
-    public Class<? extends DBSClusterInvalidator> clusterInvalidatorClass;
-
-    /** @since 9.1 */
-    @XNode("changeTokenEnabled")
-    private Boolean changeTokenEnabled;
 
     /** @since 9.1 */
     public boolean isChangeTokenEnabled() {
@@ -156,12 +170,6 @@ public class DBSRepositoryDescriptor implements Cloneable, Descriptor {
     public void setChangeTokenEnabled(boolean enabled) {
         this.changeTokenEnabled = Boolean.valueOf(enabled);
     }
-
-    @XNode("pool")
-    public PoolConfiguration pool;
-
-    @XNode("createIndexes")
-    protected Boolean createIndexes;
 
     /** @since 2021.8 */
     public boolean isCreateIndexes() {
@@ -185,16 +193,16 @@ public class DBSRepositoryDescriptor implements Cloneable, Descriptor {
         var other = (DBSRepositoryDescriptor) o;
         var merged = clone(); // for implementations to get the right new instance
         merged.name = name; // we merge based on name, so no name merging needed
-        merged.cacheConcurrencyLevel = defaultIfNull(other.cacheConcurrencyLevel, cacheConcurrencyLevel);
-        merged.cacheEnabled = defaultIfNull(other.cacheEnabled, cacheEnabled);
-        merged.cacheMaxSize = defaultIfNull(other.cacheMaxSize, cacheMaxSize);
-        merged.cacheTTL = defaultIfNull(other.cacheTTL, cacheTTL);
-        merged.clusterInvalidatorClass = defaultIfNull(other.clusterInvalidatorClass, clusterInvalidatorClass);
+        merged.cacheConcurrencyLevel = getIfNull(other.cacheConcurrencyLevel, cacheConcurrencyLevel);
+        merged.cacheEnabled = getIfNull(other.cacheEnabled, cacheEnabled);
+        merged.cacheMaxSize = getIfNull(other.cacheMaxSize, cacheMaxSize);
+        merged.cacheTTL = getIfNull(other.cacheTTL, cacheTTL);
+        merged.clusterInvalidatorClass = getIfNull(other.clusterInvalidatorClass, clusterInvalidatorClass);
         merged.fulltextDescriptor.merge(other.fulltextDescriptor);
-        merged.idType = defaultIfNull(other.idType, idType);
-        merged.isDefault = defaultIfNull(other.isDefault, isDefault);
-        merged.label = defaultIfNull(other.label, label);
-        merged.changeTokenEnabled = defaultIfNull(other.changeTokenEnabled, changeTokenEnabled);
+        merged.idType = getIfNull(other.idType, idType);
+        merged.isDefault = getIfNull(other.isDefault, isDefault);
+        merged.label = getIfNull(other.label, label);
+        merged.changeTokenEnabled = getIfNull(other.changeTokenEnabled, changeTokenEnabled);
         if (other.pool != null) {
             if (merged.pool == null) {
                 merged.pool = new PoolConfiguration(other.pool);

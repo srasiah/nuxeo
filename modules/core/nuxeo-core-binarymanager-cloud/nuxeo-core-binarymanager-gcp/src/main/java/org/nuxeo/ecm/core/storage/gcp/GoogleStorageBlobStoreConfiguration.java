@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2023-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.common.Environment;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.ecm.blob.CloudBlobStoreConfiguration;
 import org.nuxeo.ecm.core.api.NuxeoException;
 
@@ -61,7 +62,15 @@ public class GoogleStorageBlobStoreConfiguration extends CloudBlobStoreConfigura
     /**
      * Default is taken from {@link com.google.cloud.BaseWriteChannel}.
      */
-    public static final int DEFAULT_UPLOAD_CHUNK_SIZE = 2048 * 1024; // 2 MB
+    public static final ByteSize DEFAULT_UPLOAD_CHUNK_BYTE_SIZE = ByteSize.ofMebibytes(2);
+
+    /**
+     * Default is taken from {@link com.google.cloud.BaseWriteChannel}.
+     *
+     * @deprecated since 2025.11, use {@link #DEFAULT_UPLOAD_CHUNK_BYTE_SIZE} instead
+     */
+    @Deprecated(since = "2025.11", forRemoval = true)
+    public static final int DEFAULT_UPLOAD_CHUNK_SIZE = (int) DEFAULT_UPLOAD_CHUNK_BYTE_SIZE.toBytes();
 
     public static final String SYSTEM_PROPERTY_PREFIX = "nuxeo.gcp";
 
@@ -87,7 +96,7 @@ public class GoogleStorageBlobStoreConfiguration extends CloudBlobStoreConfigura
 
     protected final boolean allowByteRange;
 
-    protected final int chunkSize;
+    protected final ByteSize chunkSize;
 
     public final BlobInfo.Retention.Mode retentionMode;
 
@@ -96,7 +105,7 @@ public class GoogleStorageBlobStoreConfiguration extends CloudBlobStoreConfigura
     public GoogleStorageBlobStoreConfiguration(Map<String, String> properties) throws IOException {
         super(SYSTEM_PROPERTY_PREFIX, properties);
         String projectId = getProperty(PROJECT_ID_PROPERTY);
-        Path credentialsPath = Path.of(getProperty(GOOGLE_APPLICATION_CREDENTIALS, GCP_JSON_FILE));
+        Path credentialsPath = Path.of(getOptionalProperty(GOOGLE_APPLICATION_CREDENTIALS).orElse(GCP_JSON_FILE));
         if (!credentialsPath.isAbsolute()) {
             credentialsPath = Environment.getDefault().getConfig().toPath().resolve(credentialsPath);
         }
@@ -118,10 +127,10 @@ public class GoogleStorageBlobStoreConfiguration extends CloudBlobStoreConfigura
             b = storage.create(BucketInfo.of(bucketName));
         }
         bucket = b;
-        chunkSize = getIntProperty(UPLOAD_CHUNK_SIZE_PROPERTY, DEFAULT_UPLOAD_CHUNK_SIZE);
+        chunkSize = getOptionalByteSizeProperty(UPLOAD_CHUNK_SIZE_PROPERTY).orElse(DEFAULT_UPLOAD_CHUNK_BYTE_SIZE);
         allowByteRange = getBooleanProperty(ALLOW_BYTE_RANGE);
 
-        String bp = getProperty(BUCKET_PREFIX_PROPERTY, EMPTY);
+        String bp = getOptionalProperty(BUCKET_PREFIX_PROPERTY).orElse(EMPTY);
         if (!isBlank(bp) && !bp.endsWith(DELIMITER)) {
             log.warn("Google bucket prefix ({}): {} should end with '{}': added automatically.", BUCKET_PREFIX_PROPERTY,
                     bp, DELIMITER);

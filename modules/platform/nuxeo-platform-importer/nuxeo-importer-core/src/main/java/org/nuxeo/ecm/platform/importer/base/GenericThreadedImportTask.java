@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2008 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  *
  * Contributors:
  *     Nuxeo - initial API and implementation
- *
- * $Id$
  */
-
 package org.nuxeo.ecm.platform.importer.base;
 
 import java.io.IOException;
@@ -33,6 +30,7 @@ import org.apache.logging.log4j.Logger;
 import org.javasimon.SimonManager;
 import org.javasimon.Split;
 import org.javasimon.Stopwatch;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.common.utils.ExceptionUtils;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CoreInstance;
@@ -232,10 +230,9 @@ public class GenericThreadedImportTask implements Runnable {
                 long fileSize = blob.getLength();
                 String fileName = blob.getFilename();
                 if (fileSize > 0) {
-                    long kbSize = fileSize / 1024;
                     String parentPath = (parent == null) ? "null" : parent.getPathAsString();
                     fslog("Created doc " + leaf.getName() + " at " + parentPath + " with file " + fileName + " of size "
-                            + kbSize + "KB", true);
+                            + ByteSize.ofBytes(fileSize), true);
                 }
                 uploadedKO += fileSize;
             }
@@ -294,7 +291,7 @@ public class GenericThreadedImportTask implements Runnable {
 
         if (getFactory().isTargetDocumentModelFolderish(node)) {
             DocumentModel folder;
-            Boolean newThread = false;
+            boolean newThread = false;
             if (skipContainerCreation) {
                 folder = parent;
                 skipContainerCreation = false;

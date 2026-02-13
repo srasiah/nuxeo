@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ public class FulltextConfigurationFactory {
     public static FulltextConfiguration make(FulltextDescriptor fulltextDescriptor) {
         SchemaManager schemaManager = Framework.getService(SchemaManager.class);
         FulltextConfiguration ftc = new FulltextConfiguration();
-        ftc.fulltextFieldSizeLimit = fulltextDescriptor.getFulltextFieldSizeLimit();
+        ftc.fulltextFieldSizeLimit = (int) fulltextDescriptor.getFulltextFieldByteSizeLimit().bytes();
         ftc.fulltextStoredInBlob = fulltextDescriptor.getFulltextStoredInBlob();
         ftc.fulltextSearchDisabled = fulltextDescriptor.getFulltextSearchDisabled();
 

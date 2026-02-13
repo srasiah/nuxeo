@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.nuxeo</groupId>
   <artifactId>nuxeo-ecm</artifactId>
-  <version>2025.10-SNAPSHOT</version>
+  <version>2025.11-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Nuxeo ECM Projects</name>
   <description>Nuxeo ECM Platform and related components.</description>
@@ -56,7 +56,7 @@
     <!-- <license.useMissingFile>true</license.useMissingFile> -->
     <!-- <license.missingFile>src/main/license/THIRD-PARTY.properties</license.missingFile> -->
 
-    <nuxeo.platform.version>2025.10-SNAPSHOT</nuxeo.platform.version>
+    <nuxeo.platform.version>2025.11-SNAPSHOT</nuxeo.platform.version>
     <nuxeo.distribution.name>lts</nuxeo.distribution.name>
     <nuxeo.platform.javadoc.version>${project.version}</nuxeo.platform.javadoc.version>
 
@@ -67,7 +67,7 @@
     <ant.assembly.version>2.1.7</ant.assembly.version>
     <nuxeo.ftest.version>1.8.10</nuxeo.ftest.version>
 
-    <tomcat.version>10.1.48</tomcat.version>
+    <tomcat.version>10.1.49</tomcat.version>
     <opensearch1.version>1.3.20</opensearch1.version>
     <netty.version>4.2.7.Final</netty.version>
     <netty.boringssl.version>2.0.74.Final</netty.boringssl.version>
@@ -91,10 +91,10 @@
     <box.api.version>1.1.0</box.api.version>
     <pdfbox.version>3.0.6</pdfbox.version>
     <pdfbox.jbig2.version>3.0.4</pdfbox.jbig2.version>
-    <aws.version>2.37.2</aws.version>
-    <gcp.version>2.59.0</gcp.version>
+    <aws.version>2.38.4</aws.version>
+    <gcp.version>2.60.0</gcp.version>
     <jackson1.version>1.9.13</jackson1.version>
-    <jackson.bom.version>2.20.0</jackson.bom.version>
+    <jackson.bom.version>2.20.1</jackson.bom.version>
     <bouncycastle.version>1.82</bouncycastle.version>
     <avro.version>1.12.1</avro.version>
     <restlet.version>2.4.4</restlet.version>
@@ -145,7 +145,7 @@
     <kafka.version>3.9.1</kafka.version>
     <confluent.version>7.9.4</confluent.version>
     <metrics.version>5.0.5</metrics.version>
-    <amqp.client.version>5.27.0</amqp.client.version>
+    <amqp.client.version>5.27.1</amqp.client.version>
     <opencensus.version>0.31.1</opencensus.version>
     <prometheus.client.version>0.16.0</prometheus.client.version>
     <protobuf.java.version>4.33.0</protobuf.java.version>
@@ -1446,18 +1446,6 @@
         <version>${nuxeo.platform.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.nuxeo.elasticsearch</groupId>
-        <artifactId>nuxeo-elasticsearch-core</artifactId>
-        <version>${nuxeo.platform.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.nuxeo.elasticsearch</groupId>
-        <artifactId>nuxeo-elasticsearch-core</artifactId>
-        <version>${nuxeo.platform.version}</version>
-        <type>test-jar</type>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.nuxeo.ecm.platform</groupId>
         <artifactId>nuxeo-rest-api-io</artifactId>
         <version>${nuxeo.platform.version}</version>
@@ -2392,7 +2380,7 @@
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
-        <version>2.20.0</version>
+        <version>2.21.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -2457,7 +2445,7 @@
       <dependency>
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
-        <version>1.19.0</version>
+        <version>1.20.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -2894,7 +2882,7 @@
       <dependency>
         <groupId>org.checkerframework</groupId>
         <artifactId>checker-qual</artifactId>
-        <version>3.51.1</version>
+        <version>3.52.0</version>
       </dependency>
 
       <dependency>
@@ -3151,7 +3139,7 @@
       <dependency>
         <groupId>com.google.errorprone</groupId>
         <artifactId>error_prone_annotations</artifactId>
-        <version>2.43.0</version>
+        <version>2.44.0</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>
@@ -4097,7 +4085,7 @@
       <dependency>
         <groupId>com.google.auto.value</groupId>
         <artifactId>auto-value</artifactId>
-        <version>1.11.0</version>
+        <version>1.11.1</version>
       </dependency>
       <!-- fix transitive dependency of io.opencensus:opencensus-impl to avoid multiple versions in dependency graph -->
       <dependency>
@@ -4172,7 +4160,7 @@
       <dependency>
         <groupId>com.datadoghq</groupId>
         <artifactId>dd-trace-api</artifactId>
-        <version>1.54.0</version>
+        <version>1.55.0</version>
       </dependency>
 
       <!-- Nashorn -->
@@ -4826,7 +4814,7 @@
         <plugin>
           <groupId>org.owasp</groupId>
           <artifactId>dependency-check-maven</artifactId>
-          <version>12.1.8</version>
+          <version>12.1.9</version>
           <!-- run manually with mvn -nsu -Pdistrib org.owasp:dependency-check-maven:aggregate -->
           <!-- report file is in target/dependency-check-report.html -->
           <configuration>
@@ -5050,7 +5038,7 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
-          <version>0.46.0</version>
+          <version>0.47.0</version>
           <extensions>true</extensions>
         </plugin>
       </plugins>

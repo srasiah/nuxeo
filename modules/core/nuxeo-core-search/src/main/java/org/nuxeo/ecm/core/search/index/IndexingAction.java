@@ -62,9 +62,11 @@ public class IndexingAction implements StreamProcessorTopology {
 
     public static class IndexingComputation extends AbstractBulkComputation {
 
-        protected final String DELETE_PARAM = "delete";
+        public static final String DELETE_PARAM = "delete";
 
         protected boolean delete;
+
+        protected Set<String> filterIndexes = Set.of();
 
         public IndexingComputation(String name) {
             super(name);
@@ -89,6 +91,9 @@ public class IndexingAction implements StreamProcessorTopology {
             var indexes = searchService.getIndexNames(repository);
             Set<String> failures = new HashSet<>();
             for (String index : indexes) {
+                if (!filterIndexes.isEmpty() && !filterIndexes.contains(index)) {
+                    continue;
+                }
                 var searchIndex = searchService.getSearchIndex(index);
                 SearchClient client = indexingService.getClient(searchIndex.client());
                 if (!client.hasCapability(INDEXING)) {

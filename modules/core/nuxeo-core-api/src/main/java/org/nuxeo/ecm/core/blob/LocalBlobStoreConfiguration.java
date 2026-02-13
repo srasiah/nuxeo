@@ -74,7 +74,7 @@ public class LocalBlobStoreConfiguration extends PropertyBasedConfiguration {
      * Gets the storage base to use, based on the properties.
      */
     public Path getStorageBase() {
-        String path = getProperty(PROP_PATH, DEFAULT_PATH);
+        String path = getOptionalProperty(PROP_PATH).orElse(DEFAULT_PATH);
         path = Framework.expandVars(path);
         path = path.trim();
         Path base;

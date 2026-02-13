@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2019-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.common.Environment;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.ecm.blob.CloudBlobStoreConfiguration;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.blob.PathStrategy;
@@ -206,7 +207,7 @@ public class S3BlobStoreConfiguration extends CloudBlobStoreConfiguration {
      * @deprecated since 2025.0, merged with {@link #MINIMUM_UPLOAD_PART_SIZE_DEFAULT}
      */
     @Deprecated(since = "2025.0")
-    public static final long MULTIPART_COPY_PART_SIZE_DEFAULT = 5L * 1024 * 1024; // 5 MB;
+    public static final long MULTIPART_COPY_PART_SIZE_DEFAULT = ByteSize.ofMebibytes(5).bytes();
 
     /**
      * The Framework property to define the multipart copy threshold.
@@ -219,12 +220,14 @@ public class S3BlobStoreConfiguration extends CloudBlobStoreConfiguration {
 
     /**
      * The default value for the multipart copy threshold.
+     * <p>
+     * AWS SDK default.
      *
      * @since 2021.11
      * @deprecated since 2025.0, merged with {@link #MULTIPART_UPLOAD_THRESHOLD_DEFAULT}
      */
     @Deprecated(since = "2025.0")
-    public static final long MULTIPART_COPY_THRESHOLD_DEFAULT = 5L * 1024 * 1024 * 1024; // AWS SDK default = 5 GB
+    public static final long MULTIPART_COPY_THRESHOLD_DEFAULT = ByteSize.ofGibibytes(5).bytes();
 
     /**
      * The Framework property to define the multipart upload threshold.
@@ -235,10 +238,12 @@ public class S3BlobStoreConfiguration extends CloudBlobStoreConfiguration {
 
     /**
      * The default value for the multipart upload threshold.
+     * <p>
+     * AWS SDK default.
      *
      * @since 2021.11
      */
-    public static final long MULTIPART_UPLOAD_THRESHOLD_DEFAULT = 16L * 1024 * 1024; // AWS SDK default = 16 MB;
+    public static final long MULTIPART_UPLOAD_THRESHOLD_DEFAULT = ByteSize.ofMebibytes(16).bytes();
 
     /**
      * The Framework property to define the minimum upload part size.
@@ -249,10 +254,12 @@ public class S3BlobStoreConfiguration extends CloudBlobStoreConfiguration {
 
     /**
      * The default value for the minimum upload part size.
+     * <p>
+     * AWS SDK default.
      *
      * @since 2021.11
      */
-    public static final long MINIMUM_UPLOAD_PART_SIZE_DEFAULT = 5L * 1024 * 1024; // AWS SDK default = 5 MB
+    public static final long MINIMUM_UPLOAD_PART_SIZE_DEFAULT = ByteSize.ofMebibytes(5).bytes();
 
     /**
      * The Framework property to define the transfer manager thread pool size.
@@ -361,9 +368,9 @@ public class S3BlobStoreConfiguration extends CloudBlobStoreConfiguration {
      */
     protected URI endpointOverride;
 
-    protected long minimumPartSizeInBytes;
+    protected ByteSize minimumPartSize;
 
-    protected long multipartUploadThreshold;
+    protected ByteSize multipartUploadThreshold;
 
     protected KeyPair clientSideEncryptionKeyPair;
 
@@ -398,9 +405,10 @@ public class S3BlobStoreConfiguration extends CloudBlobStoreConfiguration {
             useServerSideEncryption = false;
             serverSideKMSKeyID = null;
         }
-        minimumPartSizeInBytes = getLongProperty(MINIMUM_UPLOAD_PART_SIZE_PROPERTY, MINIMUM_UPLOAD_PART_SIZE_DEFAULT);
-        multipartUploadThreshold = getLongProperty(MULTIPART_UPLOAD_THRESHOLD_PROPERTY,
-                MULTIPART_UPLOAD_THRESHOLD_DEFAULT);
+        minimumPartSize = getOptionalByteSizeProperty(MINIMUM_UPLOAD_PART_SIZE_PROPERTY).orElseGet(
+                () -> new ByteSize(MINIMUM_UPLOAD_PART_SIZE_DEFAULT));
+        multipartUploadThreshold = getOptionalByteSizeProperty(MULTIPART_UPLOAD_THRESHOLD_PROPERTY).orElseGet(
+                () -> new ByteSize(MULTIPART_UPLOAD_THRESHOLD_DEFAULT));
         maxConcurrency = getIntProperty(CONCURRENCY_MAX_PROPERTY);
         targetThroughputInGbps = getLongProperty(TARGET_THROUGHPUT_IN_GBPS_PROPERTY);
         maxConnections = getIntProperty(CONNECTION_MAX_PROPERTY);
@@ -499,8 +507,8 @@ public class S3BlobStoreConfiguration extends CloudBlobStoreConfiguration {
         S3CrtAsyncClientBuilder s3AsyncClientBuilder = S3AsyncClient.crtBuilder(); // NOSONAR
         s3AsyncClientBuilder.region(region)
                             .credentialsProvider(awsCredentialsProvider)
-                            .minimumPartSizeInBytes(minimumPartSizeInBytes)
-                            .thresholdInBytes(multipartUploadThreshold)
+                            .minimumPartSizeInBytes(minimumPartSize.bytes())
+                            .thresholdInBytes(multipartUploadThreshold.bytes())
                             .forcePathStyle(getBooleanProperty(PATHSTYLEACCESS_PROPERTY))
                             .accelerate(getBooleanProperty(ACCELERATE_MODE_PROPERTY))
                             .endpointOverride(endpointOverride)
@@ -663,7 +671,7 @@ public class S3BlobStoreConfiguration extends CloudBlobStoreConfiguration {
      * @since 2021.11
      * @deprecated since 2025.0, unused
      */
-    @Deprecated(since = "2025.0")
+    @Deprecated(since = "2025.0", forRemoval = true)
     public static long getMultipartCopyPartSize() {
         // backward compatibility with configuration service property
         ConfigurationService configurationService = Framework.getService(ConfigurationService.class);
@@ -679,7 +687,9 @@ public class S3BlobStoreConfiguration extends CloudBlobStoreConfiguration {
 
     /**
      * @since 2021.11
+     * @deprecated since 2025.11, use {@link #getOptionalLongProperty(String)} instead
      */
+    @Deprecated(since = "2025.11", forRemoval = true)
     public static long getLongProperty(String key, long defaultValue) {
         var value = Framework.getProperty(key);
         if (value == null) {
@@ -850,7 +860,7 @@ public class S3BlobStoreConfiguration extends CloudBlobStoreConfiguration {
     }
 
     protected S3TransferManager createTransferManager() {
-        int threadPoolSize = getIntProperty(TRANSFER_MANAGER_THREAD_POOL_SIZE_PROPERTY,
+        int threadPoolSize = getOptionalIntegerProperty(TRANSFER_MANAGER_THREAD_POOL_SIZE_PROPERTY).orElse(
                 TRANSFER_MANAGER_THREAD_POOL_SIZE_DEFAULT);
         ThreadPoolExecutor executor = new ThreadPoolExecutor(0, threadPoolSize, 60, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(1_000),

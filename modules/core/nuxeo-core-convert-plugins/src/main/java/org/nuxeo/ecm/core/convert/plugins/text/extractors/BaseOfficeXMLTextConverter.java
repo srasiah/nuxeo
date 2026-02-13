@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2007 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,17 @@
  *
  * Contributors:
  *     Nuxeo - initial API and implementation
- *
  */
 package org.nuxeo.ecm.core.convert.plugins.text.extractors;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.ecm.core.api.blobholder.BlobHolder;
 import org.nuxeo.ecm.core.convert.api.ConversionException;
 import org.nuxeo.ecm.core.convert.extension.Converter;
@@ -44,7 +43,7 @@ public abstract class BaseOfficeXMLTextConverter implements Converter {
 
     public static final String MAX_SIZE = "MAX_SIZE";
 
-    protected long maxSize4POI = 5 * 1024 * 1024L;
+    protected long maxSize4POI = ByteSize.ofMebibytes(5).toBytes();
 
     protected BlobHolder runFallBackConverter(BlobHolder blobHolder, final String prefix) throws ConversionException {
 
@@ -68,14 +67,14 @@ public abstract class BaseOfficeXMLTextConverter implements Converter {
                 }
             }
         };
-        return fallback.convert(blobHolder, new HashMap<String, Serializable>());
+        return fallback.convert(blobHolder, new HashMap<>());
     }
 
     @Override
     public void init(ConverterDescriptor descriptor) {
         String max = descriptor.getParameters().get(MAX_SIZE);
         if (max != null) {
-            maxSize4POI = Long.parseLong(max);
+            maxSize4POI = ByteSize.parse(max).toBytes();
         }
     }
 

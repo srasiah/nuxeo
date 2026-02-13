@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import java.util.Date;
 import java.util.Hashtable;
 import java.util.Map;
 
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.common.utils.DurationUtils;
 import org.w3c.dom.Node;
 
@@ -236,6 +237,21 @@ public abstract class XValueFactory {
         }
     };
 
+    public static final XValueFactory BYTE_SIZE = new XValueFactory() {
+
+        @Override
+        public Object deserialize(Context context, String value) {
+            return ByteSize.parse(value);
+        }
+
+        @Override
+        public String serialize(Context context, Object value) {
+            var byteSize = (ByteSize) value;
+            // always use International format
+            return ByteSize.Formatter.INTERNATIONAL_SYSTEM_UNIT.format(byteSize);
+        }
+    };
+
     static {
         addFactory(String.class, STRING);
         addFactory(Integer.class, INTEGER);
@@ -256,6 +272,7 @@ public abstract class XValueFactory {
         addFactory(Resource.class, RESOURCE);
 
         addFactory(Duration.class, DURATION);
+        addFactory(ByteSize.class, BYTE_SIZE);
     }
 
 }

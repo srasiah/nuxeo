@@ -33,6 +33,7 @@ import static org.nuxeo.ecm.platform.query.api.AggregateConstants.AGG_TYPE_DATE_
 import static org.nuxeo.ecm.platform.query.api.AggregateConstants.AGG_TYPE_HISTOGRAM;
 import static org.nuxeo.ecm.platform.query.api.AggregateConstants.AGG_TYPE_RANGE;
 import static org.nuxeo.ecm.platform.query.api.AggregateConstants.AGG_TYPE_TERMS;
+import static org.nuxeo.ecm.platform.query.api.PageProviderService.NAMED_PARAMETERS;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -92,6 +93,9 @@ public class SearchServicePageProvider extends CoreQueryDocumentPageProvider {
     public static final String MAX_RESULT_WINDOW_PROPERTY = "org.nuxeo.elasticsearch.provider.maxResultWindow";
 
     public static final int DEFAULT_MAX_RESULT_WINDOW = 10_000;
+
+    /** @since 2025.11 */
+    public static final String SEARCH_INDEX_OVERRIDE_PARAM = "index";
 
     protected List<SearchIndex> searchIndexes;
 
@@ -155,52 +159,92 @@ public class SearchServicePageProvider extends CoreQueryDocumentPageProvider {
 
     protected List<SearchIndex> getSearchIndexes(SearchService service, String repository) {
         if (searchIndexes == null) {
+            String pageProviderName = getDefinition().getName();
             var defaultClient = service.getSearchIndex(service.getDefaultIndexName(repository)).client();
-            final String client = requireNonNullElse(getClientName(), defaultClient);
+            String clientName = requireNonNullElse(getClientName(), defaultClient);
             if (searchOnAllRepositories()) {
-                searchIndexes = service.getRepositoryNames()
-                                       .stream()
-                                       .map(service::getIndexNames)
-                                       .flatMap(Collection::stream)
-                                       .map(service::getSearchIndex)
-                                       .filter(item -> client.equals(item.client()))
-                                       .toList();
-                if (searchIndexes.size() > service.getRepositoryNames().size()) {
-                    log.warn(
-                            "SearchClient: {} has multiple indexes per repository, explicit searchIndex must be used in PP: {}",
-                            client, getDefinition().getName());
-                }
+                // multi repositories search
+                searchIndexes = getSearchIndexesForAllRepositories(service, clientName, pageProviderName);
             } else {
-                List<String> indexes = getIndexes();
-                if (isEmpty(indexes)) {
-                    searchIndexes = List.of(
-                            service.getIndexNames(repository)
-                                   .stream()
-                                   .map(service::getSearchIndex)
-                                   .filter(item -> client.equals(item.client()))
-                                   .findFirst()
-                                   .orElseThrow(() -> new IllegalArgumentException("Invalid PP: "
-                                           + getDefinition().getName() + " no searchIndex found for client: " + client
-                                           + " and repository: " + repository)));
-                    log.debug("No searchIndex indexes defined in PP: {}, using default: {}", getDefinition().getName(),
-                            searchIndexes);
-                } else {
-                    searchIndexes = service.getRepositoryNames()
+                searchIndexes = getSearchIndexForRepository(repository, service, clientName, pageProviderName);
+            }
+        }
+        return searchIndexes;
+    }
+
+    protected List<SearchIndex> getSearchIndexesForAllRepositories(SearchService service, String clientName,
+            String pageProviderName) {
+        List<SearchIndex> indexes = service.getRepositoryNames()
                                            .stream()
                                            .map(service::getIndexNames)
                                            .flatMap(Collection::stream)
                                            .map(service::getSearchIndex)
-                                           .filter(item -> client.equals(item.client())
-                                                   && indexes.contains(item.index()))
+                                           .filter(index -> clientName.equals(index.client()))
                                            .toList();
-                    if (searchIndexes.isEmpty()) {
-                        throw new IllegalArgumentException("Invalid PP: " + getDefinition().getName() + ", " + indexes
-                                + " not found  found for searchClient" + client + " and repository: " + repository);
-                    }
-                }
-            }
+        if (indexes.size() > service.getRepositoryNames().size()) {
+            log.warn("Page provider '{}' used on multiple repositories, but some repository has multiple indexes "
+                    + "defined for client '{}': {}", pageProviderName, clientName, indexes);
         }
+        return indexes;
+    }
+
+    protected List<SearchIndex> getSearchIndexForRepository(String repository, SearchService service, String clientName,
+            String pageProviderName) {
+        List<String> configuredIndexes = getIndexes();
+        if (isEmpty(configuredIndexes)) {
+            return getDefaultIndexesForRepository(service, repository, clientName, pageProviderName);
+        } else {
+            return getConfiguredIndexes(service, configuredIndexes, clientName, pageProviderName, repository);
+        }
+    }
+
+    protected List<SearchIndex> getDefaultIndexesForRepository(SearchService service, String repository,
+            String clientName, String pageProviderName) {
+        if (getClientName() == null) {
+            return List.of(service.getSearchIndex(service.getDefaultIndexName(repository)));
+        } else {
+            // Use the first index defined for the repository and the specified client
+            return List.of(service.getIndexNames(repository)
+                                  .stream()
+                                  .map(service::getSearchIndex)
+                                  .filter(index -> clientName.equals(index.client()))
+                                  .findFirst()
+                                  .orElseThrow(() -> throwInvalidConfigurationException(pageProviderName,
+                                          "No search index found for client '" + clientName + "' and repository '"
+                                                  + repository + "'")));
+        }
+    }
+
+    protected List<SearchIndex> getConfiguredIndexes(SearchService service, List<String> configuredIndexes,
+            String clientName, String pageProviderName, String repository) {
+        List<SearchIndex> searchIndexes = service.getRepositoryNames()
+                                                 .stream()
+                                                 .map(service::getIndexNames)
+                                                 .flatMap(Collection::stream)
+                                                 .map(service::getSearchIndex)
+                                                 .filter(index -> configuredIndexes.contains(index.index()))
+                                                 .toList();
+        validateConfiguredIndexes(searchIndexes, configuredIndexes, pageProviderName, repository);
         return searchIndexes;
+    }
+
+    protected void validateConfiguredIndexes(List<SearchIndex> searchIndexes, List<String> configuredIndexes,
+            String pageProviderName, String repository) {
+        if (searchIndexes.isEmpty()) {
+            throw throwInvalidConfigurationException(pageProviderName,
+                    "Configured indexes " + configuredIndexes + " not found for repository '" + repository + "'");
+        }
+        // Verify all indexes use the same client
+        long distinctClientCount = searchIndexes.stream().map(SearchIndex::client).distinct().count();
+        if (distinctClientCount != 1) {
+            throw throwInvalidConfigurationException(pageProviderName,
+                    "Configured indexes " + searchIndexes + " must share the same client");
+        }
+    }
+
+    protected IllegalArgumentException throwInvalidConfigurationException(String pageProviderName, String reason) {
+        return new IllegalArgumentException(
+                "Invalid page provider configuration '" + pageProviderName + "': " + reason);
     }
 
     protected String getClientName() {
@@ -211,6 +255,17 @@ public class SearchServicePageProvider extends CoreQueryDocumentPageProvider {
     }
 
     protected List<String> getIndexes() {
+        if (getSearchDocumentModel() != null
+                && getSearchDocumentModel().getContextData(NAMED_PARAMETERS) instanceof HashMap<?, ?> contextData) {
+            if (contextData.containsKey(SEARCH_INDEX_OVERRIDE_PARAM)) {
+                String searchIndex = (String) contextData.get(SEARCH_INDEX_OVERRIDE_PARAM);
+                if (StringUtils.isNotBlank(searchIndex)) {
+                    log.debug("Override search Index for pp: {} to index: {}", () -> getDefinition().getName(),
+                            () -> searchIndex);
+                    return List.of(searchIndex);
+                }
+            }
+        }
         if (getDefinition() instanceof SearchServicePageProviderDescriptor searchServiceDescriptor) {
             return searchServiceDescriptor.getSearchIndexes();
         }

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 package org.nuxeo.ecm.core.storage.sql;
 
 import static java.util.stream.Collectors.toMap;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
+import static org.apache.commons.lang3.ObjectUtils.getIfNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,6 +31,7 @@ import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XNodeList;
 import org.nuxeo.common.xmap.annotation.XNodeMap;
@@ -306,9 +307,16 @@ public class RepositoryDescriptor implements Descriptor {
         return fulltextDescriptor;
     }
 
+    /** @since 2025.11 */
     @XNode("indexing/fulltext@fieldSizeLimit")
+    public void setFulltextFieldSizeLimit(ByteSize fieldByteSizeLimit) {
+        fulltextDescriptor.setFulltextFieldByteSizeLimit(fieldByteSizeLimit);
+    }
+
+    /** @deprecated since 2025.11, use {@link #setFulltextFieldSizeLimit(ByteSize)} instead */
+    @Deprecated(since = "2025.11", forRemoval = true)
     public void setFulltextFieldSizeLimit(int fieldSizeLimit) {
-        fulltextDescriptor.setFulltextFieldSizeLimit(fieldSizeLimit);
+        setFulltextFieldSizeLimit(ByteSize.ofBytes(fieldSizeLimit));
     }
 
     @XNode("indexing/fulltext@disabled")
@@ -441,10 +449,10 @@ public class RepositoryDescriptor implements Descriptor {
     public RepositoryDescriptor merge(Descriptor o) {
         var other = (RepositoryDescriptor) o;
         var merged = new RepositoryDescriptor(this);
-        merged.name = defaultIfNull(other.name, merged.name);
-        merged.label = defaultIfNull(other.label, merged.label);
-        merged.isDefault = defaultIfNull(other.isDefault, merged.isDefault);
-        merged.headless = defaultIfNull(other.headless, merged.headless);
+        merged.name = getIfNull(other.name, merged.name);
+        merged.label = getIfNull(other.label, merged.label);
+        merged.isDefault = getIfNull(other.isDefault, merged.isDefault);
+        merged.headless = getIfNull(other.headless, merged.headless);
         if (other.pool != null) {
             if (merged.pool == null) {
                 merged.pool = new PoolConfiguration(other.pool);
@@ -452,16 +460,16 @@ public class RepositoryDescriptor implements Descriptor {
                 merged.pool.merge(other.pool);
             }
         }
-        merged.clusterInvalidatorClass = defaultIfNull(other.clusterInvalidatorClass, merged.clusterInvalidatorClass);
-        merged.cachingMapperClass = defaultIfNull(other.cachingMapperClass, merged.cachingMapperClass);
-        merged.cachingMapperEnabled = defaultIfNull(other.cachingMapperEnabled, merged.cachingMapperEnabled);
+        merged.clusterInvalidatorClass = getIfNull(other.clusterInvalidatorClass, merged.clusterInvalidatorClass);
+        merged.cachingMapperClass = getIfNull(other.cachingMapperClass, merged.cachingMapperClass);
+        merged.cachingMapperEnabled = getIfNull(other.cachingMapperEnabled, merged.cachingMapperEnabled);
         merged.cachingMapperProperties.putAll(other.cachingMapperProperties);
-        merged.noDDL = defaultIfNull(other.noDDL, merged.noDDL);
-        merged.ddlMode = defaultIfNull(other.ddlMode, merged.ddlMode);
+        merged.noDDL = getIfNull(other.noDDL, merged.noDDL);
+        merged.ddlMode = getIfNull(other.ddlMode, merged.ddlMode);
         merged.sqlInitFiles.addAll(other.sqlInitFiles);
-        merged.softDeleteEnabled = defaultIfNull(other.softDeleteEnabled, merged.softDeleteEnabled);
-        merged.proxiesEnabled = defaultIfNull(other.proxiesEnabled, merged.proxiesEnabled);
-        merged.idType = defaultIfNull(other.idType, merged.idType);
+        merged.softDeleteEnabled = getIfNull(other.softDeleteEnabled, merged.softDeleteEnabled);
+        merged.proxiesEnabled = getIfNull(other.proxiesEnabled, merged.proxiesEnabled);
+        merged.idType = getIfNull(other.idType, merged.idType);
         Map<String, FieldDescriptor> mappedFields = merged.schemaFields.stream().collect(toMap(f -> f.field, f -> f));
         for (FieldDescriptor of : other.schemaFields) {
             FieldDescriptor f = mappedFields.get(of.field);
@@ -471,24 +479,22 @@ public class RepositoryDescriptor implements Descriptor {
                 merged.schemaFields.add(of);
             }
         }
-        merged.arrayColumns = defaultIfNull(other.arrayColumns, merged.arrayColumns);
-        merged.childNameUniqueConstraintEnabled = defaultIfNull(other.childNameUniqueConstraintEnabled,
+        merged.arrayColumns = getIfNull(other.arrayColumns, merged.arrayColumns);
+        merged.childNameUniqueConstraintEnabled = getIfNull(other.childNameUniqueConstraintEnabled,
                 merged.childNameUniqueConstraintEnabled);
-        merged.collectionUniqueConstraintEnabled = defaultIfNull(other.collectionUniqueConstraintEnabled,
+        merged.collectionUniqueConstraintEnabled = getIfNull(other.collectionUniqueConstraintEnabled,
                 merged.collectionUniqueConstraintEnabled);
-        merged.fulltextAnalyzer = defaultIfNull(other.fulltextAnalyzer, merged.fulltextAnalyzer);
-        merged.fulltextCatalog = defaultIfNull(other.fulltextCatalog, merged.fulltextCatalog);
+        merged.fulltextAnalyzer = getIfNull(other.fulltextAnalyzer, merged.fulltextAnalyzer);
+        merged.fulltextCatalog = getIfNull(other.fulltextCatalog, merged.fulltextCatalog);
         merged.fulltextDescriptor.merge(other.fulltextDescriptor);
         merged.neverPerInstanceMixins.addAll(other.neverPerInstanceMixins);
-        merged.pathOptimizationsEnabled = defaultIfNull(other.pathOptimizationsEnabled,
-                merged.pathOptimizationsEnabled);
+        merged.pathOptimizationsEnabled = getIfNull(other.pathOptimizationsEnabled, merged.pathOptimizationsEnabled);
 
-        merged.pathOptimizationsVersion = defaultIfNull(other.pathOptimizationsVersion,
-                merged.pathOptimizationsVersion);
-        merged.aclOptimizationsEnabled = defaultIfNull(other.aclOptimizationsEnabled, merged.aclOptimizationsEnabled);
-        merged.readAclMaxSize = defaultIfNull(other.readAclMaxSize, merged.readAclMaxSize);
-        merged.usersSeparatorKey = defaultIfNull(other.usersSeparatorKey, merged.usersSeparatorKey);
-        merged.changeTokenEnabled = defaultIfNull(other.changeTokenEnabled, merged.changeTokenEnabled);
+        merged.pathOptimizationsVersion = getIfNull(other.pathOptimizationsVersion, merged.pathOptimizationsVersion);
+        merged.aclOptimizationsEnabled = getIfNull(other.aclOptimizationsEnabled, merged.aclOptimizationsEnabled);
+        merged.readAclMaxSize = getIfNull(other.readAclMaxSize, merged.readAclMaxSize);
+        merged.usersSeparatorKey = getIfNull(other.usersSeparatorKey, merged.usersSeparatorKey);
+        merged.changeTokenEnabled = getIfNull(other.changeTokenEnabled, merged.changeTokenEnabled);
         return merged;
     }
 

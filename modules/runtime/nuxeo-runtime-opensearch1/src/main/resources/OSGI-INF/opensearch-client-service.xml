@@ -40,7 +40,7 @@
     <documentation>
       Extension point used to configure an OpenSearch index.
       <code>
-        <index name="indexName" enabled="true" create="true" manageAlias="false" writeAlias="">
+        <index name="indexName" enabled="true" create="true">
           <client id="default" /> <!-- which client the index is created against -->
           <settings file="/path/to/settings.json">
             {

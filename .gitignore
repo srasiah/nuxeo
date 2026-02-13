@@ -24,6 +24,7 @@ bin
 *.ipr
 *.iws
 *.ids
+*.vscode
 .pydevproject
 .factorypath
 .java-version

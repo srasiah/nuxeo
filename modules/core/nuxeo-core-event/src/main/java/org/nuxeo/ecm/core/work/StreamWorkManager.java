@@ -567,6 +567,14 @@ public class StreamWorkManager extends WorkManagerImpl {
     }
 
     @Override
+    public Work.State getWorkState(String workId) {
+        if (!storeState) {
+            return null;
+        }
+        return WorkStateHelper.getState(workId);
+    }
+
+    @Override
     protected boolean scheduleAfterCommit(Work work, Scheduling scheduling) {
         TransactionManager transactionManager;
         try {

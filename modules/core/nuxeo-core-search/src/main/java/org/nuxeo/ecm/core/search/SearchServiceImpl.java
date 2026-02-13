@@ -19,9 +19,11 @@
 package org.nuxeo.ecm.core.search;
 
 import static java.util.Objects.requireNonNull;
+import static org.nuxeo.ecm.core.search.index.IndexingBackgroundAction.IndexingBackgroundComputation.INDEXES_PARAM;
 import static org.nuxeo.runtime.api.login.LoginComponent.SYSTEM_USERNAME;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -32,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.common.function.ThrowablePredicate;
@@ -284,31 +287,65 @@ public class SearchServiceImpl implements SearchService, SearchIndexingService {
 
     @Override
     public String reindexRepository(String repository) {
-        log.debug("Reindexing repository: {}", repository);
+        return reindexRepository(repository, null);
+    }
+
+    @Override
+    public String reindexRepository(String repository, List<String> indexNames) {
+        List<SearchIndex> indexes;
+        log.debug("Reindexing repository: {} on indexes: {}", repository, indexNames);
+        if (CollectionUtils.isEmpty(indexNames)) {
+            indexes = getIndexNames(repository).stream().map(this::getSearchIndex).toList();
+        } else {
+            checkAllIndexInRepo(repository, indexNames);
+            indexes = indexNames.stream().map(this::getSearchIndex).toList();
+        }
+        var idxNames = indexes.stream().map(SearchIndex::index).toList();
         BulkService bulkService = Framework.getService(BulkService.class);
-        var searchIndexes = getIndexNames(repository).stream().map(this::getSearchIndex).toList();
-        searchIndexes.forEach(searchIndex -> getClient(searchIndex.client()).dropAndInitIndex(searchIndex.index()));
-        String commandId = bulkService.submit(new BulkCommand.Builder(IndexingBackgroundAction.ACTION_NAME,
-                NXQL_ALL_DOCUMENTS, SYSTEM_USERNAME).repository(repository).build());
-        log.warn("Reindexing repository: {}, with bulk command: {} on indexes: {}", repository, commandId,
-                searchIndexes);
+        indexes.forEach(index -> getClient(index.client()).dropAndInitIndex(index.index()));
+        String commandId = bulkService.submit(
+                new BulkCommand.Builder(IndexingBackgroundAction.ACTION_NAME, NXQL_ALL_DOCUMENTS,
+                        SYSTEM_USERNAME).repository(repository).param(INDEXES_PARAM, (Serializable) idxNames).build());
+        log.warn("Reindexing repository: {}, with bulk command: {} on indexes: {}", repository, commandId, idxNames);
         return commandId;
     }
 
     @Override
     public String reindexDocuments(String repository, String nxql, long queryLimit) {
-        log.debug("Reindexing repository: {} with nxql: {}, limit: {}", repository, nxql, queryLimit);
+        return reindexDocuments(repository, nxql, queryLimit, null);
+    }
+
+    @Override
+    public String reindexDocuments(String repository, String nxql, long queryLimit, List<String> indexNames) {
+        log.debug("Reindexing documents on repository: {} with nxql: {}, limit: {}, indexes: {}", repository, nxql,
+                queryLimit, indexNames);
         BulkService bulkService = Framework.getService(BulkService.class);
-        var builder = new BulkCommand.Builder(IndexingBackgroundAction.ACTION_NAME, //
-                nxql, SYSTEM_USERNAME).repository(repository);
+        var builder = new BulkCommand.Builder(IndexingBackgroundAction.ACTION_NAME, nxql, SYSTEM_USERNAME).repository(
+                repository);
         if (queryLimit > 0) {
             builder.queryLimit(queryLimit);
         }
+        if (CollectionUtils.isNotEmpty(indexNames)) {
+            checkAllIndexInRepo(repository, indexNames);
+            builder.param(INDEXES_PARAM, (Serializable) indexNames);
+        }
         String commandId = bulkService.submit(builder.build());
-        var searchIndexes = getIndexNames(repository);
         log.warn("Reindexing documents on repository: {} using: {}{}, with bulk command: {} on indexes: {}", repository,
-                nxql, queryLimit > 0 ? " limit: " + queryLimit : "", commandId, searchIndexes);
+                nxql, queryLimit > 0 ? " limit: " + queryLimit : "", commandId,
+                CollectionUtils.isEmpty(indexNames) ? "all" : indexNames);
         return commandId;
+    }
+
+    protected void checkAllIndexInRepo(String repository, List<String> indexNames) {
+        try {
+            List<SearchIndex> indexes = indexNames.stream().map(this::getSearchIndex).toList();
+            boolean allSameRepository = indexes.stream().allMatch(index -> repository.equals(index.repository()));
+            if (!allSameRepository) {
+                throw new IllegalArgumentException("All search indexes must point to the same repository");
+            }
+        } catch (NullPointerException e) {
+            throw new IllegalArgumentException(e);
+        }
     }
 
     @Override

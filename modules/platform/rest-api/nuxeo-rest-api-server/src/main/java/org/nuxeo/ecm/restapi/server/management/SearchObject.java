@@ -18,6 +18,7 @@
  */
 package org.nuxeo.ecm.restapi.server.management;
 
+import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static jakarta.servlet.http.HttpServletResponse.SC_REQUEST_TIMEOUT;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.lang.Math.max;
@@ -41,6 +42,7 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.ecm.core.api.ConcurrentUpdateException;
 import org.nuxeo.ecm.core.api.DocumentModel;
@@ -58,6 +60,7 @@ import org.nuxeo.ecm.platform.query.nxql.SearchServicePageProvider;
 import org.nuxeo.ecm.webengine.model.WebObject;
 import org.nuxeo.ecm.webengine.model.impl.AbstractResource;
 import org.nuxeo.ecm.webengine.model.impl.ResourceTypeImpl;
+import org.nuxeo.runtime.RuntimeServiceException;
 import org.nuxeo.runtime.api.Framework;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -86,8 +89,8 @@ public class SearchObject extends AbstractResource<ResourceTypeImpl> {
     @POST
     @Path("reindex")
     public BulkStatus doIndexing(@QueryParam("query") String query,
-            @QueryParam("queryLimit") @DefaultValue("-1") Long queryLimit) {
-        return performIndexing(query, queryLimit);
+            @QueryParam("queryLimit") @DefaultValue("-1") Long queryLimit, @QueryParam("index") List<String> indexes) {
+        return performIndexing(query, queryLimit, indexes);
     }
 
     /**
@@ -98,11 +101,11 @@ public class SearchObject extends AbstractResource<ResourceTypeImpl> {
     @POST
     @Path("{documentId}/reindex")
     public BulkStatus doIndexingOnDocument(@PathParam("documentId") String documentId,
-            @QueryParam("queryLimit") @DefaultValue("-1") Long queryLimit) {
+            @QueryParam("queryLimit") @DefaultValue("-1") Long queryLimit, @QueryParam("index") List<String> indexes) {
         String query = String.format("Select * From Document where %s = '%s' or %s = '%s'", //
                 NXQL.ECM_UUID, documentId, //
                 NXQL.ECM_ANCESTORID, documentId);
-        return performIndexing(query, queryLimit);
+        return performIndexing(query, queryLimit, indexes);
     }
 
     /**
@@ -121,26 +124,30 @@ public class SearchObject extends AbstractResource<ResourceTypeImpl> {
     }
 
     /**
-     * @deprecated since 2025.8 use {@link #performIndexing(String, long)} instead
+     * @deprecated since 2025.8 use {@link #performIndexing(String, long, List<String>)} instead
      */
     @Deprecated(since = "2025.8", forRemoval = true)
     protected BulkStatus performIndexing(String query) {
-        return performIndexing(query, -1);
+        return performIndexing(query, -1, null);
     }
 
     /**
      * Performs indexing on documents matching the optional NXQL query.
      */
-    protected BulkStatus performIndexing(String query, long queryLimit) {
+    protected BulkStatus performIndexing(String query, long queryLimit, List<String> indexes) {
         String repository = ctx.getCoreSession().getRepositoryName();
         var searchIndexingService = Framework.getService(SearchIndexingService.class);
         BulkService bulkService = Framework.getService(BulkService.class);
         try {
-            String commandId = isBlank(query) ? searchIndexingService.reindexRepository(repository)
-                    : searchIndexingService.reindexDocuments(repository, query, queryLimit);
+            String commandId = isBlank(query) ? searchIndexingService.reindexRepository(repository, indexes)
+                    : searchIndexingService.reindexDocuments(repository, query, queryLimit, indexes);
             return bulkService.getStatus(commandId);
         } catch (IllegalStateException e) {
+            // exclusive bulk command
             throw new ConcurrentUpdateException(e.getMessage(), e);
+        } catch (RuntimeServiceException e) {
+            // unable to drop the index, security reason or alias
+            throw new NuxeoException(e.getMessage(), SC_BAD_REQUEST);
         }
     }
 
@@ -149,7 +156,8 @@ public class SearchObject extends AbstractResource<ResourceTypeImpl> {
      */
     @GET
     @Path("checkSearch")
-    public String checkSearch(@QueryParam("nxql") String nxql, @QueryParam("pageSize") Long pageSize) {
+    public String checkSearch(@QueryParam("nxql") String nxql, @QueryParam("pageSize") Long pageSize,
+            @QueryParam("index") List<String> indexes) {
         if (nxql == null || nxql.isBlank()) {
             nxql = DEFAULT_CHECK_SEARCH_NXQL;
         }
@@ -158,10 +166,19 @@ public class SearchObject extends AbstractResource<ResourceTypeImpl> {
         }
         SearchService service = Framework.getService(SearchService.class);
         String repository = ctx.getCoreSession().getRepositoryName();
-        var indexes = service.getIndexNames(repository);
+        var repoIndexes = service.getIndexNames(repository);
+        List<String> checkIndexes;
+        if (CollectionUtils.isEmpty(indexes)) {
+            checkIndexes = repoIndexes;
+        } else {
+            if (indexes.stream().filter(index -> !repoIndexes.contains(index)).count() > 0) {
+                throw new NuxeoException("Unexisting index submitted for repository: " + repository, SC_BAD_REQUEST);
+            }
+            checkIndexes = indexes;
+        }
         Map<String, Serializable> ret = new HashMap<>();
         ret.put("query", nxql);
-        for (String index : indexes) {
+        for (String index : checkIndexes) {
             var searchIndex = service.getSearchIndex(index);
             Map<String, Serializable> map = extractResultInfo(searchIndex, nxql, pageSize);
             ret.put("order", map.get("order"));

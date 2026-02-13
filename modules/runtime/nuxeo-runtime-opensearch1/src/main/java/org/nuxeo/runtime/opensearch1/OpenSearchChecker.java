@@ -43,9 +43,19 @@ public class OpenSearchChecker implements BackingChecker {
 
     @Override
     public void check(ConfigurationHolder configHolder) throws ConfigurationException {
-        var config = getDescriptor(configHolder, CONFIG_NAME, OpenSearchClientConfig.class,
-                // avoid XMap to fail when trying to load class value by removing class attribute
-                content -> content.replace("class=", "ignore="), OpenSearchClientConfig.Store.class);
+        OpenSearchClientConfig config;
+        try {
+            config = getDescriptor(configHolder, CONFIG_NAME, OpenSearchClientConfig.class,
+                    // avoid XMap to fail when trying to load class value by removing class attribute
+                    content -> content.replace("class=", "ignore="), OpenSearchClientConfig.Store.class);
+        } catch (ConfigurationException e) {
+            if (e.getMessage() != null && e.getMessage().contains("No configuration found")) {
+                // An empty configuration is expected during a migration from another search client
+                log.warn("Skip OpenSearch1 check, because {} is empty", CONFIG_NAME);
+                return;
+            }
+            throw e;
+        }
         if (config.getEmbedServer().isPresent()) {
             log.debug("OpenSearch config check skipped on embedded configuration");
             return;

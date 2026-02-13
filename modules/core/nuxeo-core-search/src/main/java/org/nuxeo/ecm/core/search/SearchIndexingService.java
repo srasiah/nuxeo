@@ -19,64 +19,97 @@
 package org.nuxeo.ecm.core.search;
 
 import java.time.Duration;
+import java.util.List;
 
 /**
- * Search Indexing Service. This service is for internal usage since indexing is done automatically.
+ * Service responsible for managing search index operations including indexing, reindexing, and refreshing documents.
+ * This service is primarily intended for internal usage as document indexing typically occurs automatically.
  * 
  * @since 2025.0
  */
 public interface SearchIndexingService {
 
     /**
-     * Internal: index documents.
+     * Internal: Indexes documents according to the specified bulk indexing request.
+     *
+     * @param request the bulk indexing request containing documents to index
+     * @return the indexing response with operation details
      */
     BulkIndexingResponse indexDocuments(BulkIndexingRequest request);
 
     /**
-     * Internal: reindex the repository
+     * Internal: Reindexes the entire repository by dropping and recreating all associated search indexes.
      *
-     * @return the bulk command id in charge of reindexing
+     * @param repository the repository name
+     * @return the bulk command id for the reindexing operation
      */
     String reindexRepository(String repository);
 
     /**
-     * Internal: reindex documents of the given repository according to the given NXQL query.
+     * Internal: Reindexes the entire repository by dropping and recreating the given search indexes.
+     *
+     * @param indexNames the list of indexes to reindex, all indexes must be on the same repository
+     * @return the bulk command id for the reindexing operation
+     * @since 2025.11
+     */
+    String reindexRepository(String repository, List<String> indexNames);
+
+    /**
+     * Reindexes documents matching the specified NXQL query for all search indexes in the repository.
      *
      * @param repository the repository name
-     * @param nxql the NXQL query
-     * @return the bulk command id in charge of reindexing
+     * @param nxql the NXQL query to select documents
+     * @return the bulk command id for the reindexing operation
      */
     default String reindexDocuments(String repository, String nxql) {
         return reindexDocuments(repository, nxql, -1);
     }
 
     /**
-     * Internal: reindex documents of the given repository according to the given NXQL query using a limit.
+     * Reindexes documents matching the specified NXQL query up to the given limit for all search indexes of the
+     * repository.
      *
-     * @since 2025.8
      * @param repository the repository name
-     * @param nxql the NXQL query
-     * @param queryLimit limit applied to the number of documents to index, -1 for no limit
-     * @return the bulk command id in charge of reindexing
+     * @param nxql the NXQL query to select documents
+     * @param queryLimit maximum number of documents to index, or -1 for no limit
+     * @return the bulk command id for the reindexing operation
+     * @since 2025.8
      */
     String reindexDocuments(String repository, String nxql, long queryLimit);
 
     /**
-     * Refreshes an index so newly indexed documents are searchable.
+     * Reindexes documents matching the specified NXQL query for the given limit only for the specified indexes.
+     *
+     * @param repository the repository name
+     * @param nxql the NXQL query to select documents
+     * @param queryLimit maximum number of documents to index, or -1 for no limit
+     * @param indexNames search indexes to reindex, all search indexes must point to the same repository
+     * @return the bulk command id for the reindexing operation
+     * @since 2025.11
+     */
+    String reindexDocuments(String repository, String nxql, long queryLimit, List<String> indexNames);
+
+    /**
+     * Refreshes a search index to make newly indexed documents immediately searchable.
+     *
+     * @param index the search index to refresh
      */
     void refresh(SearchIndex index);
 
     /**
-     * Internal: Gets a given search client.
+     * Internal: Retrieves a search client by name.
+     *
+     * @param clientName the name of the search client
+     * @return the search client instance
      */
     SearchClient getClient(String clientName);
 
     /**
-     * Waits for completion of indexing activity for testing purpose only.
+     * Waits for completion of all indexing activities. <b>Intended for testing purposes only</b>.
      *
-     * @param duration the duration to wait
-     * @return {@code true} if all indexing processing completed or {@code false} if one or more has not finished after
-     *         the timeout
+     * @param duration the maximum duration to wait
+     * @return {@code true} if all indexing operations completed, {@code false} if timeout occurred
+     * @throws InterruptedException if the current thread is interrupted while waiting
      */
     boolean await(Duration duration) throws InterruptedException;
 }

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2011 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2011-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import jakarta.servlet.WriteListener;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.runtime.api.Framework;
 
 /**
@@ -49,10 +50,10 @@ public class BufferingServletOutputStream extends ServletOutputStream {
     private static final Logger log = LogManager.getLogger(BufferingServletOutputStream.class);
 
     /** Initial memory buffer size. */
-    public static final int INITIAL = 4 * 1024; // 4 KB
+    public static final int INITIAL = (int) ByteSize.ofKibibytes(4).toBytes();
 
     /** Maximum memory buffer size, after this a file is used. */
-    public static final int MAX = 64 * 1024; // 64 KB
+    public static final int MAX = (int) ByteSize.ofKibibytes(64).toBytes();
 
     /** Used for 0-length writes. */
     private final static OutputStream EMPTY = new ByteArrayOutputStream(0);

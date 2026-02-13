@@ -24,7 +24,10 @@ import static org.nuxeo.lib.stream.computation.AbstractComputation.OUTPUT_1;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
+import org.nuxeo.ecm.core.bulk.message.BulkCommand;
 import org.nuxeo.lib.stream.computation.Topology;
 import org.nuxeo.runtime.stream.StreamProcessorTopology;
 
@@ -53,9 +56,19 @@ public class IndexingBackgroundAction implements StreamProcessorTopology {
             super(name);
         }
 
+        /** @since 2025.11 */
+        public static final String INDEXES_PARAM = "indexes";
+
         @Override
         public void startBucket(String bucketKey) {
             delete = false;
+            BulkCommand command = getCurrentCommand();
+            if (command.getParam(INDEXES_PARAM) instanceof List<?> objects) {
+                filterIndexes = objects.stream()
+                                       .filter(Objects::nonNull)
+                                       .map(Object::toString)
+                                       .collect(Collectors.toSet());
+            }
         }
     }
 }

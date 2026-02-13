@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2022 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.platform.mimetype.MimetypeDetectionException;
 import org.nuxeo.ecm.platform.mimetype.MimetypeNotFoundException;
@@ -71,8 +72,8 @@ public class MimetypeRegistryService extends DefaultComponent implements Mimetyp
     public static final ComponentName NAME = new ComponentName( // NOSONAR
             "org.nuxeo.ecm.platform.mimetype.service.MimetypeRegistryService");
 
-    // 10 MB is the max size to allow full file scan
-    public static final long MAX_SIZE_FOR_SCAN = 10 * 1024 * 1024L;
+    // the max size to allow full file scan
+    public static final long MAX_SIZE_FOR_SCAN = ByteSize.ofMebibytes(10).toBytes();
 
     public static final String TMP_EXTENSION = "tmp";
 
@@ -219,7 +220,7 @@ public class MimetypeRegistryService extends DefaultComponent implements Mimetyp
 
             // Only take into account the first possibility.
             var possibilities = new ArrayList<MagicMatch>(match.getSubMatches());
-            var possibility = possibilities.isEmpty() ? null : possibilities.get(0);
+            var possibility = possibilities.isEmpty() ? null : possibilities.getFirst();
             MagicMatch m = requireNonNullElse(possibility, match);
             String mimeType = m.getMimeType();
 

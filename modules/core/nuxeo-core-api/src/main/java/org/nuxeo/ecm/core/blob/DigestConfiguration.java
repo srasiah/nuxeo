@@ -63,7 +63,8 @@ public class DigestConfiguration extends PropertyBasedConfiguration {
     }
 
     protected String getDigestAlgorithm() {
-        return getProperty(DIGEST_ALGORITHM_PROPERTY, DEFAULT_DIGEST_ALGORITHM).toUpperCase(Locale.ENGLISH);
+        return getOptionalProperty(DIGEST_ALGORITHM_PROPERTY).orElse(DEFAULT_DIGEST_ALGORITHM)
+                                                             .toUpperCase(Locale.ENGLISH);
     }
 
     /** @deprecated since 11.5, use {@link KeyStrategyDigest} instead */

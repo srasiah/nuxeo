@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.common.utils.DurationUtils;
 import org.nuxeo.runtime.api.Framework;
 
@@ -49,10 +50,15 @@ public class PropertyBasedConfiguration {
 
     /** Gets a string property. */
     public String getProperty(String propertyName) {
-        return getProperty(propertyName, null);
+        return getOptionalProperty(propertyName).orElse(null);
     }
 
-    /** Gets a string property, or the given default if undefined or blank. */
+    /**
+     * Gets a string property, or the given default if undefined or blank.
+     * 
+     * @deprecated since 2025.11, use {@link #getOptionalProperty} instead
+     */
+    @Deprecated(since = "2025.11", forRemoval = true)
     public String getProperty(String propertyName, String defaultValue) {
         return getOptionalProperty(propertyName).orElse(defaultValue);
     }
@@ -64,14 +70,16 @@ public class PropertyBasedConfiguration {
 
     /** Gets an integer property, or -1 if undefined or blank. */
     public int getIntProperty(String key) {
-        return getIntProperty(key, -1);
+        return getOptionalIntegerProperty(key).orElse(-1);
     }
 
     /**
      * Gets an integer property, or the given default if undefined or blank.
      *
      * @since 2023.5
+     * @deprecated since 2025.11, use {@link #getOptionalIntegerProperty} instead
      */
+    @Deprecated(since = "2025.11", forRemoval = true)
     public int getIntProperty(String key, int defaultValue) {
         return getOptionalIntegerProperty(key).orElse(defaultValue);
     }
@@ -79,6 +87,20 @@ public class PropertyBasedConfiguration {
     /** Gets a boolean property. */
     public boolean getBooleanProperty(String key) {
         return Boolean.parseBoolean(getProperty(key));
+    }
+
+    /**
+     * @since 2025.11
+     */
+    public Optional<ByteSize> getOptionalByteSizeProperty(String key) {
+        return getOptionalProperty(key).map(s -> {
+            try {
+                return ByteSize.parse(s);
+            } catch (NumberFormatException e) {
+                log.error("Cannot parse byte size {}: {} ", key, s);
+                return null;
+            }
+        });
     }
 
     /**

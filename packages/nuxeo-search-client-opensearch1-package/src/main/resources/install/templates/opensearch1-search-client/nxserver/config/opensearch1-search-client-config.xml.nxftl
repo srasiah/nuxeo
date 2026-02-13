@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <component name="org.nuxeo.ecm.core.search.client.opensearch1.contrib">
-
+<#if (nuxeo.search.client.default.opensearch1.index.name)?has_content>
   <extension target="org.nuxeo.runtime.opensearch1.OpenSearchComponent" point="client">
     <client id="search/default">
 <#if "${(nuxeo.opensearch1.embed.enabled)!}" == "true" && "${nuxeo.search.client.default.opensearch1.client.server}" == "">
@@ -48,5 +48,5 @@
     <searchIndex name="enhanced" searchClient="opensearch" repository="default" default="${(nuxeo.search.client.default.name == 'opensearch')?c}"
                  writerClass="org.nuxeo.ecm.core.search.index.DefaultIndexingJsonWriter" />
   </extension>
-
+</#if>
 </component>

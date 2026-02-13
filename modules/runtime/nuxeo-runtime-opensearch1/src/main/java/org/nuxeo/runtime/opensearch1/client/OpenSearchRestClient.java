@@ -230,26 +230,18 @@ public class OpenSearchRestClient implements OpenSearchClient {
         log.trace("Dropping index: {}", indexName);
         try {
             long timeoutSeconds = timeout.toSeconds();
-            Response response = client.getLowLevelClient()
-                                      .performRequest(
-                                              new Request("DELETE", String.format("/%s?master_timeout=%ds&timeout=%ds",
-                                                      indexName, timeoutSeconds, timeoutSeconds)));
-            int code = response.getStatusLine().getStatusCode();
-            if (code != HttpStatus.SC_OK) {
-                throw new IllegalStateException(String.format("Deleting: %s returns: %s", indexName, response));
-            }
+            client.getLowLevelClient()
+                  .performRequest(new Request("DELETE", String.format("/%s?master_timeout=%ds&timeout=%ds", indexName,
+                          timeoutSeconds, timeoutSeconds)));
         } catch (IOException e) {
-            if (e.getMessage() != null && e.getMessage().contains("illegal_argument_exception")) {
-                // when trying to delete an alias, throws the same exception as the transport client
-                throw new IllegalArgumentException(e);
-            }
             if (e instanceof ResponseException re) {
                 if (re.getResponse().getStatusLine().getStatusCode() == HttpStatus.SC_NOT_FOUND) {
                     log.info("Index: {} not found, nothing to drop", indexName);
                     return;
                 }
             }
-            throw new RuntimeServiceException(e);
+            log.warn("Fail to drop index: {}, {}", indexName, e.getMessage());
+            throw new RuntimeServiceException("Fail to drop index: " + indexName, e);
         }
         log.trace("Index: {} dropped", indexName);
     }
@@ -297,78 +289,6 @@ public class OpenSearchRestClient implements OpenSearchClient {
         } catch (IOException e) {
             throw new RuntimeServiceException(e);
         }
-    }
-
-    // method is there to have CRUD ordering
-    protected void createAlias(String aliasName, String indexName) {
-        log.trace("Creating alias: {} -> {}", aliasName, indexName);
-        Response response = performRequestWithTracing(
-                new Request("PUT", String.format("/%s/_alias/%s", indexName, aliasName)));
-        if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
-            throw new RuntimeServiceException("Fail to create alias: " + indexName + " :" + response);
-        }
-        log.trace("Alias: {} created", aliasName);
-    }
-
-    @Override
-    public boolean aliasExists(String aliasName) {
-        Response response = performRequestWithTracing(new Request("HEAD", String.format("/_alias/%s", aliasName)));
-        return switch (response.getStatusLine().getStatusCode()) {
-            case HttpStatus.SC_OK -> true;
-            case HttpStatus.SC_NOT_FOUND -> false;
-            default ->
-                throw new IllegalStateException(String.format("Checking alias %s returns: %s", aliasName, response));
-        };
-    }
-
-    @Override
-    public String getFirstIndexForAlias(String aliasName) {
-        if (!aliasExists(aliasName)) {
-            return null;
-        }
-        Response response = performRequestWithTracing(new Request("GET", String.format("/_alias/%s", aliasName)));
-        try (InputStream is = response.getEntity().getContent()) {
-            Map<String, Object> map = XContentHelper.convertToMap(XContentType.JSON.xContent(), is, true);
-            if (map.size() != 1) {
-                throw new RuntimeServiceException(String.format(
-                        "Expecting alias that point to a single index, alias: %s, got: %s", aliasName, response));
-            }
-            return map.keySet().iterator().next();
-        } catch (IOException e) {
-            throw new RuntimeServiceException(e);
-        }
-    }
-
-    @Override
-    public void updateAlias(String aliasName, String indexName) {
-        // TODO do this in a single call to make it atomically
-        log.trace("Updating alias to: {} -> {}", aliasName, indexName);
-        if (aliasExists(aliasName)) {
-            deleteAlias(aliasName);
-        }
-        if (indexExists(aliasName)) {
-            throw new RuntimeServiceException(
-                    "Can't create an alias because an index with the same name exists: " + aliasName);
-        }
-        createAlias(aliasName, indexName);
-        log.trace("Alias: {} updated", aliasName);
-    }
-
-    protected void deleteAlias(String aliasName) {
-        String indexName = getFirstIndexForAlias(aliasName);
-        if (indexName == null) {
-            // there is no alias to delete
-            return;
-        }
-        log.trace("Deleting alias: {}", aliasName);
-        Response response = performRequestWithTracing(
-                new Request("DELETE", String.format("/%s/_alias/%s", indexName, aliasName)));
-        int code = response.getStatusLine().getStatusCode();
-        if (code != HttpStatus.SC_OK) {
-            throw new IllegalStateException(
-                    String.format("Fail to delete alias %s -> %s: %s", aliasName, indexName, response));
-        }
-        log.trace("Alias: {} deleted", aliasName);
     }
 
     /**

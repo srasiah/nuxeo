@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,9 @@ package org.nuxeo.ecm.core.transientstore.api;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.common.xmap.XMap;
 import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XNodeMap;
@@ -36,8 +38,16 @@ import org.nuxeo.runtime.model.Descriptor;
 @XObject("store")
 public class TransientStoreConfig implements Descriptor {
 
+    /**
+     * @deprecated since 2025.11, not used anymore
+     */
+    @Deprecated(since = "2025.11", forRemoval = true)
     public static final int DEFAULT_TARGET_MAX_SIZE_MB = -1;
 
+    /**
+     * @deprecated since 2025.11, not used anymore
+     */
+    @Deprecated(since = "2025.11", forRemoval = true)
     public static final int DEFAULT_ABSOLUTE_MAX_SIZE_MB = -1;
 
     public static final int DEFAULT_FIRST_LEVEL_TTL = 60 * 2;
@@ -51,12 +61,14 @@ public class TransientStoreConfig implements Descriptor {
     protected String path;
 
     // target size that ideally should never be exceeded
-    @XNode("targetMaxSizeMB")
-    protected Integer targetMaxSizeMB;
+    /** @since 2025.11 */
+    @XNode("targetMaxSize")
+    protected ByteSize targetMaxSize;
 
     // size that must never be exceeded
-    @XNode("absoluteMaxSizeMB")
-    protected Integer absoluteMaxSizeMB;
+    /** @since 2025.11 */
+    @XNode("absoluteMaxSize")
+    protected ByteSize absoluteMaxSize;
 
     @XNode("firstLevelTTL")
     protected Integer firstLevelTTL;
@@ -85,8 +97,8 @@ public class TransientStoreConfig implements Descriptor {
     public TransientStoreConfig(TransientStoreConfig other) {
         name = other.name;
         path = other.path;
-        targetMaxSizeMB = other.targetMaxSizeMB;
-        absoluteMaxSizeMB = other.absoluteMaxSizeMB;
+        targetMaxSize = other.targetMaxSize;
+        absoluteMaxSize = other.absoluteMaxSize;
         firstLevelTTL = other.firstLevelTTL;
         secondLevelTTL = other.secondLevelTTL;
         implClass = other.implClass;
@@ -99,8 +111,8 @@ public class TransientStoreConfig implements Descriptor {
         TransientStoreConfig merged = new TransientStoreConfig();
         merged.name = other.name;
         merged.path = defaultValue(other.path, path);
-        merged.targetMaxSizeMB = defaultValue(other.targetMaxSizeMB, targetMaxSizeMB);
-        merged.absoluteMaxSizeMB = defaultValue(other.absoluteMaxSizeMB, absoluteMaxSizeMB);
+        merged.targetMaxSize = defaultValue(other.targetMaxSize, targetMaxSize);
+        merged.absoluteMaxSize = defaultValue(other.absoluteMaxSize, absoluteMaxSize);
         merged.firstLevelTTL = defaultValue(other.firstLevelTTL, firstLevelTTL);
         merged.secondLevelTTL = defaultValue(other.secondLevelTTL, secondLevelTTL);
         merged.implClass = defaultValue(other.implClass, implClass);
@@ -122,12 +134,58 @@ public class TransientStoreConfig implements Descriptor {
         return name;
     }
 
-    public int getTargetMaxSizeMB() {
-        return targetMaxSizeMB == null ? DEFAULT_TARGET_MAX_SIZE_MB : targetMaxSizeMB.intValue();
+    /** @since 2025.11 */
+    public Optional<ByteSize> getTargetMaxSize() {
+        return Optional.ofNullable(targetMaxSize);
     }
 
+    /**
+     * @deprecated since 2025.11, use {@link #getTargetMaxSize()} instead
+     */
+    @Deprecated(since = "2025.11", forRemoval = true)
+    public int getTargetMaxSizeMB() {
+        return targetMaxSize == null ? DEFAULT_TARGET_MAX_SIZE_MB : (int) targetMaxSize.toMebibytes();
+    }
+
+    /**
+     * @since 2025.11
+     * @deprecated since 2025.11, for backward compatibility purpose
+     */
+    @Deprecated(since = "2025.11", forRemoval = true)
+    @XNode("targetMaxSizeMB")
+    protected void setTargetMaxSizeMB(int targetMaxSizeMB) {
+        if (targetMaxSizeMB < 0) {
+            this.targetMaxSize = null;
+        } else {
+            this.targetMaxSize = ByteSize.ofMebibytes(targetMaxSizeMB);
+        }
+    }
+
+    /** @since 2025.11 */
+    public Optional<ByteSize> getAbsoluteMaxSize() {
+        return Optional.ofNullable(absoluteMaxSize);
+    }
+
+    /**
+     * @deprecated since 2025.11, use {@link #getAbsoluteMaxSize()} instead
+     */
+    @Deprecated(since = "2025.11", forRemoval = true)
     public int getAbsoluteMaxSizeMB() {
-        return absoluteMaxSizeMB == null ? DEFAULT_ABSOLUTE_MAX_SIZE_MB : absoluteMaxSizeMB.intValue();
+        return absoluteMaxSize == null ? DEFAULT_ABSOLUTE_MAX_SIZE_MB : (int) absoluteMaxSize.toMebibytes();
+    }
+
+    /**
+     * @since 2025.11, for backward compatibility purpose
+     * @deprecated since 2025.11
+     */
+    @Deprecated(since = "2025.11", forRemoval = true)
+    @XNode("absoluteMaxSizeMB")
+    protected void setAbsoluteMaxSizeMB(int absoluteMaxSizeMB) {
+        if (absoluteMaxSizeMB < 0) {
+            this.absoluteMaxSize = null;
+        } else {
+            this.absoluteMaxSize = ByteSize.ofMebibytes(absoluteMaxSizeMB);
+        }
     }
 
     public int getFirstLevelTTL() {

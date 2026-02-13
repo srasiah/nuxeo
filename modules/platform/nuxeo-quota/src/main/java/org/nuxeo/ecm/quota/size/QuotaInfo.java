@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2012 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     <a href="mailto:tdelprat@nuxeo.com">Tiry</a>
  */
-
 package org.nuxeo.ecm.quota.size;
 
 /**
@@ -40,13 +39,12 @@ public class QuotaInfo {
     protected final QuotaDisplayValue liveSize;
 
     public QuotaInfo(long innerSize, long totalSize, long trashSize, long versionsSize, long maxQuota) {
-        this.innerSize = new QuotaDisplayValue(innerSize, maxQuota);
-        this.totalSize = new QuotaDisplayValue(totalSize, maxQuota);
-        this.sizeTrash = new QuotaDisplayValue(trashSize, maxQuota);
-        this.sizeVersions = new QuotaDisplayValue(versionsSize, maxQuota);
+        this.innerSize = new QuotaDisplayValue(innerSize);
+        this.totalSize = new QuotaDisplayValue(totalSize);
+        this.sizeTrash = new QuotaDisplayValue(trashSize);
+        this.sizeVersions = new QuotaDisplayValue(versionsSize);
         this.maxQuota = new QuotaDisplayValue(maxQuota);
-        this.liveSize = new QuotaDisplayValue(
-                (totalSize - trashSize - versionsSize) > 0L ? (totalSize - trashSize - versionsSize) : 0L);
+        this.liveSize = new QuotaDisplayValue(Math.max((totalSize - trashSize - versionsSize), 0L));
     }
 
     public QuotaDisplayValue getInnerSize() {
@@ -74,22 +72,13 @@ public class QuotaInfo {
     }
 
     /**
-     * Returns the string representation of this quota informations.
-     * to = total size in bytes
-     * i  = inner size in bytes
-     * v  = versions' size in bytes
-     * l  = live size in bytes
-     * tr = trash size in bytes
-     * m  = maximum quota in bytes
+     * Returns the string representation of this quota informations. to = total size in bytes i = inner size in bytes v
+     * = versions' size in bytes l = live size in bytes tr = trash size in bytes m = maximum quota in bytes
      */
     @Override
     public String toString() {
-         return getClass().getSimpleName() + String.format("(to:%d i:%d v:%d l:%d tr:%d m:%d)",
-                 totalSize.getValue(),
-                 innerSize.getValue(),
-                 sizeVersions.getValue(),
-                 liveSize.getValue(),
-                 sizeTrash.getValue(),
-                 maxQuota.getValue());
+        return getClass().getSimpleName()
+                + String.format("(to:%d i:%d v:%d l:%d tr:%d m:%d)", totalSize.getValue(), innerSize.getValue(),
+                        sizeVersions.getValue(), liveSize.getValue(), sizeTrash.getValue(), maxQuota.getValue());
     }
 }

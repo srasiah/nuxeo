@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ package org.nuxeo.runtime.services.config;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
+import static java.util.stream.Collectors.toMap;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -31,16 +32,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.common.utils.DurationUtils;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.logging.DeprecationLogger;
 import org.nuxeo.runtime.model.ComponentInstance;
 import org.nuxeo.runtime.model.DefaultComponent;
+import org.nuxeo.runtime.model.Descriptor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -81,7 +83,7 @@ public class ConfigurationServiceImpl extends DefaultComponent implements Config
                 d = descriptors;
                 if (d == null) {
                     List<ConfigurationPropertyDescriptor> descs = getDescriptors(CONFIGURATION_EP);
-                    descriptors = d = descs.stream().collect(Collectors.toMap(desc -> desc.getId(), desc -> desc));
+                    descriptors = d = descs.stream().collect(toMap(Descriptor::getId, desc -> desc));
                 }
             }
         }
@@ -152,7 +154,7 @@ public class ConfigurationServiceImpl extends DefaultComponent implements Config
         return getDescriptors().values()
                                .stream()
                                .filter(desc -> startsWithNamespace(desc.getName(), namespace))
-                               .collect(Collectors.toMap(desc -> desc.getId().substring(namespace.length() + 1),
+                               .collect(toMap(desc -> desc.getId().substring(namespace.length() + 1),
                                        desc -> desc.getValue() != null && desc.list
                                                ? desc.getValue().split(LIST_SEPARATOR)
                                                : desc.getValue()));
@@ -162,7 +164,7 @@ public class ConfigurationServiceImpl extends DefaultComponent implements Config
     public Map<String, Serializable> getProperties() {
         return getDescriptors().values()
                                .stream()
-                               .collect(Collectors.toMap(desc -> desc.getId(),
+                               .collect(toMap(Descriptor::getId,
                                        desc -> desc.getValue() != null && desc.list
                                                ? desc.getValue().split(LIST_SEPARATOR)
                                                : desc.getValue()));
@@ -319,4 +321,20 @@ public class ConfigurationServiceImpl extends DefaultComponent implements Config
         return getDuration(key).orElse(defaultValue);
     }
 
+    @Override
+    public Optional<ByteSize> getByteSize(String key) {
+        return getString(key).map(value -> {
+            try {
+                return ByteSize.parse(value);
+            } catch (NumberFormatException e) {
+                log.error("Invalid configuration property '{}', '{}' should be a byte size", key, value, e);
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public ByteSize getByteSize(String key, ByteSize defaultValue) {
+        return getByteSize(key).orElse(defaultValue);
+    }
 }

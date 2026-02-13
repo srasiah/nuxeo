@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2023-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -233,9 +233,9 @@ public class AzureBlobStore extends AbstractBlobStore {
     protected String writeFile(AzureBlobKey azureKey, Path file) {
         String resultKey;
         ParallelTransferOptions parallelTransferOptions = new ParallelTransferOptions();
-        parallelTransferOptions.setBlockSizeLong(config.blockSize)
+        parallelTransferOptions.setBlockSizeLong(config.blockSize.bytes())
                                .setMaxConcurrency(config.maxConcurrency)
-                               .setMaxSingleUploadSizeLong(config.maxSingleUploadSize);
+                               .setMaxSingleUploadSizeLong(config.maxSingleUploadSize.bytes());
         BlobUploadFromFileOptions options = new BlobUploadFromFileOptions(file.toString());
         options.setParallelTransferOptions(parallelTransferOptions);
         try {

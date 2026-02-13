@@ -45,6 +45,7 @@ import org.nuxeo.http.test.handler.JsonNodeHandler;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
+import org.nuxeo.runtime.test.runner.WithFrameworkProperty;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
 /**
@@ -53,6 +54,7 @@ import org.nuxeo.runtime.transaction.TransactionHelper;
 @RunWith(FeaturesRunner.class)
 @Features({ RestServerFeature.class })
 @RepositoryConfig(cleanup = Granularity.METHOD, init = RestServerInit.class)
+@WithFrameworkProperty(name = "nuxeo.test.workmanager.stream.storestate.enabled", value = "true")
 @Deploy("org.nuxeo.ecm.core.cache")
 @Deploy("org.nuxeo.ecm.platform.convert")
 public class ConverterTest {
@@ -152,7 +154,7 @@ public class ConverterTest {
             String resultURL = node.get("resultURL").textValue();
             assertEquals(restServerFeature.getRestApiUrl() + computedResultURL, resultURL);
             String status = node.get("status").textValue();
-            assertTrue(status.equals("running") || status.equals("completed"));
+            assertTrue(status, status.equals("scheduled") || status.equals("running") || status.equals("completed"));
         });
 
         // wait for the conversion to finish

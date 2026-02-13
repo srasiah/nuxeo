@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
  *     Thierry Delprat <tdelprat@nuxeo.com>
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.transientstore;
 
 import java.io.Serializable;
@@ -191,7 +190,7 @@ public class SimpleTransientStore extends AbstractTransientStore {
         if (entry != null) {
             log.debug("Invalidating StorageEntry stored at key: {} form L1 cache", key);
             getL1Cache().invalidate(key);
-            if (getStorageSize() <= config.getTargetMaxSizeMB() * (1024 * 1024) || config.getTargetMaxSizeMB() < 0) {
+            if (config.getTargetMaxSize().isEmpty() || getStorageSize() <= config.getTargetMaxSize().get().toBytes()) {
                 log.debug("Putting StorageEntry at key: {} in L2 cache", key);
                 getL2Cache().put(key, entry);
             }

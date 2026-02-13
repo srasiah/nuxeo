@@ -86,15 +86,6 @@ public interface OpenSearchClient extends AutoCloseable {
      */
     String getMapping(String indexName);
 
-    boolean aliasExists(String aliasName);
-
-    /**
-     * Returns the name of the index referenced by the alias. Returns null if the alias does not exists.
-     */
-    String getFirstIndexForAlias(String aliasName);
-
-    void updateAlias(String aliasName, String indexName);
-
     // -------------------------------------------------------------------
     // Search
     //

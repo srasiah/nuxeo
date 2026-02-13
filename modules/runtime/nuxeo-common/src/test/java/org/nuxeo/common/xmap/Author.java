@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Assert;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.common.xmap.annotation.XContent;
 import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XNodeList;
@@ -219,5 +220,17 @@ public class Author {
 
     @XNode("durationJdk")
     Duration durationJdk;
+
+    @XNode("byteSize")
+    ByteSize byteSize;
+
+    @XNode("byteSizeKiB")
+    ByteSize byteSizeKiB;
+
+    @XNode("byteSizeMiB")
+    ByteSize byteSizeMiB;
+
+    @XNode("byteSizeGiB")
+    ByteSize byteSizeGiB;
 
 }

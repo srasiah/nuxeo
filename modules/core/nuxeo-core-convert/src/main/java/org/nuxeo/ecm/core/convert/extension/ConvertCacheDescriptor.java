@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,13 @@ package org.nuxeo.ecm.core.convert.extension;
 
 import static java.util.Objects.requireNonNullElse;
 import static org.apache.commons.lang3.BooleanUtils.toBooleanDefaultIfNull;
+import static org.apache.commons.lang3.ObjectUtils.getIfNull;
 
 import java.nio.file.Path;
 import java.time.Duration;
 
 import org.nuxeo.common.Environment;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XObject;
 import org.nuxeo.runtime.model.Descriptor;
@@ -41,7 +43,11 @@ public class ConvertCacheDescriptor implements Descriptor {
 
     public static final Duration DEFAULT_GC_RATE = Duration.ofMinutes(10);
 
-    public static final long DEFAULT_DISK_CACHE_IN_KB = 10 * 1024;
+    public static final ByteSize DEFAULT_DISK_CACHE = ByteSize.ofMebibytes(10);
+
+    /** @deprecated since 2025.11, use {@link #DEFAULT_DISK_CACHE} instead */
+    @Deprecated(since = "2025.11", forRemoval = true)
+    public static final long DEFAULT_DISK_CACHE_IN_KB = DEFAULT_DISK_CACHE.toKibibytes();
 
     @XNode("@enabled")
     protected Boolean enabled;
@@ -56,12 +62,12 @@ public class ConvertCacheDescriptor implements Descriptor {
     protected Duration gcRate;
 
     /**
-     * The maximum size (in KB) to reach to run the GC.
+     * The maximum byte size to reach to run the GC.
      * <p>
      * Use a negative value to clear the cache on each GC run.
      */
-    @XNode("maxSizeKB")
-    protected Long maxSizeKB;
+    @XNode("maxSize")
+    protected ByteSize maxSize;
 
     @Override
     public String getId() {
@@ -83,18 +89,34 @@ public class ConvertCacheDescriptor implements Descriptor {
         return requireNonNullElse(gcRate, DEFAULT_GC_RATE);
     }
 
+    /** @since 2025.11 */
+    public ByteSize getMaxSize() {
+        return requireNonNullElse(maxSize, DEFAULT_DISK_CACHE);
+    }
+
+    /** @deprecated since 2025.11, use {@link #getMaxSize()} instead */
+    @Deprecated(since = "2025.11", forRemoval = true)
     public long getMaxSizeKB() {
-        return requireNonNullElse(maxSizeKB, DEFAULT_DISK_CACHE_IN_KB);
+        return getMaxSize().toKibibytes();
+    }
+
+    /**
+     * @since 2025.11, for backward compatibility purpose
+     * @deprecated since 2025.11
+     */
+    @XNode("maxSizeKB")
+    protected void setMaxSizeKB(Long maxSizeKB) {
+        this.maxSize = ByteSize.ofKibibytes(maxSizeKB);
     }
 
     @Override
     public Descriptor merge(Descriptor o) {
         var other = (ConvertCacheDescriptor) o;
         var merged = new ConvertCacheDescriptor();
-        merged.enabled = other.enabled != null ? other.enabled : enabled;
-        merged.directory = other.directory != null ? other.directory : directory;
-        merged.gcRate = other.gcRate != null ? other.gcRate : gcRate;
-        merged.maxSizeKB = other.maxSizeKB != null ? other.maxSizeKB : maxSizeKB;
+        merged.enabled = getIfNull(other.enabled, enabled);
+        merged.directory = getIfNull(other.directory, directory);
+        merged.gcRate = getIfNull(other.gcRate, gcRate);
+        merged.maxSize = getIfNull(other.maxSize, maxSize);
         return merged;
     }
 }

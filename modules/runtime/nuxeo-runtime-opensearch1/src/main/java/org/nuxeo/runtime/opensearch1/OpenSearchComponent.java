@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -83,13 +83,7 @@ public class OpenSearchComponent extends DefaultComponent implements OpenSearchC
     }
 
     protected void initIndex(OpenSearchIndexConfig config, boolean dropIfExists) {
-        if (config.manageAlias()) {
-
-        } else if (config.hasExplicitWriteIndex()) {
-
-        } else {
-            createIndex(config.getName(), config, dropIfExists);
-        }
+        createIndex(config.getName(), config, dropIfExists);
     }
 
     protected void createIndex(String indexName, OpenSearchIndexConfig config, boolean dropIfExists) {
@@ -114,10 +108,9 @@ public class OpenSearchComponent extends DefaultComponent implements OpenSearchC
                     client.dropIndex(indexName);
                     indexExists = false;
                 } else {
-                    log.debug("Retrieve index: {} metadata (mapping, alias, ...) from cluster defined by client: {}",
+                    log.debug("Retrieve index: {} metadata (mapping, ...) from cluster defined by client: {}",
                             indexName, clientId);
                     mappingExists = client.mappingExists(indexName);
-                    // TODO something about alias ?
                 }
             }
             if (!indexExists) {
@@ -125,7 +118,7 @@ public class OpenSearchComponent extends DefaultComponent implements OpenSearchC
                 try {
                     client.createIndex(indexName, config.getSettingsContent());
                 } catch (RuntimeServiceException e) {
-                    if (StringUtils.contains(e.getMessage(), "resource_already_exists_exception")) {
+                    if (Strings.CS.contains(e.getMessage(), "resource_already_exists_exception")) {
                         log.warn("Index: {} on cluster defined by client: {} has been concurrently created", indexName,
                                 clientId);
                     } else {

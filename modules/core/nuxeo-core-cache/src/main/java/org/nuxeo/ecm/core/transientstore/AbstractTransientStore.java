@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
  *     Thierry Delprat <tdelprat@nuxeo.com>
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.transientstore;
 
 import static org.nuxeo.common.utils.FileUtils.checkPathTraversal;
@@ -134,7 +133,7 @@ public abstract class AbstractTransientStore implements TransientStoreProvider {
 
     @Override
     public void putBlobs(String key, List<Blob> blobs) {
-        if (config.getAbsoluteMaxSizeMB() < 0 || getStorageSize() < config.getAbsoluteMaxSizeMB() * (1024 * 1024)) {
+        if (config.getAbsoluteMaxSize().isEmpty() || getStorageSize() < config.getAbsoluteMaxSize().get().toBytes()) {
             // Store blobs on the file system
             List<Map<String, String>> blobInfos = storeBlobs(key, blobs);
             // Persist blob information in the store

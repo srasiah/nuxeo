@@ -39,6 +39,9 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
+import org.nuxeo.ecm.core.api.security.ACE;
+import org.nuxeo.ecm.core.api.security.ACL;
+import org.nuxeo.ecm.core.api.security.ACP;
 import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -54,6 +57,31 @@ public class TestComplexTypesMapping {
     CoreSession session;
 
     protected DocumentModel doc;
+
+    public void example() throws Exception {
+        // create the document and attach a blob to it
+        DocumentModel document = session.createDocumentModel("/", "file001", "File");
+        document.setPropertyValue("dc:title", "File 001 - Test Document");
+        Blob blob = Blobs.createBlob("This is a test blob");
+        blob.setFilename("file001-test.txt");
+        doc.setPropertyValue("file:content", (Serializable) blob);
+        doc = session.createDocument(document);
+        session.save();
+
+        // allow another-user to access the document
+        ACP acp = doc.getACP();
+        acp.addACE(ACL.LOCAL_ACL, ACE.builder("another-user", "Read").build());
+        doc.setACP(acp, true);
+
+        // update property
+        doc.setPropertyValue("dc:title", "File 001 - External Document");
+        session.saveDocument(doc);
+        session.save();
+
+        // add facet
+        doc.addFacet("SomeDynamicFacet");
+        session.saveDocument(doc);
+    }
 
     @Before
     public void initRepo() throws Exception {
