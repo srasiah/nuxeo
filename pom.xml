@@ -5332,6 +5332,23 @@
       </modules>
     </profile>
 
+    <!-- Used to deploy-->
+    <profile>
+        <id>deploy</id>
+        <modules>
+            <module>ftests</module>
+            <module>packages</module>
+            <module>server</module>
+            <module>parent</module>
+        </modules>
+        <distributionManagement>
+            <repository>
+                <id>gitlab-maven</id>
+                <url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>
+            </repository>
+        </distributionManagement>
+    </profile>
+
     <!-- Used to include the docker module, in particular when running mvn versions:set -->
     <profile>
       <id>docker</id>
