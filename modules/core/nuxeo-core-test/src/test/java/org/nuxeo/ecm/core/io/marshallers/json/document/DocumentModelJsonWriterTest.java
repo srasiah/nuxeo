@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,10 +80,6 @@ public class DocumentModelJsonWriterTest extends AbstractJsonWriterTest.Local<Do
     public static final String REPO = "test";
 
     protected static final int BASE_PROPERTIES = 19;
-
-    public DocumentModelJsonWriterTest() {
-        super(DocumentModelJsonWriter.class, DocumentModel.class);
-    }
 
     private DocumentModel document;
 

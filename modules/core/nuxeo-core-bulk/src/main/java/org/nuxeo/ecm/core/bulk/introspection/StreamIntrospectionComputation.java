@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ package org.nuxeo.ecm.core.bulk.introspection;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -29,6 +30,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.Logger;
+import org.nuxeo.ecm.core.io.registry.MarshallerHelper;
+import org.nuxeo.ecm.core.io.registry.context.RenderingContext;
 import org.nuxeo.lib.stream.computation.AbstractComputation;
 import org.nuxeo.lib.stream.computation.ComputationContext;
 import org.nuxeo.lib.stream.computation.Record;
@@ -197,14 +200,14 @@ public class StreamIntrospectionComputation extends AbstractComputation {
     protected void updateModel() {
         KeyValueStore kv = getKvStore();
         kv.put(INTROSPECTION_KEY, model);
-        StreamIntrospectionConverter convert = new StreamIntrospectionConverter(model);
-        ObjectMapper mapper = new ObjectMapper();
         try {
-            JsonNode activity = mapper.readTree(convert.getActivity());
-            scaleMetric = activity.at("/scale/metric").asInt();
-            currentWorkerNodes = activity.at("/scale/currentNodes").asInt();
+            var streamIntrospection = MarshallerHelper.jsonToObject(StreamIntrospection.class, model,
+                    RenderingContext.CtxBuilder.get());
+            var activity = new StreamIntrospectionToScaleActivity().apply(streamIntrospection);
+            scaleMetric = activity.scale().metric();
+            currentWorkerNodes = activity.scale().currentNodes();
             log.trace("Scale metric: {}, worker nodes: {}, activity: {}", scaleMetric, currentWorkerNodes, activity);
-        } catch (JsonProcessingException e) {
+        } catch (IOException e) {
             log.warn("Invalid json model: {}", e::getMessage);
         }
     }
@@ -251,7 +254,10 @@ public class StreamIntrospectionComputation extends AbstractComputation {
                                        .map(json -> json.get("nodeId").asText())
                                        .collect(Collectors.toList());
         toRemove.forEach(metrics::remove);
-        Set<String> toKeep = metrics.values().stream().map(json -> json.get("nodeId").asText()).collect(Collectors.toSet());
+        Set<String> toKeep = metrics.values()
+                                    .stream()
+                                    .map(json -> json.get("nodeId").asText())
+                                    .collect(Collectors.toSet());
         if (!toRemove.isEmpty()) {
             log.warn("Node(s) removed from the cluster: {}, alive: {}.", toRemove, toKeep);
         } else {

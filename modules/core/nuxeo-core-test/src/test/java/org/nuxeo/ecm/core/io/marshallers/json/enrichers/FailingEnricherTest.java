@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nour AL KOTOB
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.enrichers;
 
 import static org.junit.Assert.assertEquals;
@@ -27,7 +26,6 @@ import java.util.List;
 import jakarta.inject.Inject;
 
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.io.marshallers.json.AbstractJsonWriterTest;
@@ -36,13 +34,11 @@ import org.nuxeo.ecm.core.io.registry.context.RenderingContext.CtxBuilder;
 import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
-import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.LogCaptureFeature;
 
 /**
  * @since 11.1
  */
-@RunWith(FeaturesRunner.class)
 @Features({ LogCaptureFeature.class, CoreFeature.class })
 @Deploy("org.nuxeo.ecm.core.test.tests:enrichers-contrib.xml")
 public class FailingEnricherTest extends AbstractJsonWriterTest.External<DocumentModelJsonWriter, DocumentModel> {
@@ -52,10 +48,6 @@ public class FailingEnricherTest extends AbstractJsonWriterTest.External<Documen
 
     @Inject
     protected CoreSession session;
-
-    public FailingEnricherTest() {
-        super(DocumentModelJsonWriter.class, DocumentModel.class);
-    }
 
     @Test
     @LogCaptureFeature.FilterOn(loggerClass = AbstractJsonEnricher.class, logLevel = "WARN")

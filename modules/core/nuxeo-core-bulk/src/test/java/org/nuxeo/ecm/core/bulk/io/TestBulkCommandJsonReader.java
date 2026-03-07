@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,10 +38,6 @@ import org.nuxeo.runtime.test.runner.Features;
  */
 @Features(CoreBulkFeature.class)
 public class TestBulkCommandJsonReader extends AbstractJsonReaderTest.Local<BulkCommandJsonReader, BulkCommand> {
-
-    public TestBulkCommandJsonReader() {
-        super(BulkCommandJsonReader.class, BulkCommand.class);
-    }
 
     @Test
     public void testDefault() throws Exception {

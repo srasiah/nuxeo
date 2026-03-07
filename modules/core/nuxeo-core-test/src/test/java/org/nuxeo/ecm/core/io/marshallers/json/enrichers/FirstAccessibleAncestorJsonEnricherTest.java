@@ -16,7 +16,6 @@
  * Contributors:
  *     Guillaume Renard
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.enrichers;
 
 import jakarta.inject.Inject;
@@ -53,10 +52,6 @@ public class FirstAccessibleAncestorJsonEnricherTest
         extends AbstractJsonWriterTest.Local<DocumentModelJsonWriter, DocumentModel> {
 
     public static final String JOHN = "John";
-
-    public FirstAccessibleAncestorJsonEnricherTest() {
-        super(DocumentModelJsonWriter.class, DocumentModel.class);
-    }
 
     @Inject
     protected CoreSession session;

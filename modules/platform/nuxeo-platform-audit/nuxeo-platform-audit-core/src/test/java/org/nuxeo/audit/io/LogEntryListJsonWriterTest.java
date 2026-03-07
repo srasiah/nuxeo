@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ package org.nuxeo.audit.io;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.commons.lang3.reflect.TypeUtils;
 import org.junit.Test;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.audit.api.PaginableLogEntryList;
@@ -33,10 +32,6 @@ import org.nuxeo.runtime.test.runner.Deploy;
 @Deploy("org.nuxeo.ecm.platform.audit:OSGI-INF/marshallers-contrib.xml")
 public class LogEntryListJsonWriterTest
         extends AbstractJsonWriterTest.External<LogEntryListJsonWriter, List<LogEntry>> {
-
-    public LogEntryListJsonWriterTest() {
-        super(LogEntryListJsonWriter.class, List.class, TypeUtils.parameterize(List.class, LogEntry.class));
-    }
 
     @Test
     public void test() throws Exception {

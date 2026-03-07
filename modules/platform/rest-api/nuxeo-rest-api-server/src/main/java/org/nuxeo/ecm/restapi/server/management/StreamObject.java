@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,31 +18,47 @@
  */
 package org.nuxeo.ecm.restapi.server.management;
 
+import static jakarta.ws.rs.core.HttpHeaders.ACCEPT;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static jakarta.ws.rs.core.MediaType.WILDCARD;
+import static org.apache.commons.collections4.ListUtils.emptyIfNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.nuxeo.ecm.core.bulk.introspection.StreamIntrospectionComputation.INTROSPECTION_KEY;
 import static org.nuxeo.ecm.core.bulk.introspection.StreamIntrospectionComputation.INTROSPECTION_KV_STORE;
+import static org.nuxeo.ecm.core.bulk.introspection.StreamIntrospectionProcessorTopologyJsonWriter.FORMAT_PARAMETER;
+import static org.nuxeo.ecm.core.bulk.introspection.StreamIntrospectionProcessorTopologyJsonWriter.OutputFormat.PRETTIER;
+import static org.nuxeo.ecm.core.io.marshallers.NuxeoMediaType.TEXT_D2;
+import static org.nuxeo.ecm.core.io.marshallers.NuxeoMediaType.TEXT_PLANT_UML;
 import static org.nuxeo.runtime.pubsub.ClusterActionServiceImpl.STREAM_START_CONSUMER_ACTION;
 import static org.nuxeo.runtime.pubsub.ClusterActionServiceImpl.STREAM_STOP_CONSUMER_ACTION;
 
+import java.io.IOException;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.ecm.core.api.NuxeoException;
-import org.nuxeo.ecm.core.bulk.introspection.StreamIntrospectionConverter;
+import org.nuxeo.ecm.core.bulk.introspection.ScaleActivity;
+import org.nuxeo.ecm.core.bulk.introspection.StreamIntrospection;
+import org.nuxeo.ecm.core.bulk.introspection.StreamIntrospectionToScaleActivity;
+import org.nuxeo.ecm.core.io.registry.MarshallerHelper;
+import org.nuxeo.ecm.core.io.registry.context.RenderingContext;
+import org.nuxeo.ecm.restapi.io.management.StreamLag;
+import org.nuxeo.ecm.restapi.io.management.StreamLagChange;
 import org.nuxeo.ecm.webengine.model.WebObject;
 import org.nuxeo.ecm.webengine.model.impl.AbstractResource;
 import org.nuxeo.ecm.webengine.model.impl.ResourceTypeImpl;
@@ -74,40 +90,53 @@ public class StreamObject extends AbstractResource<ResourceTypeImpl> {
 
     protected static final String ENABLED_OPTION = "metrics.streams.enabled";
 
+    protected static final Function<StreamIntrospection, ScaleActivity> TO_SCALE_ACTIVITY = new StreamIntrospectionToScaleActivity();
+
     @GET
-    public String doGet(@QueryParam("format") String format, @QueryParam("excludeFilter") String excludeFilter,
-            @QueryParam("excludeInactive") @DefaultValue("false") Boolean excludeInactive) {
-        String json = getJson();
-        List<String> exclude = excludeFilter == null ? List.of() : List.of(excludeFilter.split(","));
-        return switch (format) {
-            case PUML_FORMAT -> new StreamIntrospectionConverter(json).getPuml();
-            case D2_FORMAT -> new StreamIntrospectionConverter(json).getD2(exclude, excludeInactive);
-            case null, default -> json;
-        };
+    @Produces(WILDCARD)
+    public Response doGet(@QueryParam("format") String format, @Context HttpHeaders headers) {
+        var streamIntrospection = getStreamIntrospection();
+        return Response.ok(streamIntrospection, switch (format) {
+            case PUML_FORMAT -> TEXT_PLANT_UML;
+            case D2_FORMAT -> TEXT_D2;
+            // format takes precedence over Accept header
+            case null -> {
+                var acceptTypes = trimToEmpty(headers.getHeaderString(ACCEPT));
+                if (acceptTypes.contains(TEXT_PLANT_UML)) {
+                    yield TEXT_PLANT_UML;
+                } else if (acceptTypes.contains(TEXT_D2)) {
+                    yield TEXT_D2;
+                } else {
+                    yield APPLICATION_JSON;
+                }
+            }
+            default -> APPLICATION_JSON;
+        }).build();
     }
 
     /**
-     * @deprecated since 2022.21 use {@link StreamObject#doGet(String, String, Boolean)} with format=puml instead.
+     * @deprecated since 2021.21 use {@link StreamObject#doGet(String, HttpHeaders)} with format=puml instead.
      */
     @Deprecated
     @GET
     @Path("/puml")
-    public String doGetPuml() {
-        return doGet(PUML_FORMAT, null, null);
+    public Response doGetPuml(@Context HttpHeaders headers) {
+        return doGet(PUML_FORMAT, headers);
     }
 
     @GET
     @Path("/streams")
-    public String listStreams() {
-        String json = getJson();
-        return new StreamIntrospectionConverter(json).getStreams();
+    public List<StreamIntrospection.Stream> listStreams() {
+        return getStreamIntrospection().streams();
     }
 
     @GET
     @Path("/consumers")
-    public String listConsumers(@QueryParam("stream") String stream) {
-        String json = getJson();
-        return new StreamIntrospectionConverter(json).getConsumers(stream);
+    public List<StreamIntrospection.ProcessorTopology> listConsumers(@QueryParam("stream") String stream,
+            @Context RenderingContext renderingContext) {
+        // add prettier format that will be used if not given by the request
+        renderingContext.addParameterValues(FORMAT_PARAMETER, PRETTIER);
+        return emptyIfNull(getStreamIntrospection().consumers(stream));
     }
 
     @PUT
@@ -124,7 +153,7 @@ public class StreamObject extends AbstractResource<ResourceTypeImpl> {
 
     @GET
     @Path("/consumer/position")
-    public String getConsumerPosition(@QueryParam("consumer") String consumer, @QueryParam("stream") String stream) {
+    public StreamLag getConsumerPosition(@QueryParam("consumer") String consumer, @QueryParam("stream") String stream) {
         if (isBlank(stream)) {
             throw new NuxeoException("Missing stream param", HttpServletResponse.SC_BAD_REQUEST);
         }
@@ -136,12 +165,12 @@ public class StreamObject extends AbstractResource<ResourceTypeImpl> {
             consumer = NO_CONSUMER;
         }
         List<LogLag> lag = logManager.getLagPerPartition(Name.ofUrn(stream), Name.ofUrn(consumer));
-        return lagAsJson(consumer, stream, lag);
+        return new StreamLag(stream, consumer, lag);
     }
 
     @PUT
     @Path("/consumer/position/end")
-    public String setConsumerPositionToEnd(@QueryParam("consumer") String consumer,
+    public StreamLagChange setConsumerPositionToEnd(@QueryParam("consumer") String consumer,
             @QueryParam("stream") String stream) {
         if (isBlank(stream)) {
             throw new NuxeoException("Missing stream param", HttpServletResponse.SC_BAD_REQUEST);
@@ -163,17 +192,12 @@ public class StreamObject extends AbstractResource<ResourceTypeImpl> {
         List<LogLag> after = logManager.getLagPerPartition(Name.ofUrn(stream), Name.ofUrn(consumer));
         log.warn("setConsumerPositionToEnd consumer: {}, stream: {}, before: {}, after: {}", consumer, stream, before,
                 after);
-        return positionChangeAsJson(consumer, stream, before, after);
-    }
-
-    protected String positionChangeAsJson(String consumer, String stream, List<LogLag> before, List<LogLag> after) {
-        return "{\"before\":" + lagAsJson(consumer, stream, before) + ",\"after\":" + lagAsJson(consumer, stream, after)
-                + "}";
+        return new StreamLagChange(stream, consumer, before, after);
     }
 
     @PUT
     @Path("/consumer/position/beginning")
-    public String setConsumerPositionToBeginning(@QueryParam("consumer") String consumer,
+    public StreamLagChange setConsumerPositionToBeginning(@QueryParam("consumer") String consumer,
             @QueryParam("stream") String stream) {
         if (isBlank(stream)) {
             throw new NuxeoException("Missing stream param", HttpServletResponse.SC_BAD_REQUEST);
@@ -195,12 +219,12 @@ public class StreamObject extends AbstractResource<ResourceTypeImpl> {
         List<LogLag> after = logManager.getLagPerPartition(Name.ofUrn(stream), Name.ofUrn(consumer));
         log.warn("setConsumerPositionToBeginning consumer: {}, stream: {}, before: {}, after: {}", consumer, stream,
                 before, after);
-        return positionChangeAsJson(consumer, stream, before, after);
+        return new StreamLagChange(stream, consumer, before, after);
     }
 
     @PUT
     @Path("/consumer/position/offset")
-    public String setConsumerPositionToOffset(@QueryParam("consumer") String consumer,
+    public StreamLagChange setConsumerPositionToOffset(@QueryParam("consumer") String consumer,
             @QueryParam("stream") String stream, @QueryParam("partition") int partition,
             @QueryParam("offset") long offset) {
         if (isBlank(stream)) {
@@ -232,12 +256,12 @@ public class StreamObject extends AbstractResource<ResourceTypeImpl> {
         log.warn(
                 "setConsumerPositionToOffset consumer: {}, stream: {}, partition: {}, offset: {}, before: {}, after: {}",
                 consumer, stream, partition, offset, before, after);
-        return positionChangeAsJson(consumer, stream, before, after);
+        return new StreamLagChange(stream, consumer, before, after);
     }
 
     @PUT
     @Path("/consumer/position/after")
-    public String setConsumerPositionAfterDate(@QueryParam("consumer") String consumer,
+    public StreamLagChange setConsumerPositionAfterDate(@QueryParam("consumer") String consumer,
             @QueryParam("stream") String stream, @QueryParam("date") String dateTime) {
         if (isBlank(stream)) {
             throw new NuxeoException("Missing stream param", HttpServletResponse.SC_BAD_REQUEST);
@@ -271,30 +295,24 @@ public class StreamObject extends AbstractResource<ResourceTypeImpl> {
         List<LogLag> after = logManager.getLagPerPartition(Name.ofUrn(stream), Name.ofUrn(consumer));
         log.warn("setConsumerPositionAfterDate consumer: {}, stream: {}, date: {}, before: {}, after: {}", consumer,
                 stream, dateTime, before, after);
-        return positionChangeAsJson(consumer, stream, before, after);
-    }
-
-    protected String lagAsJson(String consumer, String stream, List<LogLag> lags) {
-        LogLag allLag = LogLag.of(lags);
-        AtomicInteger i = new AtomicInteger();
-        String lagList = lags.stream()
-                             .map(lag -> "{\"partition\":" + i.getAndIncrement() + ",\"pos\":" + lag.lowerOffset()
-                                     + ",\"end\":" + lag.upperOffset() + ",\"lag\":" + lag.lag() + "}")
-                             .collect(Collectors.joining(",", "[", "]"));
-        return "{\"stream\":\"" + stream + "\",\"consumer\":\"" + consumer + "\",\"lag\":" + allLag.lag() + ",\"lags\":"
-                + lagList + "}";
+        return new StreamLagChange(stream, consumer, before, after);
     }
 
     @GET
     @Path("/scale")
-    public String scale() {
-        String json = getJson();
-        return new StreamIntrospectionConverter(json).getActivity();
+    public ScaleActivity scale() {
+        var streamIntrospection = getStreamIntrospection();
+        return TO_SCALE_ACTIVITY.apply(streamIntrospection);
     }
 
-    protected String getJson() {
-        checkStreamMetricEnabled();
-        return getKvStore().getString(INTROSPECTION_KEY);
+    protected StreamIntrospection getStreamIntrospection() {
+        try {
+            checkStreamMetricEnabled();
+            String json = getKvStore().getString(INTROSPECTION_KEY);
+            return MarshallerHelper.jsonToObject(StreamIntrospection.class, json, RenderingContext.CtxBuilder.get());
+        } catch (IOException e) {
+            throw new NuxeoException("Unable to read the stream introspection", e);
+        }
     }
 
     protected KeyValueStore getKvStore() {

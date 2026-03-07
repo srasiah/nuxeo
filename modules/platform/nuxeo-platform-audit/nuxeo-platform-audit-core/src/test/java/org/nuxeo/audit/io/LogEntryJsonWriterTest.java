@@ -42,10 +42,6 @@ import org.nuxeo.runtime.test.runner.Features;
 @Features(UserManagerFeature.class) // for testWhenPrincipalFetcherIsProvided test
 public class LogEntryJsonWriterTest extends AbstractJsonWriterTest.External<LogEntryJsonWriter, LogEntry> {
 
-    public LogEntryJsonWriterTest() {
-        super(LogEntryJsonWriter.class, LogEntry.class);
-    }
-
     @Test
     public void test() throws Exception {
         var eventDate = toDate(parseISODateTime("2024-08-05T17:10:00.000+02:00"));

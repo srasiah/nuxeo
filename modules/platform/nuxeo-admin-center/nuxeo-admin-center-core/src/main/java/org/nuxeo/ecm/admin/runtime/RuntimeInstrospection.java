@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
  *     tdelprat, jcarsique
  */
 package org.nuxeo.ecm.admin.runtime;
+
+import static org.nuxeo.osgi.BundleManifestReader.BUNDLE_REVISION;
 
 import java.io.File;
 import java.io.IOException;
@@ -92,20 +94,18 @@ public class RuntimeInstrospection {
     }
 
     protected static SimplifiedBundleInfo getBundleSimplifiedInfo(Bundle bundle) {
-        if (!(bundle instanceof BundleImpl)) {
+        if (!(bundle instanceof BundleImpl nxBundle)) {
             return null;
         }
-        BundleImpl nxBundle = (BundleImpl) bundle;
         BundleFile file = nxBundle.getBundleFile();
         File jarFile = null;
-        if (file instanceof JarBundleFile) {
-            JarBundleFile jar = (JarBundleFile) file;
+        if (file instanceof JarBundleFile jar) {
             jarFile = jar.getFile();
         }
         if (jarFile == null || jarFile.isDirectory()) {
             return null;
         }
-        SimplifiedBundleInfo result = null;
+        String version = null;
         try (ZipFile zFile = new ZipFile(jarFile)) {
             // Look for a pom.properties to extract its Maven version
             Enumeration<ZipEntry> entries = (Enumeration<ZipEntry>) zFile.entries();
@@ -114,8 +114,7 @@ public class RuntimeInstrospection {
                 if (entry.getName().endsWith("pom.properties")) {
                     try (InputStream pomStream = zFile.getInputStream(entry)) {
                         PropertyResourceBundle prb = new PropertyResourceBundle(pomStream);
-                        String version = prb.getString("version");
-                        result = new SimplifiedBundleInfo(bundle.getSymbolicName(), version);
+                        version = prb.getString("version");
                     }
                     break;
                 }
@@ -123,25 +122,23 @@ public class RuntimeInstrospection {
         } catch (IOException e) {
             log.debug(e.getMessage(), e);
         }
-        if (result == null) {
+        if (version == null) {
             // Fall back on the filename to extract a version
             try {
-                Version version = new Version(jarFile.getName());
-                result = new SimplifiedBundleInfo(bundle.getSymbolicName(), version.toString());
+                version = new Version(jarFile.getName()).toString();
             } catch (NumberFormatException e) {
                 log.debug(e.getMessage());
             }
         }
-        if (result == null) {
+        if (version == null) {
             // Fall back on the MANIFEST Bundle-Version
             try {
-                org.osgi.framework.Version version = bundle.getVersion();
-                result = new SimplifiedBundleInfo(bundle.getSymbolicName(), version.toString());
+                version = bundle.getVersion().toString();
             } catch (RuntimeException e) {
                 log.debug(e.getMessage());
-                result = new SimplifiedBundleInfo(bundle.getSymbolicName(), "unknown");
+                version = "unknown";
             }
         }
-        return result;
+        return new SimplifiedBundleInfo(bundle.getSymbolicName(), version, bundle.getHeaders().get(BUNDLE_REVISION));
     }
 }

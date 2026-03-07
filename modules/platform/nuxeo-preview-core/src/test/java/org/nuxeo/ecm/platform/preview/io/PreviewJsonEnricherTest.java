@@ -40,10 +40,6 @@ public class PreviewJsonEnricherTest extends AbstractJsonWriterTest.External<Doc
     @Inject
     protected CoreSession session;
 
-    public PreviewJsonEnricherTest() {
-        super(DocumentModelJsonWriter.class, DocumentModel.class);
-    }
-
     @Test
     public void test() throws Exception {
         DocumentModel root = session.getDocument(new PathRef("/"));

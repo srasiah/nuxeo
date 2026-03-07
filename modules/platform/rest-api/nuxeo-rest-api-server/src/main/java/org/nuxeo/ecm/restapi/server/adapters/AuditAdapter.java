@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import org.apache.logging.log4j.Logger;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
-import org.nuxeo.ecm.core.io.marshallers.csv.AbstractCSVWriter;
+import org.nuxeo.ecm.core.io.marshallers.NuxeoMediaType;
 import org.nuxeo.ecm.core.schema.utils.DateParser;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
@@ -46,7 +46,7 @@ import org.nuxeo.runtime.api.Framework;
  * @since 5.7.3
  */
 @WebAdapter(name = AuditAdapter.NAME, type = "AuditService")
-@Produces({ MediaType.APPLICATION_JSON, AbstractCSVWriter.TEXT_CSV })
+@Produces({ MediaType.APPLICATION_JSON, NuxeoMediaType.TEXT_CSV })
 public class AuditAdapter extends PaginableAdapter<LogEntry> {
 
     private static final Logger log = LogManager.getLogger(AuditAdapter.class);

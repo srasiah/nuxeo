@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.nuxeo.ecm.core</groupId>
     <artifactId>nuxeo-core-parent</artifactId>
-    <version>2025.11-SNAPSHOT</version>
+    <version>2025.12-SNAPSHOT</version>
   </parent>
 
   <artifactId>nuxeo-core-test</artifactId>
@@ -288,7 +288,6 @@
     <dependency>
       <groupId>org.awaitility</groupId>
       <artifactId>awaitility</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.codehaus.groovy</groupId>

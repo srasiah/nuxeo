@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2016-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
  *     Gabriel Barata <gbarata@nuxeo.com>
  *     Charles Boidot <cboidot@nuxeo.com>
  */
-
 package org.nuxeo.ecm.platform.types;
 
 import static org.junit.Assert.assertTrue;
@@ -52,10 +51,6 @@ public class SubtypesJsonEnricherTest extends AbstractJsonWriterTest.Local<Docum
 
     @Inject
     private CoreSession session;
-
-    public SubtypesJsonEnricherTest() {
-        super(DocumentModelJsonWriter.class, DocumentModel.class);
-    }
 
     @Before
     public void setup() {

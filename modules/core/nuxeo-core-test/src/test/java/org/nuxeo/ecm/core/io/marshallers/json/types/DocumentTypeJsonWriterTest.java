@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.types;
 
 import jakarta.inject.Inject;
@@ -31,10 +30,6 @@ import org.nuxeo.runtime.test.runner.Features;
 
 @Features(CoreFeature.class)
 public class DocumentTypeJsonWriterTest extends AbstractJsonWriterTest.Local<DocumentTypeJsonWriter, DocumentType> {
-
-    public DocumentTypeJsonWriterTest() {
-        super(DocumentTypeJsonWriter.class, DocumentType.class);
-    }
 
     @Inject
     private SchemaManager schemaManager;

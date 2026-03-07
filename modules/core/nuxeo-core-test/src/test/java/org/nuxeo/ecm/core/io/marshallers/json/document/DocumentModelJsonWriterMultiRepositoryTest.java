@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,10 +47,6 @@ public class DocumentModelJsonWriterMultiRepositoryTest
     @Inject
     @Named("other")
     protected CoreSession otherSession;
-
-    public DocumentModelJsonWriterMultiRepositoryTest() {
-        super(DocumentModelJsonWriter.class, DocumentModel.class);
-    }
 
     // NXP-30615
     @Test

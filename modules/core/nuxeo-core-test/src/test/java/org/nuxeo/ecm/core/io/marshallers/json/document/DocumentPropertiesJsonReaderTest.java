@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.lang3.reflect.TypeUtils;
 import org.junit.Test;
 import org.nuxeo.ecm.core.api.model.Property;
 import org.nuxeo.ecm.core.io.marshallers.json.AbstractJsonWriterTest;
@@ -47,10 +46,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 public class DocumentPropertiesJsonReaderTest
         extends AbstractJsonWriterTest.Local<DocumentPropertyJsonWriter, Property> {
 
-    public DocumentPropertiesJsonReaderTest() {
-        super(DocumentPropertyJsonWriter.class, List.class, TypeUtils.parameterize(List.class, Property.class));
-    }
-
     /*
      * NXP-22436
      */
@@ -59,7 +54,8 @@ public class DocumentPropertiesJsonReaderTest
         String propertiesJson = "{ \"dc:title\": \"A note\",\n" + //
                 "  \"note:note\": \"note content\" }";
 
-        DocumentPropertiesJsonReader reader = registry.getInstance(CtxBuilder.get(), DocumentPropertiesJsonReader.class);
+        DocumentPropertiesJsonReader reader = registry.getInstance(CtxBuilder.get(),
+                DocumentPropertiesJsonReader.class);
         List<Property> properties;
         try (JsonParser jp = JsonFactoryProvider.get().createParser(propertiesJson)) {
             JsonNode jn = jp.readValueAsTree();
@@ -81,7 +77,8 @@ public class DocumentPropertiesJsonReaderTest
                 "\"tst2:dates\":[\"2018-02-20T23:00:00.000Z\",\"2018-02-04T23:00:00.000Z\"]," + //
                 "\"dc:created\": \"2018-02-20T23:00:00.000Z\" }";
 
-        DocumentPropertiesJsonReader reader = registry.getInstance(CtxBuilder.get(),DocumentPropertiesJsonReader.class);
+        DocumentPropertiesJsonReader reader = registry.getInstance(CtxBuilder.get(),
+                DocumentPropertiesJsonReader.class);
         List<Property> properties;
         try (JsonParser jp = JsonFactoryProvider.get().createParser(propertiesJson)) {
             JsonNode jn = jp.readValueAsTree();

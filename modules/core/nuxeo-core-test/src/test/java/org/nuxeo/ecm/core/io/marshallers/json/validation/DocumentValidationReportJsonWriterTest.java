@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,9 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.validation;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import jakarta.inject.Inject;
@@ -29,7 +27,6 @@ import org.junit.Test;
 import org.nuxeo.ecm.core.api.validation.ConstraintViolation;
 import org.nuxeo.ecm.core.api.validation.ConstraintViolation.PathNode;
 import org.nuxeo.ecm.core.api.validation.DocumentValidationReport;
-import org.nuxeo.ecm.core.api.validation.ValidationViolation;
 import org.nuxeo.ecm.core.io.marshallers.json.AbstractJsonWriterTest;
 import org.nuxeo.ecm.core.io.marshallers.json.JsonAssert;
 import org.nuxeo.ecm.core.schema.SchemaManager;
@@ -41,12 +38,8 @@ import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.runtime.test.runner.Features;
 
 @Features(CoreFeature.class)
-public class DocumentValidationReportJsonWriterTest extends
-        AbstractJsonWriterTest.Local<DocumentValidationReportJsonWriter, DocumentValidationReport> {
-
-    public DocumentValidationReportJsonWriterTest() {
-        super(DocumentValidationReportJsonWriter.class, DocumentValidationReport.class);
-    }
+public class DocumentValidationReportJsonWriterTest
+        extends AbstractJsonWriterTest.Local<DocumentValidationReportJsonWriter, DocumentValidationReport> {
 
     @Inject
     private SchemaManager schemaManager;
@@ -55,12 +48,12 @@ public class DocumentValidationReportJsonWriterTest extends
     public void test() throws Exception {
         Schema schema = schemaManager.getSchema("dublincore");
         Field title = schema.getField("title");
-        List<PathNode> titleNode = Arrays.asList(new PathNode(title));
+        List<PathNode> titleNode = List.of(new PathNode(title));
         ConstraintViolation violation1 = new ConstraintViolation(schema, titleNode, NotNullConstraint.get(), null);
         Field description = schema.getField("description");
-        List<PathNode> descNode = Arrays.asList(new PathNode(description));
+        List<PathNode> descNode = List.of(new PathNode(description));
         ConstraintViolation violation2 = new ConstraintViolation(schema, descNode, new PatternConstraint(".*"), null);
-        DocumentValidationReport report = new DocumentValidationReport(Arrays.asList(violation1, violation2));
+        DocumentValidationReport report = new DocumentValidationReport(List.of(violation1, violation2));
         JsonAssert json = jsonAssert(report);
         json.properties(4);
         json.has("entity-type").isEquals("validation_report");
@@ -80,7 +73,7 @@ public class DocumentValidationReportJsonWriterTest extends
 
     @Test
     public void testNoErrors() throws Exception {
-        DocumentValidationReport report = new DocumentValidationReport(new ArrayList<ValidationViolation>());
+        DocumentValidationReport report = new DocumentValidationReport(new ArrayList<>());
         JsonAssert json = jsonAssert(report);
         json.properties(4);
         json.has("entity-type").isEquals("validation_report");

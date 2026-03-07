@@ -638,7 +638,7 @@ public class S3BlobStore extends AbstractBlobStore {
              .sourceVersionId(srcs3Key.versionId())
              .destinationBucket(destinationConfig.bucketName)
              .destinationKey(destinationKey)
-             .storageClass(config.storageClass);
+             .storageClass(destinationConfig.storageClass);
             if (destinationConfig.useServerSideEncryption) {
                 // server-side encryption
                 if (isNotBlank(destinationConfig.serverSideKMSKeyID)) {

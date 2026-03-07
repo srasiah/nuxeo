@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import org.nuxeo.ecm.core.io.registry.reflect.Setup;
 /**
  * @since 10.3
  */
+@SuppressWarnings("removal") // import to NuxeoMediaType should be added when removed
 @Setup(mode = SINGLETON, priority = REFERENCE)
 public class DocumentModelListCSVWriter extends AbstractCSVWriter<List<DocumentModel>> {
 

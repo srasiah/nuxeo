@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@
  */
 package org.nuxeo.ecm.core.bulk.io;
 
-import static java.util.Collections.singletonMap;
 import static org.nuxeo.ecm.core.bulk.io.BulkConstants.COMMAND_ACTION;
 import static org.nuxeo.ecm.core.bulk.io.BulkConstants.COMMAND_BATCH_SIZE;
 import static org.nuxeo.ecm.core.bulk.io.BulkConstants.COMMAND_BUCKET_SIZE;
@@ -31,6 +30,7 @@ import static org.nuxeo.ecm.core.bulk.io.TestBulkCommandAvro.QUERY;
 import static org.nuxeo.ecm.core.io.registry.MarshallingConstants.ENTITY_FIELD_NAME;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.Test;
 import org.nuxeo.ecm.core.bulk.CoreBulkFeature;
@@ -45,21 +45,18 @@ import org.nuxeo.runtime.test.runner.Features;
 @Features(CoreBulkFeature.class)
 public class TestBulkCommandJsonWriter extends AbstractJsonWriterTest.Local<BulkCommandJsonWriter, BulkCommand> {
 
-    public TestBulkCommandJsonWriter() {
-        super(BulkCommandJsonWriter.class, BulkCommand.class);
-    }
-
     @Test
     public void testDefault() throws Exception {
-        BulkCommand command = new BulkCommand.Builder("myAction", QUERY, "myUser")
-                         .repository("myRepository")
-                         .bucket(20)
-                         .batch(10)
-                         .param("actionParam", "mySpecificParameter")
-                         .param("boolean", false)
-                         .param("long", 1200)
-                         .param("complex", new HashMap<>(singletonMap("key", "value")))
-                         .build();
+        var command = //
+                new BulkCommand.Builder("myAction", QUERY, "myUser").repository("myRepository")
+                                                                    .bucket(20)
+                                                                    .batch(10)
+                                                                    .param("actionParam", "mySpecificParameter")
+                                                                    .param("boolean", false)
+                                                                    .param("long", 1200)
+                                                                    .param("complex",
+                                                                            new HashMap<>(Map.of("key", "value")))
+                                                                    .build();
         JsonAssert json = jsonAssert(command);
         json.properties(8);
         json.has(ENTITY_FIELD_NAME).isEquals(COMMAND_ENTITY_TYPE);

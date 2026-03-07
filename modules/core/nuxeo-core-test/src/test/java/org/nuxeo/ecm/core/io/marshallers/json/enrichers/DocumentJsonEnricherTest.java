@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.enrichers;
 
 import java.util.HashMap;
@@ -41,10 +40,6 @@ import org.nuxeo.runtime.test.runner.Features;
 @Deploy("org.nuxeo.ecm.core.io:OSGI-INF/doc-type-contrib.xml")
 public class DocumentJsonEnricherTest extends AbstractJsonWriterTest.Local<DocumentModelJsonWriter, DocumentModel> {
 
-    public DocumentJsonEnricherTest() {
-        super(DocumentModelJsonWriter.class, DocumentModel.class);
-    }
-
     @Inject
     private CoreSession session;
 
@@ -61,8 +56,7 @@ public class DocumentJsonEnricherTest extends AbstractJsonWriterTest.Local<Docum
         Map<String, String> params = new HashMap<>();
         params.put("param1", "value1");
         params.put("param2", "value2");
-        RenderingContext ctx = CtxBuilder.enrichDoc("contextualParameters", "children", "breadcrumb",
-                                                    "permissions")
+        RenderingContext ctx = CtxBuilder.enrichDoc("contextualParameters", "children", "breadcrumb", "permissions")
                                          .param("contextualParameters", params)
                                          .get();
         JsonAssert json = jsonAssert(root, ctx);

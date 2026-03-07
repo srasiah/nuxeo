@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2019-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2019-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import java.util.Map;
 import jakarta.inject.Inject;
 
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.nuxeo.ecm.automation.core.Constants;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
@@ -42,12 +41,10 @@ import org.nuxeo.ecm.platform.task.Task;
 import org.nuxeo.runtime.test.runner.BlacklistComponent;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
-import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
 /**
  * @since 11.1
  */
-@RunWith(FeaturesRunner.class)
 @Features(WorkflowFeature.class)
 @Deploy("org.nuxeo.ecm.platform.routing.core.test:OSGI-INF/test-route-contrib.xml")
 // needs NotificationService & MailService
@@ -59,10 +56,6 @@ public class TaskWriterActionContextTest extends AbstractJsonWriterTest.External
 
     @Inject
     protected CoreSession session;
-
-    public TaskWriterActionContextTest() {
-        super(TaskWriter.class, Task.class);
-    }
 
     @Test
     public void shouldEvaluateTaskActionAvailabilityBasedOnWorkflowVars() throws IOException {
@@ -80,7 +73,7 @@ public class TaskWriterActionContextTest extends AbstractJsonWriterTest.External
 
         List<Task> tasks = documentRoutingService.getTasks(null, null, workflowInstanceId, workflowModel, session);
         assertEquals(1, tasks.size());
-        Task task = tasks.get(0);
+        Task task = tasks.getFirst();
 
         Map<String, Object> data = new HashMap<>();
         Map<String, Serializable> subData = new HashMap<>();
@@ -91,7 +84,7 @@ public class TaskWriterActionContextTest extends AbstractJsonWriterTest.External
 
         tasks = documentRoutingService.getTasks(null, null, workflowInstanceId, workflowModel, session);
         assertEquals(1, tasks.size());
-        task = tasks.get(0);
+        task = tasks.getFirst();
 
         JsonAssert taskActions = jsonAssert(task).get("taskInfo.taskActions");
 

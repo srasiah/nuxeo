@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,10 +37,6 @@ import org.nuxeo.ecm.core.schema.types.primitives.LongType;
  * since 11.5
  */
 public class DocumentPropertyJsonWriterTest extends AbstractJsonWriterTest.Local<DocumentPropertyJsonWriter, Property> {
-
-    public DocumentPropertyJsonWriterTest() {
-        super(DocumentPropertyJsonWriter.class, Property.class);
-    }
 
     // NXP-29840
     @Test

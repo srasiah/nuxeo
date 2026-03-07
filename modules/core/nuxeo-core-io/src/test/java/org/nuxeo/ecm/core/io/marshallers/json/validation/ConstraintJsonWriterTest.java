@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.validation;
 
 import org.junit.Test;
@@ -27,10 +26,6 @@ import org.nuxeo.ecm.core.schema.types.constraints.NotNullConstraint;
 import org.nuxeo.ecm.core.schema.types.constraints.NumericIntervalConstraint;
 
 public class ConstraintJsonWriterTest extends AbstractJsonWriterTest.Local<ConstraintJsonWriter, Constraint> {
-
-    public ConstraintJsonWriterTest() {
-        super(ConstraintJsonWriter.class, Constraint.class);
-    }
 
     @Test
     public void testWithParameters() throws Exception {

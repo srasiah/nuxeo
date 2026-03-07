@@ -35,6 +35,7 @@ import org.nuxeo.ecm.core.io.registry.reflect.Setup;
 /**
  * @since 11.1
  */
+@SuppressWarnings("removal") // import to NuxeoMediaType should be added when removed
 @Setup(mode = SINGLETON, priority = REFERENCE)
 public class LogEntryListCSVWriter extends AbstractCSVWriter<List<LogEntry>> {
 

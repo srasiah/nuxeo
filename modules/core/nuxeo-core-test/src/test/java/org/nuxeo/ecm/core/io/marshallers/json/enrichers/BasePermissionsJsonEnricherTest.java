@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.enrichers;
 
 import jakarta.inject.Inject;
@@ -41,12 +40,8 @@ import org.nuxeo.runtime.test.runner.Features;
 
 @Features(CoreFeature.class)
 @Deploy("org.nuxeo.ecm.core.io:OSGI-INF/doc-type-contrib.xml")
-public class BasePermissionsJsonEnricherTest extends
-        AbstractJsonWriterTest.Local<DocumentModelJsonWriter, DocumentModel> {
-
-    public BasePermissionsJsonEnricherTest() {
-        super(DocumentModelJsonWriter.class, DocumentModel.class);
-    }
+public class BasePermissionsJsonEnricherTest
+        extends AbstractJsonWriterTest.Local<DocumentModelJsonWriter, DocumentModel> {
 
     @Inject
     private CoreSession session;

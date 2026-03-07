@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2019-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nour Al Kotob
  */
-
 package org.nuxeo.ecm.restapi.io.management;
 
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
@@ -24,6 +23,7 @@ import static org.nuxeo.ecm.core.io.registry.reflect.Priorities.REFERENCE;
 
 import java.io.IOException;
 
+import org.nuxeo.common.function.ThrowableConsumer;
 import org.nuxeo.ecm.admin.runtime.SimplifiedBundleInfo;
 import org.nuxeo.ecm.admin.runtime.SimplifiedServerInfo;
 import org.nuxeo.ecm.core.io.marshallers.json.ExtensibleEntityJsonWriter;
@@ -56,6 +56,8 @@ public class SimplifiedServerInfoJsonWriter extends ExtensibleEntityJsonWriter<S
             jg.writeStartObject();
             jg.writeStringField("name", b.getName());
             jg.writeStringField("version", b.getVersion());
+            b.getRevision()
+             .ifPresent(ThrowableConsumer.asConsumer(revision -> jg.writeStringField("revision", revision)));
             jg.writeEndObject();
         }
         jg.writeEndArray();

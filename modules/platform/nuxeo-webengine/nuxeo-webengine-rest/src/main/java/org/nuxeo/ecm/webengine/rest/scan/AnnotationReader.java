@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2011 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ public class AnnotationReader extends ClassVisitor {
     protected String cname;
 
     public AnnotationReader(Set<String> annotations) {
-        super(Opcodes.ASM7);
+        super(Opcodes.ASM9);
         results = new ArrayList<>();
         this.annotations = annotations;
     }

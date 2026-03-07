@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2011 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  *
  * Contributors:
  *     Nuxeo - initial API and implementation
- *
- * $Id$
  */
-
 package org.nuxeo.osgi;
 
 import java.io.File;
@@ -52,6 +49,9 @@ public final class BundleManifestReader {
 
     public static final String WEB_MODULE = "Nuxeo-WebModule";
 
+    /** @since 2025.12 */
+    public static final String BUNDLE_REVISION = "Bundle-Revision";
+
     protected static final String[] CUSTOM_HEADERS;
 
     static { // we can add dynamically new headers through system properties
@@ -59,7 +59,7 @@ public final class BundleManifestReader {
         if (h != null) {
             CUSTOM_HEADERS = StringUtils.split(h, ',', true);
         } else {
-            CUSTOM_HEADERS = new String[] { COMPONENT_HEADER, WEB_MODULE, ALLOW_HOST_OVERRIDE };
+            CUSTOM_HEADERS = new String[] { COMPONENT_HEADER, WEB_MODULE, ALLOW_HOST_OVERRIDE, BUNDLE_REVISION };
         }
     }
 

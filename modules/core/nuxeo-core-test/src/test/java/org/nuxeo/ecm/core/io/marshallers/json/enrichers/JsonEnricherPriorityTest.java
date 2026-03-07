@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2021 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2021-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,10 +49,6 @@ public class JsonEnricherPriorityTest extends AbstractJsonWriterTest.Local<Docum
 
     @Inject
     protected CoreSession session;
-
-    public JsonEnricherPriorityTest() {
-        super(DocumentModelJsonWriter.class, DocumentModel.class);
-    }
 
     @Test
     public void testPriorities() throws IOException {

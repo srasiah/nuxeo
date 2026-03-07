@@ -39,10 +39,6 @@ import org.nuxeo.ecm.core.io.registry.context.RenderingContext;
  */
 public class LogEntryCSVWriterTest extends AbstractCSVWriterTest.External<LogEntryCSVWriter, LogEntry> {
 
-    public LogEntryCSVWriterTest() {
-        super(LogEntryCSVWriter.class, LogEntry.class);
-    }
-
     @Test
     public void testDefaultProperties() throws IOException {
         // No fetch param in the context, retrieve all default properties

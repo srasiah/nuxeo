@@ -24,7 +24,6 @@ import java.util.Set;
 import org.nuxeo.ecm.webengine.app.JsonNuxeoExceptionWriter;
 import org.nuxeo.ecm.webengine.app.WebEngineModule;
 import org.nuxeo.ecm.webengine.app.jersey.WebEngineServlet;
-import org.nuxeo.ecm.webengine.rest.coreiodelegate.CoreIODelegate;
 
 import com.unboundid.scim2.server.providers.DotSearchFilter;
 import com.unboundid.scim2.server.resources.ResourceTypesEndpoint;
@@ -49,7 +48,6 @@ public class ScimV2Module extends WebEngineModule {
         // filter
         result.add(DotSearchFilter.class); // allow to convert POST /.search requests to GET search requests
         // marshalling
-        result.add(CoreIODelegate.class);
         result.add(JsonNuxeoExceptionWriter.class);
         // resources
         result.add(SchemasEndpoint.class);

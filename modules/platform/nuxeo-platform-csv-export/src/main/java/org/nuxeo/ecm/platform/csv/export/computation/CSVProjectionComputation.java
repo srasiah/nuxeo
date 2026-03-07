@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@
 package org.nuxeo.ecm.platform.csv.export.computation;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.nuxeo.ecm.core.io.marshallers.csv.AbstractCSVWriter.TEXT_CSV_TYPE;
+import static org.nuxeo.ecm.core.io.marshallers.NuxeoMediaType.TEXT_CSV_TYPE;
 import static org.nuxeo.ecm.platform.csv.export.io.DocumentModelCSVWriter.SCHEMAS_CTX_DATA;
 import static org.nuxeo.ecm.platform.csv.export.io.DocumentModelCSVWriter.XPATHS_CTX_DATA;
-import static org.nuxeo.ecm.platform.csv.export.io.DocumentPropertyCSVWriter.NEWLINE_REPLACEMENT_CTX_DATA;
 import static org.nuxeo.ecm.platform.csv.export.io.DocumentPropertyCSVWriter.LANG_CTX_DATA;
+import static org.nuxeo.ecm.platform.csv.export.io.DocumentPropertyCSVWriter.NEWLINE_REPLACEMENT_CTX_DATA;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -135,8 +135,7 @@ public class CSVProjectionComputation extends AbstractBulkComputation {
         if (value == null) {
             return Collections.emptyList();
         }
-        if (value instanceof List<?>) {
-            List<?> objects = (List<?>) value;
+        if (value instanceof List<?> objects) {
             List<String> values = new ArrayList<>(objects.size());
             for (Object object : objects) {
                 if (object != null) {
