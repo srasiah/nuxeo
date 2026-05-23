@@ -91,6 +91,27 @@ public class TestSearchClientAggregates extends AbstractTestSearchClient {
     }
 
     @Test
+    public void testAggregateTermNumeric() {
+        AggregateDefinition aggDef = new AggregateDescriptor();
+        aggDef.setType("terms");
+        aggDef.setId("myAgg");
+        aggDef.setDocumentField("common:size");
+        AggregateTerm agg = new AggregateTerm(aggDef, null);
+
+        SearchResponse response = search("SELECT * FROM Document", agg);
+
+        assertTrue(response.getTotal() > 0);
+        assertEquals(1, response.getAggregates().size());
+        var resultAgg = response.getAggregates().getFirst();
+        assertEquals("myAgg", resultAgg.getId());
+        assertEquals(6, resultAgg.getBuckets().size());
+        assertEquals("100", resultAgg.getBuckets().get(0).getKey());
+        assertEquals(2, resultAgg.getBuckets().get(0).getDocCount());
+        assertEquals("10000", resultAgg.getBuckets().get(1).getKey());
+        assertEquals(2, resultAgg.getBuckets().get(1).getDocCount());
+    }
+
+    @Test
     public void testAggregateTermLimit() {
         AggregateDefinition aggDef = new AggregateDescriptor();
         aggDef.setType("terms");

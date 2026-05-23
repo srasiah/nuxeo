@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2016-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,8 +34,7 @@ public class DirectoryListJsonWriter extends DefaultListJsonWriter<Directory> {
     public static final String ENTITY_TYPE = "directories";
 
     public DirectoryListJsonWriter() {
-        super(ENTITY_TYPE, Directory.class);
+        super(ENTITY_TYPE);
     }
-
 
 }

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2021 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
  *     Nuxeo - initial API and implementation
  *     bstefanescu, jcarsique
  *     Anahide Tchertchian
- *
  */
 package org.nuxeo.common.utils;
 
@@ -37,6 +36,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.function.Function;
@@ -92,6 +92,8 @@ public class TextTemplate {
 
     private static final Logger log = LogManager.getLogger(TextTemplate.class);
 
+    private static final String DEFAULT_FREEMARKER_NEW_BUILTIN_CLASS_RESOLVER = "safer";
+
     private static final int MAX_RECURSION_LEVEL = 10;
 
     private static final String PATTERN_GROUP_DECRYPT = "decrypt";
@@ -116,6 +118,8 @@ public class TextTemplate {
     private List<String> plainTextExtensions;
 
     private List<String> freemarkerExtensions = new ArrayList<>();
+
+    private String freemarkerNewBuiltInClassResolver = DEFAULT_FREEMARKER_NEW_BUILTIN_CLASS_RESOLVER;
 
     private Configuration freemarkerConfiguration = null;
 
@@ -354,9 +358,15 @@ public class TextTemplate {
     @SuppressWarnings("unchecked")
     public void initFreeMarker() {
         freemarkerConfiguration = new Configuration(Configuration.VERSION_2_3_30);
+        try {
+            freemarkerConfiguration.setSetting(Configuration.NEW_BUILTIN_CLASS_RESOLVER_KEY, StringUtils.defaultIfBlank(
+                    freemarkerNewBuiltInClassResolver, DEFAULT_FREEMARKER_NEW_BUILTIN_CLASS_RESOLVER));
+        } catch (TemplateException e) {
+            log.debug("Unable to set new built-in class resolver setting", e);
+        }
         // declare the decrypt method to be allowed to decrypt variables in nxftl
         freemarkerConfiguration.setSharedVariable("decrypt", (TemplateMethodModelEx) arguments -> {
-            String value = StringUtils.defaultIfBlank(arguments.get(0).toString(), "");
+            String value = StringUtils.defaultIfBlank(arguments.getFirst().toString(), "");
             // check if the given parameter is still a variable (ie: the parameter is an encrypted variable)
             var matcher = PATTERN.matcher(value);
             if (matcher.matches()) {
@@ -379,7 +389,7 @@ public class TextTemplate {
             currentMap = freemarkerVars;
             currentString = "";
             for (int i = 0; i < keyparts.length - 1; i++) {
-                currentString = currentString + ("".equals(currentString) ? "" : ".") + keyparts[i];
+                currentString = currentString + (StringUtils.isBlank(currentString) ? "" : ".") + keyparts[i];
                 if (!currentMap.containsKey(keyparts[i])) {
                     Map<String, Object> nextMap = new HashMap<>();
                     currentMap.put(keyparts[i], nextMap);
@@ -555,6 +565,19 @@ public class TextTemplate {
         while (st.hasMoreTokens()) {
             String extension = st.nextToken().toLowerCase();
             freemarkerExtensions.add(extension);
+        }
+    }
+
+    /**
+     * Sets the FreeMarker new built-in class resolver.
+     *
+     * @param freemarkerNewBuiltInClassResolver the resolver to set
+     * @since 2025.14
+     */
+    public void setFreemarkerNewResolver(String freemarkerNewBuiltInClassResolver) {
+        if (!Objects.equals(this.freemarkerNewBuiltInClassResolver, freemarkerNewBuiltInClassResolver)) {
+            this.freemarkerNewBuiltInClassResolver = freemarkerNewBuiltInClassResolver;
+            freemarkerConfiguration = null;
         }
     }
 

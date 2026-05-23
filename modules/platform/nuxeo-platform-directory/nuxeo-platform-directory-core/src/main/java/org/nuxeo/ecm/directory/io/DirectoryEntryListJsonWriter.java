@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.directory.io;
 
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
@@ -37,7 +36,7 @@ public class DirectoryEntryListJsonWriter extends DefaultListJsonWriter<Director
     public static final String ENTITY_TYPE = "directoryEntries";
 
     public DirectoryEntryListJsonWriter() {
-        super(ENTITY_TYPE, DirectoryEntry.class);
+        super(ENTITY_TYPE);
     }
 
 }

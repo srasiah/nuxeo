@@ -27,6 +27,7 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.audit.api.LogEntry;
+import org.nuxeo.audit.api.Route;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.ScrollResult;
@@ -46,6 +47,17 @@ public abstract class AbstractAuditBackend extends org.nuxeo.ecm.platform.audit.
         implements AuditBackend {
 
     protected static final Logger log = LogManager.getLogger(AbstractAuditBackend.class);
+
+    /** @deprecated since 2025.16, introduced for {@link #addLogEntries(List)} backward compatibility mechanism */
+    @Deprecated(since = "2025.16", forRemoval = true)
+    protected String name;
+
+    @Override
+    @Deprecated(since = "2025.16", forRemoval = true)
+    public void addLogEntries(List<LogEntry> entries) {
+        log.warn("Using a deprecated API, please use AuditRouter.routeToBackend instead");
+        Framework.getService(AuditRouter.class).routeToBackends(entries, List.of(Route.allEventsTo(name)));
+    }
 
     protected LogEntry doCreateAndFillEntryFromDocument(DocumentModel doc, Principal principal) {
         Date eventDate = new Date();
@@ -121,5 +133,11 @@ public abstract class AbstractAuditBackend extends org.nuxeo.ecm.platform.audit.
     @Override
     public ScrollResult<String> scroll(String scrollId) {
         throw new NuxeoException("The operation is not supported on org.nuxeo.audit.service.AuditBackend");
+    }
+
+    /** @deprecated since 2025.16 */
+    @Deprecated(since = "2025.16", forRemoval = true)
+    protected void setName(String name) {
+        this.name = name;
     }
 }

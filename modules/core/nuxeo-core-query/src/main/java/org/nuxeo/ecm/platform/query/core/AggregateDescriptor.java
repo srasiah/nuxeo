@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.nuxeo.common.utils.ReflectUtils;
 import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XNodeList;
 import org.nuxeo.common.xmap.annotation.XObject;
@@ -110,9 +111,7 @@ public class AggregateDescriptor implements AggregateDefinition {
 
     @Override
     public List<AggregateRangeDateDefinition> getDateRanges() {
-        @SuppressWarnings("unchecked")
-        List<AggregateRangeDateDefinition> ret = (List<AggregateRangeDateDefinition>) (List<?>) aggregateDateRanges;
-        return ret;
+        return ReflectUtils.downgradeCast(aggregateDateRanges);
     }
 
     @Override
@@ -132,9 +131,7 @@ public class AggregateDescriptor implements AggregateDefinition {
 
     @Override
     public List<AggregateRangeDefinition> getRanges() {
-        @SuppressWarnings("unchecked")
-        List<AggregateRangeDefinition> ret = (List<AggregateRangeDefinition>) (List<?>) aggregateRanges;
-        return ret;
+        return ReflectUtils.downgradeCast(aggregateRanges);
     }
 
     @Override

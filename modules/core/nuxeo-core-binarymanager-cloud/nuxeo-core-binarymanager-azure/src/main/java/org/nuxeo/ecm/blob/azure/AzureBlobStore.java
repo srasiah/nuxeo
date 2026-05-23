@@ -49,7 +49,6 @@ import org.nuxeo.ecm.core.blob.BlobWriteContext;
 import org.nuxeo.ecm.core.blob.ByteRange;
 import org.nuxeo.ecm.core.blob.KeyStrategy;
 import org.nuxeo.ecm.core.blob.KeyStrategyDigest;
-import org.nuxeo.ecm.core.blob.KeyStrategyDocId;
 import org.nuxeo.ecm.core.blob.binary.BinaryGarbageCollector;
 
 import com.azure.core.http.rest.Response;
@@ -80,8 +79,6 @@ public class AzureBlobStore extends AbstractBlobStore {
 
     protected boolean allowByteRange;
 
-    protected final boolean useVersion;
-
     public AzureBlobStore(String blobProviderId, String name, AzureBlobStoreConfiguration config,
             KeyStrategy keyStrategy) {
         super(blobProviderId, name, keyStrategy);
@@ -90,7 +87,6 @@ public class AzureBlobStore extends AbstractBlobStore {
         this.prefix = config.prefix;
         this.allowByteRange = config.getBooleanProperty(ALLOW_BYTE_RANGE);
         this.gc = new AzureBlobGarbageCollector();
-        useVersion = keyStrategy instanceof KeyStrategyDocId && config.isContainerVersioningEnabled;
     }
 
     public class AzureBlobGarbageCollector extends AbstractBlobGarbageCollector {
@@ -173,7 +169,7 @@ public class AzureBlobStore extends AbstractBlobStore {
             String resultKey = null;
             BlockBlobItem blockBlobItem = destBlobClient.getBlockBlobClient().uploadFromUrl(sourceBlobSasURL);
             if (blockBlobItem != null) {
-                if (useVersion) {
+                if (hasVersioning()) {
                     resultKey = key + VER_SEP + blockBlobItem.getVersionId();
                 } else {
                     resultKey = key;
@@ -242,7 +238,8 @@ public class AzureBlobStore extends AbstractBlobStore {
             Response<BlockBlobItem> blockBlob = azureKey.blobClient()
                                                         .uploadFromFileWithResponse(options, config.uploadTimeout,
                                                                 null);
-            resultKey = useVersion ? azureKey.key() + VER_SEP + blockBlob.getValue().getVersionId() : azureKey.key();
+            resultKey = hasVersioning() ? azureKey.key() + VER_SEP + blockBlob.getValue().getVersionId()
+                    : azureKey.key();
         } catch (UncheckedIOException e) {
             throw new NuxeoException("Failed to write blob: " + azureKey.key(), e);
         }
@@ -257,7 +254,7 @@ public class AzureBlobStore extends AbstractBlobStore {
 
     @Override
     public boolean hasVersioning() {
-        return useVersion;
+        return config.useVersion();
     }
 
     @Override
@@ -389,7 +386,7 @@ public class AzureBlobStore extends AbstractBlobStore {
     public void deleteBlob(String key) {
         var azureKey = new AzureBlobKey(config, key);
         var blobClient = azureKey.blobClient();
-        if (useVersion) {
+        if (hasVersioning()) {
             if (!blobClient.exists()) {
                 return;
             }

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,12 +50,18 @@ public class UserRootObject extends AbstractUMRootObject<NuxeoPrincipal> {
      */
     public static final String ALLOW_EMPTY_PASSWORD_PROP = "nuxeo.user.password.empty.enabled";
 
+    public UserRootObject() {
+        super(UserObject.class);
+    }
+
     @Override
     protected NuxeoPrincipal getArtifact(String id) {
         return um.getPrincipal(id);
     }
 
     @Override
+    @SuppressWarnings("removal")
+    @Deprecated(since = "2025.14", forRemoval = true)
     protected String getArtifactType() {
         return "user";
     }
@@ -120,11 +126,6 @@ public class UserRootObject extends AbstractUMRootObject<NuxeoPrincipal> {
     protected PageProviderDefinition getPageProviderDefinition() {
         PageProviderService ppService = Framework.getService(PageProviderService.class);
         return ppService.getPageProviderDefinition(PAGE_PROVIDER_NAME);
-    }
-
-    @Override
-    protected Object[] getParams() {
-        return new Object[] { query };
     }
 
 }

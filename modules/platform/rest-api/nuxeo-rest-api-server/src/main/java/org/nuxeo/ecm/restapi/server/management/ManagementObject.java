@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2019-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2019-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,8 @@ import jakarta.ws.rs.core.Context;
 
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
+import org.nuxeo.ecm.core.event.EventService;
+import org.nuxeo.ecm.core.event.impl.EventContextImpl;
 import org.nuxeo.ecm.webengine.model.WebObject;
 import org.nuxeo.ecm.webengine.model.impl.AbstractResource;
 import org.nuxeo.ecm.webengine.model.impl.ResourceTypeImpl;
@@ -44,6 +46,9 @@ import org.nuxeo.runtime.api.Framework;
 public class ManagementObject extends AbstractResource<ResourceTypeImpl> {
 
     public static final String MANAGEMENT_OBJECT_PREFIX = "management/";
+
+    /** @since 2025.16 */
+    public static final String MANAGEMENT_API_ACCESS_EVENT = "managementApiAccess";
 
     protected static final String MANAGEMENT_API_HTTP_PORT_PROPERTY = "nuxeo.management.api.http.port";
 
@@ -65,6 +70,14 @@ public class ManagementObject extends AbstractResource<ResourceTypeImpl> {
 
     @Path("{path}")
     public Object route(@PathParam("path") String path) {
+        // fire event for audit purposes
+        NuxeoPrincipal principal = ctx.getPrincipal();
+        var eventContext = new EventContextImpl(ctx.getCoreSession(), principal, request);
+        eventContext.setProperty("comment",
+                "%s called %s on %s".formatted(principal.getName(), request.getMethod(), request.getRequestURI()));
+        var event = eventContext.newEvent(MANAGEMENT_API_ACCESS_EVENT);
+        Framework.getService(EventService.class).fireEvent(event);
+        // return the child WebObject
         return newObject(MANAGEMENT_OBJECT_PREFIX + path);
     }
 

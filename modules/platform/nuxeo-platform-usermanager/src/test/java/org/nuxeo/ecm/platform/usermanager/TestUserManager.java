@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -986,6 +987,18 @@ public class TestUserManager extends UserManagerTestCase {
         g3.setProperty("group", "members", List.of("jdoe"));
         g3.setProperty("group", "subGroups", List.of("group2"));
         userManager.createGroup(g3);
+    }
+
+    // NXP-33500
+    @Test
+    @Deploy("org.nuxeo.ecm.platform.usermanager.tests:test-usermanager-permissions.xml")
+    public void testGetLeafPermissionsWithCircularDependency() {
+        if (userManager instanceof UserManagerImpl userManagerImpl) {
+            assertEquals(List.of("Permission3", "Permission4", "Permission5"),
+                    userManagerImpl.getLeafPermissions("Permission2"));
+        } else {
+            fail("Expected UserManagerImpl implementation.");
+        }
     }
 
     /**

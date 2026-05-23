@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2011-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2011-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,6 @@ import org.nuxeo.ecm.core.query.sql.NXQL;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
 import org.nuxeo.ecm.platform.query.core.GenericPageProviderDescriptor;
-import org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider;
 
 /**
  * Operation to execute a query or a named provider against Audit with support for Pagination
@@ -80,6 +79,9 @@ public class AuditPageProviderOperation {
 
     @Context
     protected PageProviderService ppService;
+
+    @Param(name = "backendName", required = false)
+    protected String backendName;
 
     @Param(name = "providerName", required = false)
     protected String providerName;
@@ -131,7 +133,7 @@ public class AuditPageProviderOperation {
             }
             for (int i = 0; i < sorts.length; i++) {
                 String sort = sorts[i];
-                boolean sortAscending = (orders != null && orders.length > i && "asc".equals(orders[i].toLowerCase()));
+                boolean sortAscending = (orders != null && orders.length > i && "asc".equalsIgnoreCase(orders[i]));
                 sortInfos.add(new SortInfo(sort, sortAscending));
             }
         }
@@ -155,7 +157,8 @@ public class AuditPageProviderOperation {
         }
 
         Map<String, Serializable> props = new HashMap<>();
-        props.put(CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY, (Serializable) session);
+        props.put(AuditPageProvider.CORE_SESSION_PROPERTY, (Serializable) session);
+        props.put(AuditPageProvider.BACKEND_NAME_PROPERTY, backendName);
 
         if (query == null && StringUtils.isEmpty(providerName)) {
             // provide a default provider

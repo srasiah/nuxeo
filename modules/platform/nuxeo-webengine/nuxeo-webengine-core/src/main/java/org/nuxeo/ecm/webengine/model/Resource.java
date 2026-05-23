@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2008 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  *
  * Contributors:
  *     bstefanescu
- *
- * $Id$
  */
-
 package org.nuxeo.ecm.webengine.model;
 
 import java.text.ParseException;
@@ -76,6 +73,9 @@ public interface Resource extends Adaptable {
 
     List<LinkDescriptor> getLinks(String category);
 
+    /** @since 2025.14 */
+    <R extends Resource> R newObject(Class<? extends R> type, Object... args);
+
     Resource newObject(String type, Object... args);
 
     AdapterResource newAdapter(String type, Object... args);
@@ -97,7 +97,5 @@ public interface Resource extends Adaptable {
      * Checks the given guard expression in the context of this resource.
      */
     boolean checkGuard(String guard) throws ParseException;
-
-    // Response getEntries();
 
 }

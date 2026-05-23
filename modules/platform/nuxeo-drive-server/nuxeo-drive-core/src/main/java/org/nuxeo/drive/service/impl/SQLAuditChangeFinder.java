@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package org.nuxeo.drive.service.impl;
 
+import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +27,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.drive.service.FileSystemChangeFinder;
 import org.nuxeo.drive.service.NuxeoDriveEvents;
 import org.nuxeo.drive.service.SynchronizationRoots;
@@ -46,7 +49,7 @@ public class SQLAuditChangeFinder extends AuditChangeFinder {
     @Override
     @SuppressWarnings("unchecked")
     public long getUpperBound() {
-        var auditBackend = Framework.getService(AuditBackend.class);
+        var auditBackend = Framework.getService(AuditService.class).getAuditBackend(DEFAULT_AUDIT_BACKEND);
         String auditQuery = "from LogEntry log order by log.id desc";
         log.debug("Querying audit log for greatest id: {}", auditQuery);
 
@@ -61,7 +64,7 @@ public class SQLAuditChangeFinder extends AuditChangeFinder {
     @SuppressWarnings("unchecked")
     protected List<LogEntry> queryAuditEntries(CoreSession session, SynchronizationRoots activeRoots,
             Set<String> collectionSyncRootMemberIds, long lowerBound, long upperBound, int limit) {
-        var auditBackend = Framework.getService(AuditBackend.class);
+        var auditBackend = Framework.getService(AuditService.class).getAuditBackend(DEFAULT_AUDIT_BACKEND);
         // Set fixed query parameters
         Map<String, Object> params = new HashMap<>();
         params.put("repositoryId", session.getRepositoryName());

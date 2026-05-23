@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
@@ -30,6 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.lang3.reflect.TypeUtils;
+import org.nuxeo.common.utils.ReflectUtils;
 import org.nuxeo.ecm.automation.core.util.Paginable;
 import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.api.PartialList;
@@ -86,11 +86,22 @@ public abstract class DefaultListJsonWriter<EntityType> extends AbstractJsonWrit
     private final Type elGenericType;
 
     /**
+     * @param entityType The list "entity-type".
+     */
+    public DefaultListJsonWriter(String entityType) {
+        super();
+        this.entityType = entityType;
+        this.elClazz = ReflectUtils.retrieveFirstParameterType(getClass(), DefaultListJsonWriter.class);
+        this.elGenericType = this.elClazz;
+    }
+
+    /**
      * Use this constructor if the element of the list are not based on Java generic type.
      *
      * @param entityType The list "entity-type".
      * @param elClazz The class of the element of the list.
      */
+    @Deprecated(since = "2025.14", forRemoval = true)
     public DefaultListJsonWriter(String entityType, Class<EntityType> elClazz) {
         super();
         this.entityType = entityType;
@@ -130,8 +141,7 @@ public abstract class DefaultListJsonWriter<EntityType> extends AbstractJsonWrit
     }
 
     private void writePaginationInfos(List<EntityType> list, JsonGenerator jg) throws IOException {
-        if (list instanceof Paginable) {
-            Paginable<?> paginable = (Paginable<?>) list;
+        if (list instanceof Paginable<?> paginable) {
             jg.writeBooleanField("isPaginable", true);
             jg.writeNumberField("resultsCount", paginable.getResultsCount());
             jg.writeNumberField("pageSize", paginable.getPageSize());
@@ -180,8 +190,7 @@ public abstract class DefaultListJsonWriter<EntityType> extends AbstractJsonWrit
                 }
                 jg.writeEndArray();
             }
-        } else if (list instanceof PartialList) {
-            PartialList<EntityType> partial = (PartialList<EntityType>) list;
+        } else if (list instanceof PartialList<EntityType> partial) {
             jg.writeNumberField("totalSize", partial.totalSize());
         }
     }

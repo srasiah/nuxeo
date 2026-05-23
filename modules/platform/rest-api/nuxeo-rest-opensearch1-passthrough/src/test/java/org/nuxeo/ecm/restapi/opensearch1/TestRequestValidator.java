@@ -25,16 +25,12 @@ import org.json.JSONException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.nuxeo.ecm.core.search.client.opensearch1.IgnoreIfNotOpenSearchSearchClient;
-import org.nuxeo.ecm.core.test.CoreSearchFeature;
 import org.nuxeo.ecm.restapi.opensearch1.filter.RequestValidator;
-import org.nuxeo.runtime.test.runner.ConditionalIgnore;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
 @RunWith(FeaturesRunner.class)
-@Features(CoreSearchFeature.class)
-@ConditionalIgnore(condition = IgnoreIfNotOpenSearchSearchClient.class)
+@Features(OpenSearchPassthroughFeature.class)
 public class TestRequestValidator {
 
     private RequestValidator validator;

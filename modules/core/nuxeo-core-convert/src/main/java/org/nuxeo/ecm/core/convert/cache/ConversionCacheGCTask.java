@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.Objects;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.nuxeo.common.utils.ByteSize;
 
 /**
  * @since 2025.0
@@ -33,10 +34,18 @@ public class ConversionCacheGCTask implements Runnable {
 
     private static final Logger log = LogManager.getLogger(ConversionCacheGCTask.class);
 
-    protected final long maxSizeKB;
+    protected final ByteSize maxSize;
 
+    public ConversionCacheGCTask(ByteSize maxSize) {
+        this.maxSize = maxSize;
+    }
+
+    /**
+     * @deprecated since 2025.15, use {@link #ConversionCacheGCTask(ByteSize)} instead
+     */
+    @Deprecated(since = "2025.15", forRemoval = true)
     public ConversionCacheGCTask(long maxSizeKB) {
-        this.maxSizeKB = maxSizeKB;
+        this(ByteSize.ofKibibytes(maxSizeKB));
     }
 
     @Override
@@ -48,12 +57,13 @@ public class ConversionCacheGCTask implements Runnable {
                                                 .filter(Objects::nonNull)
                                                 .mapToLong(ConversionCacheEntry::getDiskSpaceUsageInKB)
                                                 .sum();
-        long toDeleteSize = currentSize - maxSizeKB;
+        long maxSizeKibibytes = maxSize.toKibibytes();
+        long toDeleteSize = currentSize - maxSizeKibibytes;
         if (toDeleteSize < 0) {
-            log.info("No GC needed, currentSize: {} < maxSize: {}", currentSize, maxSizeKB);
+            log.info("No GC needed, currentSize: {} < maxSize: {}", currentSize, maxSizeKibibytes);
             return;
         }
-        if (maxSizeKB < 0) {
+        if (maxSizeKibibytes < 0) {
             log.info("Configured maxSize is negative, clean up everything"); // mainly for testing
             toDeleteSize = currentSize;
         }

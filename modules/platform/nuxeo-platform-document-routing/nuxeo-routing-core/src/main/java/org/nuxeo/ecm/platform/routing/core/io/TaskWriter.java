@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,7 @@
  * Contributors:
  *     <a href="mailto:grenard@nuxeo.com">Guillaume Renard</a>
  *     <a href="mailto:ncunha@nuxeo.com">Nuno Cunha</a>
- *
  */
-
 package org.nuxeo.ecm.platform.routing.core.io;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
@@ -30,7 +28,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import jakarta.inject.Inject;
 
@@ -101,7 +98,7 @@ public class TaskWriter extends ExtensibleEntityJsonWriter<Task> {
     protected UserManager userManager;
 
     public TaskWriter() {
-        super(ENTITY_TYPE, Task.class);
+        super(ENTITY_TYPE);
     }
 
     public static final String ENTITY_TYPE = "task";
@@ -280,9 +277,8 @@ public class TaskWriter extends ExtensibleEntityJsonWriter<Task> {
         actionContext.setDocumentManager(session);
         actionContext.setCurrentPrincipal(session.getPrincipal());
         if (node != null) {
-            Map<String, Object> workflowContextualInfo = new HashMap<String, Object>();
-            workflowContextualInfo.putAll(node.getWorkflowContextualInfo(session, true));
-            actionContext.putAllLocalVariables(workflowContextualInfo);
+            // copy the detached contextual information
+            actionContext.putAllLocalVariables(new HashMap<>(node.getWorkflowContextualInfo(session, true)));
         }
         return actionContext;
     }

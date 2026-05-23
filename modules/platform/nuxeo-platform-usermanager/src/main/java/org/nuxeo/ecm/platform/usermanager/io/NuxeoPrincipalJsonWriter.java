@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.platform.usermanager.io;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
@@ -105,7 +104,7 @@ public class NuxeoPrincipalJsonWriter extends ExtensibleEntityJsonWriter<NuxeoPr
     private DirectoryService directoryService;
 
     public NuxeoPrincipalJsonWriter() {
-        super(ENTITY_TYPE, NuxeoPrincipal.class);
+        super(ENTITY_TYPE);
     }
 
     @Override

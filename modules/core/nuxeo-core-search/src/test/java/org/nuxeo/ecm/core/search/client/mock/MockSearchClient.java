@@ -65,9 +65,7 @@ public class MockSearchClient extends AbstractSearchClient {
     public boolean hasCapability(Capability capability) {
         return switch (capability) {
             case INDEXING -> true;
-            case HIGHLIGHT -> false;
-            case AGGREGATE -> false;
-            case MULTI_REPOSITORIES -> false;
+            default -> false;
         };
     }
 

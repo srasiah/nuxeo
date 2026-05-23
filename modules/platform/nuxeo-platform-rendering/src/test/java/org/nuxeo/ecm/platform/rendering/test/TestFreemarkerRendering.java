@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
  */
 package org.nuxeo.ecm.platform.rendering.test;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 
 import java.io.FileInputStream;
@@ -27,7 +28,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.junit.Before;
@@ -39,7 +39,6 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.impl.DataModelImpl;
 import org.nuxeo.ecm.core.api.impl.DocumentModelImpl;
 import org.nuxeo.ecm.core.api.impl.blob.URLBlob;
-import org.nuxeo.ecm.core.api.model.DocumentPart;
 import org.nuxeo.ecm.platform.rendering.fm.FreemarkerEngine;
 import org.nuxeo.ecm.platform.rendering.wiki.WikiTransformer;
 import org.nuxeo.ecm.platform.rendering.wiki.extensions.FreemarkerMacro;
@@ -55,6 +54,7 @@ import org.nuxeo.runtime.test.runner.RuntimeFeature;
 @RunWith(FeaturesRunner.class)
 @Features(RuntimeFeature.class)
 @Deploy("org.nuxeo.ecm.core.schema")
+@Deploy("org.nuxeo.ecm.platform.rendering")
 @Deploy("org.nuxeo.ecm.platform.rendering.tests:OSGI-INF/test-schema.xml")
 public class TestFreemarkerRendering {
 
@@ -67,8 +67,7 @@ public class TestFreemarkerRendering {
         engine.setResourceLocator(new MyResourceLocator());
 
         WikiTransformer tr = new WikiTransformer();
-        tr.getSerializer()
-          .addFilter(new PatternFilter("[A-Z]+[a-z]+[A-Z][A-Za-z]*", "<link>$0</link>"));
+        tr.getSerializer().addFilter(new PatternFilter("[A-Z]+[a-z]+[A-Z][A-Za-z]*", "<link>$0</link>"));
         tr.getSerializer()
           .addFilter(new PatternFilter("NXP-[0-9]+", "<a href=\"http://jira.nuxeo.org/browse/$0\">$0</a>"));
         tr.getSerializer().registerMacro(new FreemarkerMacro());
@@ -84,7 +83,7 @@ public class TestFreemarkerRendering {
         DocumentModelImpl doc1 = new DocumentModelImpl("File", null, new Path("/root/folder/wiki1"), null, null,
                 new String[] { "dublincore", "file" }, null, null, false, null, "default", null);
         doc1.addDataModel(new DataModelImpl("dublincore"));
-        DocumentPart documentPart = doc1.getPart("dublincore");
+        var documentPart = doc1.getPart("dublincore");
         documentPart.get("title").setValue("The dublincore title for doc1");
         documentPart.get("description").setValue("A descripton *with* wiki code and a WikiName");
         Blob blob = new URLBlob(TestFreemarkerRendering.class.getClassLoader().getResource("testdata/blob.wiki"));
@@ -104,7 +103,7 @@ public class TestFreemarkerRendering {
         // double e = System.currentTimeMillis();
 
         try (InputStream expected = new FileInputStream(getTestFile("expecteddata/c_output.txt"))) {
-            assertTextEquals(IOUtils.toString(expected, Charsets.UTF_8), writer.toString());
+            assertTextEquals(IOUtils.toString(expected, UTF_8), writer.toString());
         }
 
     }

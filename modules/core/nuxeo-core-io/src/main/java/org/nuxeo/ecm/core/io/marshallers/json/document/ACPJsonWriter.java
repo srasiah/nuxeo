@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.document;
 
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
@@ -76,7 +75,7 @@ public class ACPJsonWriter extends ExtensibleEntityJsonWriter<ACP> {
     public static final String ENTITY_TYPE = "acls";
 
     public ACPJsonWriter() {
-        super(ENTITY_TYPE, ACP.class);
+        super(ENTITY_TYPE);
     }
 
     @Override
@@ -95,8 +94,8 @@ public class ACPJsonWriter extends ExtensibleEntityJsonWriter<ACP> {
                 jg.writeStringField("creator", ace.getCreator());
                 jg.writeStringField("begin",
                         ace.getBegin() != null ? DateParser.formatW3CDateTime(ace.getBegin().getTime()) : null);
-                jg.writeStringField("end", ace.getEnd() != null ? DateParser.formatW3CDateTime(ace.getEnd().getTime())
-                        : null);
+                jg.writeStringField("end",
+                        ace.getEnd() != null ? DateParser.formatW3CDateTime(ace.getEnd().getTime()) : null);
                 jg.writeStringField("status", ace.getStatus().toString().toLowerCase());
                 jg.writeEndObject();
             }

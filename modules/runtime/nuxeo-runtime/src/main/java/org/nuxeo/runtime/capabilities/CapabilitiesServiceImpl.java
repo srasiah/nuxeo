@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Kevin Leturc <kleturc@nuxeo.com>
  */
-
 package org.nuxeo.runtime.capabilities;
 
 import static java.util.stream.Collectors.collectingAndThen;
@@ -92,7 +91,11 @@ public class CapabilitiesServiceImpl extends DefaultComponent implements Capabil
 
     @Override
     public void registerCapabilities(String name, Supplier<Map<String, Object>> supplier) {
-        capabilitiesSuppliers.put(name, supplier);
+        capabilitiesSuppliers.merge(name, supplier, (old, curr) -> () -> {
+            var oldMap = new LinkedHashMap<>(old.get());
+            oldMap.putAll(curr.get());
+            return oldMap;
+        });
     }
 
     @Override

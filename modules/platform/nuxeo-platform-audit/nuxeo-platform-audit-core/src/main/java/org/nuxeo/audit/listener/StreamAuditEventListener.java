@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,11 +33,10 @@ import jakarta.transaction.Synchronization;
 import jakarta.transaction.SystemException;
 import jakarta.transaction.TransactionManager;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.audit.api.LogEntry;
-import org.nuxeo.audit.service.AuditService;
+import org.nuxeo.audit.service.AuditRouter;
 import org.nuxeo.ecm.core.event.Event;
 import org.nuxeo.ecm.core.event.EventListener;
 import org.nuxeo.ecm.core.io.registry.MarshallerHelper;
@@ -64,54 +61,43 @@ public class StreamAuditEventListener implements EventListener, Synchronization 
 
     protected static final ThreadLocal<List<LogEntry>> entries = ThreadLocal.withInitial(ArrayList::new);
 
+    /** @deprecated since 2025.16, unused */
+    @Deprecated(since = "2025.16", forRemoval = true)
     public static final String STREAM_AUDIT_ENABLED_PROP = "nuxeo.stream.audit.enabled";
 
+    /**
+     * @deprecated since 2025.16, use
+     *             {@link org.nuxeo.audit.service.AuditComponent#STREAM_AUDIT_VIRTUAL_EVENTS_ENABLED_PROP} instead
+     */
+    @Deprecated(since = "2025.16", forRemoval = true)
     public static final String STREAM_AUDIT_VIRTUAL_EVENTS_ENABLED_PROP = "nuxeo.stream.audit.virtual.events.enabled";
 
+    /** @deprecated since 2025.16, unused */
+    @Deprecated(since = "2025.16", forRemoval = true)
     public static final String VIRTUAL_EVENT = "virtualEventCreated";
 
     public static final String STREAM_NAME = "audit/audit";
 
     protected static final AtomicInteger writeCounter = new AtomicInteger(0);
 
-    protected Boolean handleVirtualEvents;
-
     @Deprecated
     // @deprecated since 11.1 log config is not needed anymore
     public static final String DEFAULT_LOG_CONFIG = "audit";
 
-    protected boolean handleVirtualEvents() {
-        if (handleVirtualEvents == null) {
-            handleVirtualEvents = Framework.isBooleanPropertyTrue(STREAM_AUDIT_VIRTUAL_EVENTS_ENABLED_PROP);
-        }
-        return handleVirtualEvents;
-    }
-
     @Override
     public void handleEvent(Event event) {
-        var auditService = Framework.getService(AuditService.class);
         if (!isEnlisted.get()) {
             isEnlisted.set(registerSynchronization(this));
             entries.get().clear();
             log.debug("AuditEventListener collecting entries for the tx");
         }
-        if (auditService.getAuditableEventNames().contains(event.getName())) {
-            entries.get().add(auditService.buildEntryFromEvent(event));
-        } else if (handleVirtualEvents() && VIRTUAL_EVENT.equals(event.getName())) {
-            entries.get().addAll(extractVirtualEvents(event.getContext().getArguments()));
-        }
+        var auditRouter = Framework.getService(AuditRouter.class);
+        entries.get().addAll(auditRouter.computeLogEntries(event));
         if (!isEnlisted.get()) {
             // there is no transaction so don't wait for a commit
             afterCompletion(Status.STATUS_COMMITTED);
         }
 
-    }
-
-    protected Collection<? extends LogEntry> extractVirtualEvents(Object[] args) {
-        if (ArrayUtils.isEmpty(args)) {
-            return List.of();
-        }
-        return Arrays.stream(args).filter(arg -> arg instanceof LogEntry).map(LogEntry.class::cast).toList();
     }
 
     @Override

@@ -18,7 +18,10 @@
  */
 package org.nuxeo.ecm.platform.audit.service;
 
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
+import static org.nuxeo.audit.service.extension.ExtendedInfoDescriptor.ALL_EVENTS;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,8 +36,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.audit.service.extension.AdapterDescriptor;
-import org.nuxeo.audit.service.extension.EventDescriptor;
+import org.nuxeo.audit.service.extension.AuditRouteDescriptor;
 import org.nuxeo.audit.service.extension.ExtendedInfoDescriptor;
+import org.nuxeo.common.stream.MapMultis;
 import org.nuxeo.ecm.platform.audit.api.AuditLogger;
 import org.nuxeo.ecm.platform.audit.api.AuditReader;
 import org.nuxeo.ecm.platform.audit.api.AuditStorage;
@@ -82,6 +86,9 @@ public class NXAuditEventsService extends DefaultComponent {
     protected static final Logger log = LogManager.getLogger(NXAuditEventsService.class);
 
     protected static final String AUDIT_COMPONENT_NAME = "org.nuxeo.audit.service.AuditComponent";
+
+    /** @since 2025.16 */
+    protected static final String ROUTES_EXT_POINT = "routes";
 
     protected AuditBackend backend;
 
@@ -163,11 +170,19 @@ public class NXAuditEventsService extends DefaultComponent {
      * @since 7.4
      */
     public Map<String, List<ExtendedInfoDescriptor>> getEventExtendedInfoDescriptors() {
-        return getRegistry().<EventDescriptor> getDescriptors(AUDIT_COMPONENT_NAME, EVENT_EXT_POINT)
+        var extendedInfoDescriptors = this.getRegistry()
+                                          .<ExtendedInfoDescriptor> getDescriptors(AUDIT_COMPONENT_NAME,
+                                                  EXTENDED_INFO_EXT_POINT)
+                                          .stream()
+                                          .collect(groupingBy(ExtendedInfoDescriptor::getEvent, toList()));
+        return getRegistry().<AuditRouteDescriptor> getDescriptors(AUDIT_COMPONENT_NAME, ROUTES_EXT_POINT)
                             .stream()
-                            .filter(EventDescriptor::isEnabled)
-                            .collect(Collectors.groupingBy(EventDescriptor::getName,
-                                    Collectors.flatMapping(desc -> desc.getExtendedInfoDescriptors().stream(),
+                            .filter(route -> DEFAULT_AUDIT_BACKEND.equals(route.getBackendName()))
+                            .mapMulti(MapMultis.each(AuditRouteDescriptor::getEvents))
+                            .collect(Collectors.groupingBy(AuditRouteDescriptor.EventDescriptor::getName,
+                                    Collectors.flatMapping(
+                                            desc -> extendedInfoDescriptors.getOrDefault(desc.getName(), List.of())
+                                                                           .stream(),
                                             Collectors.collectingAndThen(
                                                     Collectors.toMap(ExtendedInfoDescriptor::getKey,
                                                             Function.identity(), ExtendedInfoDescriptor::merge),
@@ -178,7 +193,10 @@ public class NXAuditEventsService extends DefaultComponent {
     }
 
     public Set<ExtendedInfoDescriptor> getExtendedInfoDescriptors() {
-        return new HashSet<>(getRegistry().getDescriptors(AUDIT_COMPONENT_NAME, EXTENDED_INFO_EXT_POINT));
+        return getRegistry().<ExtendedInfoDescriptor> getDescriptors(AUDIT_COMPONENT_NAME, EXTENDED_INFO_EXT_POINT)
+                            .stream()
+                            .filter(descriptor -> ALL_EVENTS.equals(descriptor.getEvent()))
+                            .collect(Collectors.toSet());
     }
 
     @Override
@@ -201,15 +219,17 @@ public class NXAuditEventsService extends DefaultComponent {
     public void registerContribution(Object contribution, String extensionPoint, ComponentInstance contributor) {
         if (contribution instanceof AuditStorageDescriptor auditStorageDesc) {
             auditStorageDescriptors.put(auditStorageDesc.getId(), auditStorageDesc);
-        } else if (contribution instanceof Descriptor descriptor) {
-            getRegistry().register(AUDIT_COMPONENT_NAME, extensionPoint, descriptor);
+        } else if (contribution instanceof Descriptor) {
+            ((DefaultComponent) Framework.getRuntime().getComponent(AUDIT_COMPONENT_NAME)).registerContribution(
+                    contribution, extensionPoint, contributor);
         }
     }
 
     @Override
     public void unregisterContribution(Object contribution, String extensionPoint, ComponentInstance contributor) {
-        if (contribution instanceof Descriptor descriptor) {
-            getRegistry().unregister(AUDIT_COMPONENT_NAME, extensionPoint, descriptor);
+        if (contribution instanceof Descriptor) {
+            ((DefaultComponent) Framework.getRuntime().getComponent(AUDIT_COMPONENT_NAME)).unregisterContribution(
+                    contribution, extensionPoint, contributor);
         }
     }
 

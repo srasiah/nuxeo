@@ -21,6 +21,7 @@ package org.nuxeo.ecm.restapi.server.usermanager;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -35,6 +36,8 @@ import org.nuxeo.ecm.platform.usermanager.UserManager;
 import org.nuxeo.ecm.webengine.model.WebObject;
 import org.nuxeo.ecm.webengine.model.impl.DefaultObject;
 import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.user.preferences.api.UserPreferences;
+import org.nuxeo.user.preferences.api.UserPreferencesService;
 
 /**
  * @since 9.1
@@ -46,6 +49,20 @@ public class MeObject extends DefaultObject {
     @GET
     public NuxeoPrincipal doGet(@Context Request request) {
         return getContext().getCoreSession().getPrincipal();
+    }
+
+    @GET
+    @Path("preferences")
+    public UserPreferences preferences() {
+        return Framework.getService(UserPreferencesService.class).list(getContext().getCoreSession());
+    }
+
+    /**
+     * @since 2025.16
+     */
+    @Path("preferences/{key}")
+    public UserPreferencesObject preferences(@PathParam("key") String key) {
+        return newObject(UserPreferencesObject.class, key);
     }
 
     @PUT

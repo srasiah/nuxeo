@@ -10,8 +10,10 @@
     </hibernateConfiguration>
   </extension>
 
-  <extension target="org.nuxeo.audit.service.AuditComponent" point="event">
-    <event name="search" enabled="false" />
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
+    <route name="default">
+      <event name="search" enabled="false" />
+    </route>
   </extension>
 
 </component>

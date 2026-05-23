@@ -18,13 +18,9 @@
  */
 package org.nuxeo.ecm.core.storage.gcp;
 
-import org.nuxeo.ecm.core.blob.TestAbstractBlobStoreWithOptimizedCopy;
-import org.nuxeo.runtime.test.runner.Features;
-
 /**
  * @since 2023.5
  */
-@Features(GoogleStorageBlobProviderFeature.class)
-public class TestGoogleStorageBlobStore extends TestAbstractBlobStoreWithOptimizedCopy {
+public class TestGoogleStorageBlobStore extends TestAbstractGoogleStorageBlobStore {
 
 }

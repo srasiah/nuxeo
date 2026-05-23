@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ package org.nuxeo.audit.impl;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.nuxeo.audit.listener.StreamAuditEventListener.STREAM_NAME;
-import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +30,7 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.audit.api.LogEntry;
-import org.nuxeo.audit.service.AuditService;
+import org.nuxeo.audit.service.AuditRouter;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.io.registry.MarshallerHelper;
 import org.nuxeo.ecm.core.io.registry.context.RenderingContext;
@@ -77,21 +76,12 @@ public class StreamAuditWriter implements StreamProcessorTopology {
                     log.error("Discard invalid record: {}", record, e);
                 }
             }
-            writeEntriesToAudit(logEntries);
+            Framework.getService(AuditRouter.class).routeToBackends(logEntries);
         }
 
         @Override
         public void batchFailure(ComputationContext context, String inputStreamName, List<Record> records) {
             // error log already done by abstract
-        }
-
-        protected void writeEntriesToAudit(List<LogEntry> logEntries) {
-            if (logEntries.isEmpty()) {
-                return;
-            }
-            log.debug("Writing {} log entries to audit backend.", logEntries::size);
-            var backend = Framework.getService(AuditService.class).getAuditBackend(DEFAULT_AUDIT_BACKEND);
-            backend.addLogEntries(logEntries);
         }
 
         protected LogEntry getLogEntryFromJson(byte[] data) {

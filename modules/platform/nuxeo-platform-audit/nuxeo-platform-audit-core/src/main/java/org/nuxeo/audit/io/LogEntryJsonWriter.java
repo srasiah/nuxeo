@@ -110,7 +110,7 @@ public class LogEntryJsonWriter extends ExtensibleEntityJsonWriter<LogEntry> {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public LogEntryJsonWriter() {
-        super(ENTITY_TYPE, LogEntry.class);
+        super(ENTITY_TYPE);
     }
 
     @Override

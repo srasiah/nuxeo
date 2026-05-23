@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,13 +39,13 @@ import org.nuxeo.runtime.model.Descriptor;
 public class TransientStoreConfig implements Descriptor {
 
     /**
-     * @deprecated since 2025.11, not used anymore
+     * @deprecated since 2025.11, use {@link ByteSize#unlimited()} instead
      */
     @Deprecated(since = "2025.11", forRemoval = true)
     public static final int DEFAULT_TARGET_MAX_SIZE_MB = -1;
 
     /**
-     * @deprecated since 2025.11, not used anymore
+     * @deprecated since 2025.11, use {@link ByteSize#unlimited()} instead
      */
     @Deprecated(since = "2025.11", forRemoval = true)
     public static final int DEFAULT_ABSOLUTE_MAX_SIZE_MB = -1;

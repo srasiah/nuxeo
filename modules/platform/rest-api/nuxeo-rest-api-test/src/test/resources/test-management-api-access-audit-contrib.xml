@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.ecm.restapi.test.management.audit.access.test">
+
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
+    <route name="default">
+      <event name="managementApiAccess" />
+    </route>
+  </extension>
+
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="extendedInfo">
+    <extendedInfo event="managementApiAccess" expression="${message.arguments[0].method}" key="method" />
+    <extendedInfo event="managementApiAccess" expression="${message.arguments[0].requestURI}" key="requestURI" />
+    <extendedInfo event="managementApiAccess" expression="${message.arguments[0].queryString}" key="queryString" />
+    <extendedInfo event="managementApiAccess" expression="${message.arguments[0].contentLength}" key="contentLength" />
+    <extendedInfo event="managementApiAccess" expression="${message.arguments[0].getHeader('Accept')}" key="headerAccept" />
+  </extension>
+
+</component>

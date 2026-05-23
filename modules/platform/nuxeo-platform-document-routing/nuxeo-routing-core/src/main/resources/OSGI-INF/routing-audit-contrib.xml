@@ -9,112 +9,94 @@
     </doctype>
   </extension>
 
-  <extension target="org.nuxeo.audit.service.AuditComponent" point="event">
-    <event name="auditLogRoute" />
-    <event name="workflowTaskAssigned">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.taskInstance.directive}" key="directive" />
-        <extendedInfo expression="${message.properties.taskInstance.dueDate}" key="dueDate" />
-      </extendedInfos>
-    </event>
-    <event name="workflowTaskReassigned">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.taskInstance.directive}" key="directive" />
-        <extendedInfo expression="${message.properties.taskInstance.dueDate}" key="dueDate" />
-      </extendedInfos>
-    </event>
-    <event name="workflowTaskCompleted">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.taskInstance.directive}" key="directive" />
-        <extendedInfo expression="${message.properties.taskInstance.dueDate}" key="dueDate" />
-      </extendedInfos>
-    </event>
-    <event name="workflowCanceled" />
-    <event name="workflowTaskDelegated">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.taskInstance.directive}" key="directive" />
-        <extendedInfo expression="${message.properties.taskInstance.dueDate}" key="dueDate" />
-      </extendedInfos>
-    </event>
-    <event name="afterWorkflowStarted">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.modelId}" key="modelId" />
-        <extendedInfo expression="${message.properties.modelName}" key="modelName" />
-        <extendedInfo expression="${message.properties.workflowInitiator}" key="workflowInitiator" />
-        <extendedInfo expression="${message.properties.workflowVariables}" key="workflowVariables" />
-      </extendedInfos>
-    </event>
-    <event name="afterWorkflowFinish">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.modelId}" key="modelId" />
-        <extendedInfo expression="${message.properties.modelName}" key="modelName" />
-        <extendedInfo expression="${message.properties.workflowInitiator}" key="workflowInitiator" />
-        <extendedInfo expression="${message.properties.timeSinceWfStarted}" key="timeSinceWfStarted" />
-        <extendedInfo expression="${message.properties.workflowVariables}" key="workflowVariables" />
-      </extendedInfos>
-    </event>
-    <event name="beforeWorkflowCanceled">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.modelId}" key="modelId" />
-        <extendedInfo expression="${message.properties.modelName}" key="modelName" />
-        <extendedInfo expression="${message.properties.workflowInitiator}" key="workflowInitiator" />
-        <extendedInfo expression="${message.properties.pendingNodes}" key="pendingNodes" />
-        <extendedInfo expression="${message.properties.workflowVariables}" key="workflowVariables" />
-      </extendedInfos>
-    </event>
-    <event name="afterWorkflowTaskCreated">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.modelName}" key="modelName" />
-        <extendedInfo expression="${message.properties.modelId}" key="modelId" />
-        <extendedInfo expression="${message.properties.workflowInitiator}" key="workflowInitiator" />
-        <extendedInfo expression="${message.properties.taskName}" key="taskName" />
-        <extendedInfo expression="${message.properties.taskActor}" key="taskActor" />
-        <extendedInfo expression="${message.properties.actors}" key="actors" />
-        <extendedInfo expression="${message.properties.nodeVariables}" key="nodeVariables" />
-        <extendedInfo expression="${message.properties.workflowVariables}" key="workflowVariables" />
-        <extendedInfo expression="${message.properties.timeSinceWfStarted}" key="timeSinceWfStarted" />
-      </extendedInfos>
-    </event>
-    <event name="afterWorkflowTaskEnded">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.modelName}" key="modelName" />
-        <extendedInfo expression="${message.properties.workflowInitiator}" key="workflowInitiator" />
-        <extendedInfo expression="${message.properties.taskName}" key="taskName" />
-        <extendedInfo expression="${message.properties.taskActor}" key="taskActor" />
-        <extendedInfo expression="${message.properties.data}" key="data" />
-        <extendedInfo expression="${message.properties.action}" key="action" />
-        <extendedInfo expression="${message.properties.nodeVariables}" key="nodeVariables" />
-        <extendedInfo expression="${message.properties.workflowVariables}" key="workflowVariables" />
-        <extendedInfo expression="${message.properties.timeSinceTaskStarted}" key="timeSinceTaskStarted" />
-        <extendedInfo expression="${message.properties.timeSinceWfStarted}" key="timeSinceWfStarted" />
-      </extendedInfos>
-    </event>
-    <event name="afterWorkflowTaskReassigned">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.modelName}" key="modelName" />
-        <extendedInfo expression="${message.properties.modelId}" key="modelId" />
-        <extendedInfo expression="${message.properties.workflowInitiator}" key="workflowInitiator" />
-        <extendedInfo expression="${message.properties.taskName}" key="taskName" />
-        <extendedInfo expression="${message.properties.taskActor}" key="taskActor" />
-        <extendedInfo expression="${message.properties.actors}" key="actors" />
-        <extendedInfo expression="${message.properties.comment}" key="comment" />
-        <extendedInfo expression="${message.properties.timeSinceWfStarted}" key="timeSinceWfStarted" />
-        <extendedInfo expression="${message.properties.timeSinceTaskStarted}" key="timeSinceTaskStarted" />
-      </extendedInfos>
-    </event>
-    <event name="afterWorkflowTaskDelegated">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.modelName}" key="modelName" />
-        <extendedInfo expression="${message.properties.modelId}" key="modelId" />
-        <extendedInfo expression="${message.properties.workflowInitiator}" key="workflowInitiator" />
-        <extendedInfo expression="${message.properties.taskName}" key="taskName" />
-        <extendedInfo expression="${message.properties.taskActor}" key="taskActor" />
-        <extendedInfo expression="${message.properties.delegatedActors}" key="delegatedActors" />
-        <extendedInfo expression="${message.properties.comment}" key="comment" />
-        <extendedInfo expression="${message.properties.timeSinceWfStarted}" key="timeSinceWfStarted" />
-        <extendedInfo expression="${message.properties.timeSinceTaskStarted}" key="timeSinceTaskStarted" />
-      </extendedInfos>
-    </event>
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
+    <route name="default">
+      <event name="auditLogRoute" />
+      <event name="workflowTaskAssigned" />
+      <event name="workflowTaskReassigned" />
+      <event name="workflowTaskCompleted" />
+      <event name="workflowCanceled" />
+      <event name="workflowTaskDelegated" />
+      <event name="afterWorkflowStarted" />
+      <event name="afterWorkflowFinish" />
+      <event name="beforeWorkflowCanceled" />
+      <event name="afterWorkflowTaskCreated" />
+      <event name="afterWorkflowTaskEnded" />
+      <event name="afterWorkflowTaskReassigned" />
+      <event name="afterWorkflowTaskDelegated" />
+    </route>
+  </extension>
+  
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="extendedInfo">
+    <extendedInfo event="workflowTaskAssigned" key="directive" expression="${message.properties.taskInstance.directive}" />
+    <extendedInfo event="workflowTaskAssigned" key="dueDate" expression="${message.properties.taskInstance.dueDate}" />
+    
+    <extendedInfo event="workflowTaskReassigned" key="directive" expression="${message.properties.taskInstance.directive}" />
+    <extendedInfo event="workflowTaskReassigned" key="dueDate" expression="${message.properties.taskInstance.dueDate}" />
+    
+    <extendedInfo event="workflowTaskCompleted" key="directive" expression="${message.properties.taskInstance.directive}" />
+    <extendedInfo event="workflowTaskCompleted" key="dueDate" expression="${message.properties.taskInstance.dueDate}" />
+
+    <extendedInfo event="workflowTaskDelegated" key="directive" expression="${message.properties.taskInstance.directive}" />
+    <extendedInfo event="workflowTaskDelegated" key="dueDate" expression="${message.properties.taskInstance.dueDate}" />
+
+    <extendedInfo event="afterWorkflowStarted" key="modelId" expression="${message.properties.modelId}" />
+    <extendedInfo event="afterWorkflowStarted" key="modelName" expression="${message.properties.modelName}" />
+    <extendedInfo event="afterWorkflowStarted" key="workflowInitiator" expression="${message.properties.workflowInitiator}" />
+    <extendedInfo event="afterWorkflowStarted" key="workflowVariables" expression="${message.properties.workflowVariables}" />
+
+    <extendedInfo event="afterWorkflowFinish" key="modelId" expression="${message.properties.modelId}" />
+    <extendedInfo event="afterWorkflowFinish" key="modelName" expression="${message.properties.modelName}" />
+    <extendedInfo event="afterWorkflowFinish" key="workflowInitiator" expression="${message.properties.workflowInitiator}" />
+    <extendedInfo event="afterWorkflowFinish" key="timeSinceWfStarted" expression="${message.properties.timeSinceWfStarted}" />
+    <extendedInfo event="afterWorkflowFinish" key="workflowVariables" expression="${message.properties.workflowVariables}" />
+
+    <extendedInfo event="beforeWorkflowCanceled" key="modelId" expression="${message.properties.modelId}" />
+    <extendedInfo event="beforeWorkflowCanceled" key="modelName" expression="${message.properties.modelName}" />
+    <extendedInfo event="beforeWorkflowCanceled" key="workflowInitiator" expression="${message.properties.workflowInitiator}" />
+    <extendedInfo event="beforeWorkflowCanceled" key="pendingNodes" expression="${message.properties.pendingNodes}" />
+    <extendedInfo event="beforeWorkflowCanceled" key="workflowVariables" expression="${message.properties.workflowVariables}" />
+
+    <extendedInfo event="afterWorkflowTaskCreated" key="modelName" expression="${message.properties.modelName}" />
+    <extendedInfo event="afterWorkflowTaskCreated" key="modelId" expression="${message.properties.modelId}" />
+    <extendedInfo event="afterWorkflowTaskCreated" key="workflowInitiator" expression="${message.properties.workflowInitiator}" />
+    <extendedInfo event="afterWorkflowTaskCreated" key="taskName" expression="${message.properties.taskName}" />
+    <extendedInfo event="afterWorkflowTaskCreated" key="taskActor" expression="${message.properties.taskActor}" />
+    <extendedInfo event="afterWorkflowTaskCreated" key="actors" expression="${message.properties.actors}" />
+    <extendedInfo event="afterWorkflowTaskCreated" key="nodeVariables" expression="${message.properties.nodeVariables}" />
+    <extendedInfo event="afterWorkflowTaskCreated" key="workflowVariables" expression="${message.properties.workflowVariables}" />
+    <extendedInfo event="afterWorkflowTaskCreated" key="timeSinceWfStarted" expression="${message.properties.timeSinceWfStarted}" />
+
+    <extendedInfo event="afterWorkflowTaskEnded" key="modelName" expression="${message.properties.modelName}" />
+    <extendedInfo event="afterWorkflowTaskEnded" key="workflowInitiator" expression="${message.properties.workflowInitiator}" />
+    <extendedInfo event="afterWorkflowTaskEnded" key="taskName" expression="${message.properties.taskName}" />
+    <extendedInfo event="afterWorkflowTaskEnded" key="taskActor" expression="${message.properties.taskActor}" />
+    <extendedInfo event="afterWorkflowTaskEnded" key="data" expression="${message.properties.data}" />
+    <extendedInfo event="afterWorkflowTaskEnded" key="action" expression="${message.properties.action}" />
+    <extendedInfo event="afterWorkflowTaskEnded" key="nodeVariables" expression="${message.properties.nodeVariables}" />
+    <extendedInfo event="afterWorkflowTaskEnded" key="workflowVariables" expression="${message.properties.workflowVariables}" />
+    <extendedInfo event="afterWorkflowTaskEnded" key="timeSinceTaskStarted" expression="${message.properties.timeSinceTaskStarted}" />
+    <extendedInfo event="afterWorkflowTaskEnded" key="timeSinceWfStarted" expression="${message.properties.timeSinceWfStarted}" />
+
+    <extendedInfo event="afterWorkflowTaskReassigned" key="modelName" expression="${message.properties.modelName}" />
+    <extendedInfo event="afterWorkflowTaskReassigned" key="modelId" expression="${message.properties.modelId}" />
+    <extendedInfo event="afterWorkflowTaskReassigned" key="workflowInitiator" expression="${message.properties.workflowInitiator}" />
+    <extendedInfo event="afterWorkflowTaskReassigned" key="taskName" expression="${message.properties.taskName}" />
+    <extendedInfo event="afterWorkflowTaskReassigned" key="taskActor" expression="${message.properties.taskActor}" />
+    <extendedInfo event="afterWorkflowTaskReassigned" key="actors" expression="${message.properties.actors}" />
+    <extendedInfo event="afterWorkflowTaskReassigned" key="comment" expression="${message.properties.comment}" />
+    <extendedInfo event="afterWorkflowTaskReassigned" key="timeSinceWfStarted" expression="${message.properties.timeSinceWfStarted}" />
+    <extendedInfo event="afterWorkflowTaskReassigned" key="timeSinceTaskStarted" expression="${message.properties.timeSinceTaskStarted}" />
+
+    <extendedInfo event="afterWorkflowTaskDelegated" key="modelName" expression="${message.properties.modelName}" />
+    <extendedInfo event="afterWorkflowTaskDelegated" key="modelId" expression="${message.properties.modelId}" />
+    <extendedInfo event="afterWorkflowTaskDelegated" key="workflowInitiator" expression="${message.properties.workflowInitiator}" />
+    <extendedInfo event="afterWorkflowTaskDelegated" key="taskName" expression="${message.properties.taskName}" />
+    <extendedInfo event="afterWorkflowTaskDelegated" key="taskActor" expression="${message.properties.taskActor}" />
+    <extendedInfo event="afterWorkflowTaskDelegated" key="delegatedActors" expression="${message.properties.delegatedActors}" />
+    <extendedInfo event="afterWorkflowTaskDelegated" key="comment" expression="${message.properties.comment}" />
+    <extendedInfo event="afterWorkflowTaskDelegated" key="timeSinceWfStarted" expression="${message.properties.timeSinceWfStarted}" />
+    <extendedInfo event="afterWorkflowTaskDelegated" key="timeSinceTaskStarted" expression="${message.properties.timeSinceTaskStarted}" />
   </extension>
 
 </component>

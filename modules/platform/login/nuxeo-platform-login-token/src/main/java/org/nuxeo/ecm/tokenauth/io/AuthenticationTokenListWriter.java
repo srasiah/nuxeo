@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2016-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@
  */
 package org.nuxeo.ecm.tokenauth.io;
 
-import org.nuxeo.ecm.core.io.marshallers.json.DefaultListJsonWriter;
-import org.nuxeo.ecm.core.io.registry.reflect.Setup;
-
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
 import static org.nuxeo.ecm.core.io.registry.reflect.Priorities.REFERENCE;
+
+import org.nuxeo.ecm.core.io.marshallers.json.DefaultListJsonWriter;
+import org.nuxeo.ecm.core.io.registry.reflect.Setup;
 
 /**
  * @since 8.3
@@ -33,7 +33,7 @@ public class AuthenticationTokenListWriter extends DefaultListJsonWriter<Authent
     public static final String ENTITY_TYPE = "tokens";
 
     public AuthenticationTokenListWriter() {
-        super(ENTITY_TYPE, AuthenticationToken.class);
+        super(ENTITY_TYPE);
     }
 
 }

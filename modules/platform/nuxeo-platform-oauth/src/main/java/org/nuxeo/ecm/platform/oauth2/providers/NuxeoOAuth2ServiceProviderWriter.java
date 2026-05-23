@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,15 @@
  */
 package org.nuxeo.ecm.platform.oauth2.providers;
 
+import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
+import static org.nuxeo.ecm.core.io.registry.reflect.Priorities.REFERENCE;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
@@ -29,15 +38,6 @@ import org.nuxeo.runtime.api.Framework;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
-import static org.nuxeo.ecm.core.io.registry.reflect.Priorities.REFERENCE;
-
 /**
  * @since 9.2
  */
@@ -47,7 +47,7 @@ public class NuxeoOAuth2ServiceProviderWriter extends ExtensibleEntityJsonWriter
     public static final String ENTITY_TYPE = "nuxeoOAuth2ServiceProvider";
 
     public NuxeoOAuth2ServiceProviderWriter() {
-        super(ENTITY_TYPE, NuxeoOAuth2ServiceProvider.class);
+        super(ENTITY_TYPE);
     }
 
     @Override
@@ -75,7 +75,7 @@ public class NuxeoOAuth2ServiceProviderWriter extends ExtensibleEntityJsonWriter
             try {
                 authorizationURL = provider.getAuthorizationUrl(ctx.getBaseUrl());
             } catch (IllegalArgumentException e) {
-                authorizationURL = null;
+                // ignore
             }
         }
         jg.writeStringField("authorizationURL", authorizationURL);
@@ -95,7 +95,7 @@ public class NuxeoOAuth2ServiceProviderWriter extends ExtensibleEntityJsonWriter
                 if (entries.size() > 1) {
                     throw new NuxeoException("Found multiple " + provider.getId() + " accounts for " + nxuser);
                 } else if (entries.size() == 1) {
-                    return new NuxeoOAuth2Token(entries.get(0));
+                    return new NuxeoOAuth2Token(entries.getFirst());
                 }
             }
             return null;

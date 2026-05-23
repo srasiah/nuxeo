@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2012-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2012-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  */
 package org.nuxeo.drive.test;
 
-import org.nuxeo.audit.listener.StreamAuditEventListener;
+import org.nuxeo.audit.service.AuditComponent;
 import org.nuxeo.audit.test.AuditFeature;
 import org.nuxeo.ecm.automation.core.AutomationCoreFeature;
 import org.nuxeo.ecm.collections.core.test.CollectionFeature;
@@ -47,7 +47,7 @@ import org.nuxeo.runtime.test.runner.WithFrameworkProperty;
         FileManagerFeature.class, //
         KeyValueBlobTransientStoreFeature.class, //
         PlatformFeature.class })
-@WithFrameworkProperty(name = StreamAuditEventListener.STREAM_AUDIT_VIRTUAL_EVENTS_ENABLED_PROP, value = "true")
+@WithFrameworkProperty(name = AuditComponent.STREAM_AUDIT_VIRTUAL_EVENTS_ENABLED_PROP, value = "true")
 public class NuxeoDriveFeature implements RunnerFeature {
 
     @Override

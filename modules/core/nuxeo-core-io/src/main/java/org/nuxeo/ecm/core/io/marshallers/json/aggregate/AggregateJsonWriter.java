@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2016-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,7 +116,7 @@ public class AggregateJsonWriter extends ExtensibleEntityJsonWriter<Aggregate> {
     private SchemaManager schemaManager;
 
     public AggregateJsonWriter() {
-        super(ENTITY_TYPE, Aggregate.class);
+        super(ENTITY_TYPE);
     }
 
     @SuppressWarnings("unchecked")

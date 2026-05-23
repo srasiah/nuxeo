@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,13 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.Temporal;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -61,21 +61,19 @@ public class MemAuditBackend extends AbstractAuditBackend {
 
     protected final CircularFifoQueue<LogEntry> entries = new CircularFifoQueue<>(10_000);
 
-    protected final AtomicLong idCounter = new AtomicLong(1);
-
     @Override
     public Long getEventsCount(String eventId) {
         return entries.stream().map(LogEntry::getEventId).filter(Predicate.isEqual(eventId)).count();
     }
 
     @Override
-    public void addLogEntries(List<LogEntry> entries) {
-        this.entries.addAll(entries.stream()
-                                   .map(entry -> entry.builder()
-                                                      .id(idCounter.getAndIncrement())
-                                                      .extended(mapJsonContent(entry.getExtended()))
-                                                      .build())
-                                   .toList());
+    public void insertLogs(Collection<LogEntry> entries) {
+        for (var entry : entries) {
+            if (entry.getId() == 0L || entry.getLogDate() == null) {
+                throw new IllegalArgumentException("Log entry must have an id and log date to be inserted");
+            }
+            this.entries.add(entry.builder().extended(mapJsonContent(entry.getExtended())).build());
+        }
     }
 
     protected Map<String, Object> mapJsonContent(Map<String, Object> extended) {
@@ -277,6 +275,5 @@ public class MemAuditBackend extends AbstractAuditBackend {
     @Override
     protected void clearEntries() {
         entries.clear();
-        idCounter.set(1L);
     }
 }

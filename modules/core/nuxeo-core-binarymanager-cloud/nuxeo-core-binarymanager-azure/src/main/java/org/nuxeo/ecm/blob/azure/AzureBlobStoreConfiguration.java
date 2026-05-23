@@ -181,6 +181,11 @@ public class AzureBlobStoreConfiguration extends CloudBlobStoreConfiguration {
         isContainerVersioningEnabled = retentionEnabled;
     }
 
+    @Override
+    protected boolean isVersioningEnabled() {
+        return isContainerVersioningEnabled;
+    }
+
     public AzureBlobStoreConfiguration withNamespace(String ns) throws IOException {
         return new AzureBlobStoreConfiguration(propertiesWithNamespace(ns));
     }

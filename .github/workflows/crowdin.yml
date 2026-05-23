@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: 2025
 
@@ -29,7 +29,7 @@ jobs:
 
       - name: Crowdin Action
         id: crowdin-sync
-        uses: crowdin/github-action@60debf382ee245b21794321190ad0501db89d8c1 # v2.13.0
+        uses: crowdin/github-action@5587c43063e52090026857d386174d2599ad323b # v2.14.1
         with:
           dryrun_action: false
           # Disable 'git checkout "${GITHUB_REF#refs/heads/}"'
@@ -54,17 +54,21 @@ jobs:
           create_pull_request: true
           pull_request_title: New Crowdin translations by GitHub Action (lts-2025)
 
+          # configure commit author
+          github_user_name: ${{ secrets.PLATFORM_BOT_USERNAME }}
+          github_user_email: "platform+jx-bot@nuxeo.com"
+
           # Automatically download all the new translations
           download_translations: true
 
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PLATFORM_BOT_TOKEN }}
 
       - name: Auto-merge PR
         if: steps.crowdin-sync.outputs.pull_request_url
         run: |
-          gh pr --repo $GITHUB_REPOSITORY merge "$PR_URL" --auto --rebase
-          gh pr --repo $GITHUB_REPOSITORY review --approve "$PR_URL"
+          gh pr --repo $GITHUB_REPOSITORY merge $PR_URL --auto --rebase
+          gh pr --repo $GITHUB_REPOSITORY review --approve $PR_URL
         env:
           PR_URL: ${{ steps.crowdin-sync.outputs.pull_request_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

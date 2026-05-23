@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,17 @@ package org.nuxeo.ecm.platform.routing.core.audit;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_CATEGORY;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_DOC_UUID;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_EVENT_ID;
+import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
 
 import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.nuxeo.audit.api.AuditQueryBuilder;
 import org.nuxeo.audit.api.LogEntry;
-import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.ecm.core.query.sql.model.Predicates;
 import org.nuxeo.ecm.platform.routing.api.DocumentRoutingConstants;
 import org.nuxeo.runtime.api.Framework;
@@ -39,6 +42,8 @@ import org.nuxeo.runtime.api.Framework;
  * @since 7.4
  */
 public final class RoutingAuditHelper {
+
+    private static final Logger log = LogManager.getLogger(RoutingAuditHelper.class);
 
     public static final String TIME_SINCE_WF_STARTED = "timeSinceWfStarted";
 
@@ -57,19 +62,25 @@ public final class RoutingAuditHelper {
      * @since 7.4
      */
     public static long computeElapsedTime(DocumentRoutingConstants.Events event, String elementId) {
-        var auditBackend = Framework.getService(AuditBackend.class);
-        if (auditBackend != null && StringUtils.isNotBlank(elementId)) {
-            List<LogEntry> logEntries = auditBackend.queryLogs(
-                    new AuditQueryBuilder().predicate(Predicates.eq(LOG_DOC_UUID, elementId))
-                                           .and(Predicates.eq(LOG_CATEGORY, DocumentRoutingConstants.ROUTING_CATEGORY))
-                                           .and(Predicates.eq(LOG_EVENT_ID, event.name()))
-                                           .defaultOrder()
-                                           .limit(1));
-            if (!logEntries.isEmpty()) {
-                LogEntry logEntry = logEntries.getFirst();
-                Date start = logEntry.getEventDate();
-                return new Date().getTime() - start.getTime();
+        var auditService = Framework.getService(AuditService.class);
+        if (auditService != null) {
+            if (StringUtils.isNotBlank(elementId)) {
+                var auditBackend = auditService.getAuditBackend(DEFAULT_AUDIT_BACKEND);
+                List<LogEntry> logEntries = auditBackend.queryLogs(
+                        new AuditQueryBuilder().predicate(Predicates.eq(LOG_DOC_UUID, elementId))
+                                               .and(Predicates.eq(LOG_CATEGORY,
+                                                       DocumentRoutingConstants.ROUTING_CATEGORY))
+                                               .and(Predicates.eq(LOG_EVENT_ID, event.name()))
+                                               .defaultOrder()
+                                               .limit(1));
+                if (!logEntries.isEmpty()) {
+                    LogEntry logEntry = logEntries.getFirst();
+                    Date start = logEntry.getEventDate();
+                    return new Date().getTime() - start.getTime();
+                }
             }
+        } else {
+            log.warn("AuditService is not available");
         }
         return -1;
     }

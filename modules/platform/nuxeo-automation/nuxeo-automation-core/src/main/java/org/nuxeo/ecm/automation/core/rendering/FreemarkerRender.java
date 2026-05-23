@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2011 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,8 +48,8 @@ public class FreemarkerRender extends FreemarkerEngine implements Renderer {
             public URL getResourceURL(String key) {
                 try {
                     if (key.startsWith(Renderer.TEMPLATE_PREFIX)) {
-                        return Framework.getService(ResourceService.class).getResource(
-                                key.substring(Renderer.TEMPLATE_PREFIX.length()));
+                        return Framework.getService(ResourceService.class)
+                                        .getResource(key.substring(Renderer.TEMPLATE_PREFIX.length()));
                     } else {
                         return new URL(key);
                     }
@@ -65,6 +65,10 @@ public class FreemarkerRender extends FreemarkerEngine implements Renderer {
         });
     }
 
+    /**
+     * @deprecated since 2025.14, use {@link #renderInline(String, Object, Writer)} instead
+     */
+    @Deprecated(since = "2025.14", forRemoval = true)
     public void renderContent(String content, Object ctx, Writer writer) throws IOException, TemplateException {
         StringReader reader = new StringReader(content);
         Template tpl = new Template("@inline", reader, getConfiguration(), "UTF-8");
@@ -73,8 +77,8 @@ public class FreemarkerRender extends FreemarkerEngine implements Renderer {
     }
 
     @Override
-    public String render(String uriOrContent, Map<String, Object> root) throws RenderingException, TemplateException,
-            IOException {
+    public String render(String uriOrContent, Map<String, Object> root)
+            throws RenderingException, TemplateException, IOException {
         if (root.get("Document") != null) {
             // mvel wrapper not supported in freemarker
             root.put("Document", root.get("This"));
@@ -83,7 +87,7 @@ public class FreemarkerRender extends FreemarkerEngine implements Renderer {
         if (uriOrContent.startsWith(Renderer.TEMPLATE_PREFIX)) {
             render(uriOrContent, root, result);
         } else {
-            renderContent(uriOrContent, root, result);
+            renderInline(uriOrContent, root, result);
         }
         return result.getBuffer().toString();
     }

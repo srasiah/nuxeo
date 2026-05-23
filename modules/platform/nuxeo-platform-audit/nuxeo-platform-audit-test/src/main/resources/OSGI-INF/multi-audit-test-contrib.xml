@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.audit.test.multi.defaultContrib">
+
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="backendFactory">
+    <backend name="other" factory="org.nuxeo.audit.mem.MemAuditBackendFactory" />
+  </extension>
+
+  <genericPageProvider name="OTHER_ADMIN_HISTORY" class="org.nuxeo.audit.provider.AuditPageProvider">
+    <property name="backend">other</property>
+    <searchDocumentType>BasicAuditSearch</searchDocumentType>
+    <whereClause>
+      <predicate parameter="eventDate" operator="BETWEEN">
+        <field schema="basicauditsearch" name="startDate" />
+        <field schema="basicauditsearch" name="endDate" />
+      </predicate>
+      <predicate parameter="category" operator="=">
+        <field schema="basicauditsearch" name="eventCategory" />
+      </predicate>
+      <predicate parameter="eventId" operator="IN">
+        <field schema="basicauditsearch" name="eventIds" />
+      </predicate>
+      <predicate parameter="principalName" operator="=">
+        <field schema="basicauditsearch" name="principalName" />
+      </predicate>
+    </whereClause>
+    <sort column="eventDate" ascending="false" />
+    <pageSize>10</pageSize>
+    <maxPageSize>1000</maxPageSize>
+  </genericPageProvider>
+
+</component>

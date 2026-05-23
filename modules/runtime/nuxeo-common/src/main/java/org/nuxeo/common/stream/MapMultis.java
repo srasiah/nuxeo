@@ -106,4 +106,30 @@ public class MapMultis {
             }
         };
     }
+
+    /**
+     * Returns a {@link BiConsumer} to use with {@link java.util.stream.Stream#mapMulti(BiConsumer)} in order to get a
+     * stream on a {@link Collection} of elements with the given {@link Class} type. This is equivalent to the
+     * filter/map approach:
+     *
+     * <pre>
+     * {@code
+     * entries.stream().filter(LogEntry.class::isInstance).map(LogEntry.class::cast);
+     * entries.stream().mapMulti(MapMultis.instanceIf(LogEntry.class));
+     * }
+     * </pre>
+     *
+     * @param clazz the type of elements to keep
+     * @return a {@link BiConsumer} to use with mapMulti
+     * @param <T> the type of elements within the stream
+     * @param <R> the type of elements to keep
+     * @since 2025.16
+     */
+    public static <T, R> BiConsumer<? super T, Consumer<R>> instanceOf(Class<R> clazz) {
+        return (element, downstream) -> {
+            if (clazz.isInstance(element)) {
+                downstream.accept(clazz.cast(element));
+            }
+        };
+    }
 }

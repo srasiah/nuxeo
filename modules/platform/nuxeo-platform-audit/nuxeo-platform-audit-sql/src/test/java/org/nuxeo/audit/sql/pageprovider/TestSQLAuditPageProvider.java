@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2011-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2011-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,6 +70,9 @@ public class TestSQLAuditPageProvider {
     protected static final Calendar testDate = Calendar.getInstance();
 
     @Inject
+    protected AuditBackend backend;
+
+    @Inject
     protected CoreSession session;
 
     @Inject
@@ -80,8 +83,6 @@ public class TestSQLAuditPageProvider {
 
     @Before
     public void createTestEntries() {
-        var backend = Framework.getService(AuditBackend.class);
-        assertNotNull(backend);
         List<LogEntry> entries = new ArrayList<>();
 
         for (String suffix : entriesIdx) {

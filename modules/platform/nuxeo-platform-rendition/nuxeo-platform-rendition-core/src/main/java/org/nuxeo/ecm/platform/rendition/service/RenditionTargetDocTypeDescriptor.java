@@ -16,20 +16,23 @@
  * Contributors:
  *     Guillaume Renard
  */
-package org.nuxeo.ecm.blob.s3;
+package org.nuxeo.ecm.platform.rendition.service;
 
-import org.nuxeo.runtime.test.runner.WithFrameworkProperty;
+import org.nuxeo.common.xmap.annotation.XNode;
+import org.nuxeo.common.xmap.annotation.XObject;
+import org.nuxeo.runtime.model.Descriptor;
 
-import software.amazon.awssdk.services.s3.model.StorageClass;
+@XObject("targetDocType")
+public class RenditionTargetDocTypeDescriptor implements Descriptor {
 
-/**
- * @since 2025.8
- */
-@WithFrameworkProperty(name = "nuxeo.test.s3storage.storageClass", value = "INTELLIGENT_TIERING")
-public class TestS3IntelligentTieringBlobStore extends TestS3BlobStore {
+    @XNode("@from")
+    protected String from;
+
+    @XNode("@to")
+    protected String to;
 
     @Override
-    protected StorageClass expectedStorageClass() {
-        return StorageClass.INTELLIGENT_TIERING;
+    public String getId() {
+        return from;
     }
 }

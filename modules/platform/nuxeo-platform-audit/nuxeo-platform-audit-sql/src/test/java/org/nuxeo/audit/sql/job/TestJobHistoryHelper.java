@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  *
  * Contributors:
  *     Nuxeo - initial API and implementation
- *
  */
 package org.nuxeo.audit.sql.job;
 
@@ -27,13 +26,14 @@ import static org.junit.Assert.assertTrue;
 import java.util.Date;
 import java.util.List;
 
+import jakarta.inject.Inject;
+
 import org.apache.commons.lang3.SystemUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.audit.api.job.JobHistoryHelper;
 import org.nuxeo.audit.service.AuditBackend;
 import org.nuxeo.audit.sql.SQLAuditFeature;
-import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
@@ -41,14 +41,15 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 @Features(SQLAuditFeature.class)
 public class TestJobHistoryHelper {
 
+    @Inject
+    protected AuditBackend backend;
+
     @Test
     public void testLogger() {
         StringBuilder query = new StringBuilder("from LogEntry log where ");
         query.append(" log.category='");
         query.append("MyExport");
         query.append("'  ORDER BY log.eventDate DESC");
-
-        var backend = Framework.getService(AuditBackend.class);
 
         List<?> result = backend.nativeQuery(query.toString(), 1, 1);
         assertEquals(0, result.size());

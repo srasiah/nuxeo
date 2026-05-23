@@ -19,18 +19,20 @@
 package org.nuxeo.ecm.restapi.opensearch1;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.nuxeo.ecm.restapi.opensearch1.OpenSearchPassthroughComponent.PASSTHROUGH_ELASTICSEARCH_ENABLED_PROPERTY;
 
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.annotation.Nonnull;
 
 import org.json.JSONException;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
 import org.nuxeo.ecm.restapi.opensearch1.filter.RequestValidator;
 import org.nuxeo.ecm.restapi.opensearch1.filter.SearchRequestFilter;
+import org.nuxeo.runtime.api.Framework;
 
 /**
  * Rewrite an OpenSearch search request to add security filter. URI Search are turned into Request body search.
@@ -67,6 +69,9 @@ public abstract class AbstractSearchRequestFilterImpl implements SearchRequestFi
 
     @Override
     public void init(CoreSession session, String indices, String rawQuery, String payload) {
+        if (!Framework.isBooleanPropertyTrue(PASSTHROUGH_ELASTICSEARCH_ENABLED_PROPERTY)) {
+            throw new IllegalArgumentException("ElasticSearch passthrough is disabled");
+        }
         RequestValidator validator = new RequestValidator();
         this.indices = validator.getIndices(indices);
         this.principal = session.getPrincipal();
@@ -101,7 +106,8 @@ public abstract class AbstractSearchRequestFilterImpl implements SearchRequestFi
     }
 
     @Override
-    public @NotNull String getUrl() {
+    @Nonnull
+    public String getUrl() {
         if (url == null) {
             url = "/" + indices + "/_search";
             if (rawQuery != null) {

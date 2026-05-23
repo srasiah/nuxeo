@@ -55,7 +55,6 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 /**
@@ -133,11 +132,6 @@ public class S3BlobProvider extends CloudBlobProvider<S3BlobStoreConfiguration> 
     @Override
     public void close() {
         config.close();
-    }
-
-    @Override
-    protected String getDigestAlgorithm() {
-        return config.digestConfiguration.digestAlgorithm;
     }
 
     /** Checks if the bucket exists (used in health check probes). */
@@ -245,16 +239,27 @@ public class S3BlobProvider extends CloudBlobProvider<S3BlobStoreConfiguration> 
             s3Presignerbuilder.endpointOverride(config.endpointOverride);
         }
         try (S3Presigner presigner = s3Presignerbuilder.build()) {
-            var presignRequest = GetObjectPresignRequest.builder().signatureDuration(expiration).getObjectRequest(b -> {
-                b.bucket(config.bucketName)
-                 .key(s3Key.bucketKey())
-                 .responseContentDisposition(getContentDispositionHeader(blob, servletRequest))
-                 .responseContentType(getContentTypeHeader(blob));
-                if (s3Key.isVersioned()) {
-                    b.versionId(s3Key.versionId());
-                }
-            }).build();
-            return presigner.presignGetObject(presignRequest).url().toURI();
+            if (servletRequest != null && "HEAD".equals(servletRequest.getMethod())) {
+                return presigner.presignHeadObject(r -> r.signatureDuration(expiration).headObjectRequest(hor -> {
+                    hor.bucket(config.bucketName)
+                       .key(s3Key.bucketKey())
+                       .responseContentDisposition(getContentDispositionHeader(blob, servletRequest))
+                       .responseContentType(getContentTypeHeader(blob));
+                    if (s3Key.isVersioned()) {
+                        hor.versionId(s3Key.versionId());
+                    }
+                })).url().toURI();
+            } else {
+                return presigner.presignGetObject(r -> r.signatureDuration(expiration).getObjectRequest(gor -> {
+                    gor.bucket(config.bucketName)
+                       .key(s3Key.bucketKey())
+                       .responseContentDisposition(getContentDispositionHeader(blob, servletRequest))
+                       .responseContentType(getContentTypeHeader(blob));
+                    if (s3Key.isVersioned()) {
+                        gor.versionId(s3Key.versionId());
+                    }
+                })).url().toURI();
+            }
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.document;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.nuxeo.common.utils.DateUtils.formatISODateTime;
 import static org.nuxeo.common.utils.DateUtils.nowIfNull;
 import static org.nuxeo.ecm.core.io.registry.MarshallingConstants.WILDCARD_VALUE;
@@ -136,7 +136,7 @@ public class DocumentModelJsonWriter extends ExtensibleEntityJsonWriter<Document
     protected SchemaManager schemaManager;
 
     public DocumentModelJsonWriter() {
-        super(ENTITY_TYPE, DocumentModel.class);
+        super(ENTITY_TYPE);
     }
 
     @Override
@@ -227,17 +227,15 @@ public class DocumentModelJsonWriter extends ExtensibleEntityJsonWriter<Document
         jg.writeEndArray();
 
         jg.writeArrayFieldStart("schemas");
-        if (docSchemas.length > 0) {
-            for (String schemaName : docSchemas) {
-                Schema schema = schemaManager.getSchema(schemaName);
-                if (schema != null) {
-                    jg.writeStartObject();
-                    String name = schema.getName();
-                    String prefix = schema.getNamespace().prefix;
-                    jg.writeStringField("name", name);
-                    jg.writeStringField("prefix", StringUtils.isEmpty(prefix) ? name : prefix);
-                    jg.writeEndObject();
-                }
+        for (String schemaName : docSchemas) {
+            Schema schema = schemaManager.getSchema(schemaName);
+            if (schema != null) {
+                jg.writeStartObject();
+                String name = schema.getName();
+                String prefix = schema.getNamespace().prefix;
+                jg.writeStringField("name", name);
+                jg.writeStringField("prefix", StringUtils.isEmpty(prefix) ? name : prefix);
+                jg.writeEndObject();
             }
         }
         jg.writeEndArray();
@@ -250,7 +248,7 @@ public class DocumentModelJsonWriter extends ExtensibleEntityJsonWriter<Document
         try (Closeable resource = ctx.wrap().with(ENTITY_TYPE, doc).open()) {
             Schema schema = schemaManager.getSchema(schemaName);
             String prefix = schema.getNamespace().prefix;
-            if (prefix == null || prefix.length() == 0) {
+            if (isBlank(prefix)) {
                 prefix = schemaName;
             }
             prefix = prefix + ":";

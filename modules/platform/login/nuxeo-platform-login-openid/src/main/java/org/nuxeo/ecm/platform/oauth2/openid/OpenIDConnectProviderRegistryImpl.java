@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,10 +48,6 @@ public class OpenIDConnectProviderRegistryImpl extends DefaultComponent implemen
 
     protected Map<String, OpenIDConnectProvider> providers = new HashMap<>();
 
-    protected OAuth2ServiceProviderRegistry getOAuth2ServiceProviderRegistry() {
-        return Framework.getService(OAuth2ServiceProviderRegistry.class);
-    }
-
     @Override
     public void registerContribution(Object contribution, String extensionPoint, ComponentInstance contributor) {
         if (PROVIDER_EP.equals(extensionPoint)) {
@@ -96,8 +92,6 @@ public class OpenIDConnectProviderRegistryImpl extends DefaultComponent implemen
     }
 
     protected void registerOpenIdProvider(OpenIDConnectProviderDescriptor provider) {
-
-        OAuth2ServiceProviderRegistry oauth2ProviderRegistry = getOAuth2ServiceProviderRegistry();
         RedirectUriResolver redirectUriResolver;
         try {
             redirectUriResolver = provider.getRedirectUriResolver().getDeclaredConstructor().newInstance();
@@ -105,41 +99,34 @@ public class OpenIDConnectProviderRegistryImpl extends DefaultComponent implemen
             throw new RuntimeException(e);
         }
 
-        if (oauth2ProviderRegistry != null) {
+        var oauth2ProviderRegistry = Framework.getService(OAuth2ServiceProviderRegistry.class);
+        OAuth2ServiceProvider oauth2Provider = oauth2ProviderRegistry.getProvider(provider.getName());
 
-            OAuth2ServiceProvider oauth2Provider = oauth2ProviderRegistry.getProvider(provider.getName());
-
-            if (oauth2Provider == null) {
-                oauth2Provider = oauth2ProviderRegistry.addProvider(provider.getName(), provider.getDescription(),
-                        provider.getTokenServerURL(), provider.getAuthorizationServerURL(), provider.getClientId(),
-                        provider.getClientSecret(), Arrays.asList(provider.getScopes()));
-            } else {
-                log.warn("Provider {} is already in the Database, XML contribution  won't overwrite it",
-                        provider::getName);
-            }
-            providers.put(provider.getName(),
-                    new OpenIDConnectProvider(oauth2Provider, provider.getAccessTokenKey(), provider.getUserInfoURL(),
-                            provider.getUserInfoClass(), provider.getIcon(), provider.isEnabled(), redirectUriResolver,
-                            provider.getUserResolverClass(), provider.getUserMapper(),
-                            provider.getAuthenticationMethod()));
-
-            // contribute icon and link to the Login Screen
-            LoginScreenHelper.registerSingleProviderLoginScreenConfig(provider.getName(), provider.getIcon(),
-                    provider.getUserInfoURL(), provider.getLabel(), provider.getDescription(),
-                    providers.get(provider.getName()));
-
+        if (oauth2Provider == null) {
+            oauth2Provider = oauth2ProviderRegistry.addProvider(provider.getName(), provider.getDescription(),
+                    provider.getTokenServerURL(), provider.getAuthorizationServerURL(), provider.getClientId(),
+                    provider.getClientSecret(), Arrays.asList(provider.getScopes()));
         } else {
-            if (Framework.isTestModeSet()) {
-                providers.put(provider.getName(),
-                        new OpenIDConnectProvider(null, provider.getAccessTokenKey(), provider.getUserInfoURL(),
-                                provider.getUserInfoClass(), provider.getIcon(), provider.isEnabled(),
-                                redirectUriResolver, provider.getUserResolverClass(), provider.getUserMapper(),
-                                provider.getAuthenticationMethod()));
-            } else {
-                log.error("Can not register OAuth Provider since OAuth Registry is not available");
-            }
+            log.warn("Provider {} is already in the Database, XML contribution  won't overwrite it", provider::getName);
         }
+        providers.put(provider.getName(),
+                new OpenIDConnectProvider(oauth2Provider, provider.getAccessTokenKey(), provider.getUserInfoURL(),
+                        provider.getUserInfoClass(), provider.getIcon(), provider.isEnabled(), redirectUriResolver,
+                        provider.getUserResolverClass(), provider.getUserMapper(), provider.getAuthenticationMethod()));
 
+        // contribute icon and link to the Login Screen
+        LoginScreenHelper.registerSingleProviderLoginScreenConfig(provider.getName(), provider.getIcon(),
+                provider.getUserInfoURL(), provider.getLabel(), provider.getDescription(),
+                providers.get(provider.getName()));
+    }
+
+    @Override
+    public int getApplicationStartedOrder() {
+        var oauth2RegistryComponent = ((DefaultComponent) Framework.getRuntime()
+                                                                   .getComponent(
+                                                                           OAuth2ServiceProviderRegistry.class.getName()));
+        // start after OAuth2ServiceProviderRegistry component to ensure that it is available when registering providers
+        return oauth2RegistryComponent.getApplicationStartedOrder() + 10;
     }
 
     @Override

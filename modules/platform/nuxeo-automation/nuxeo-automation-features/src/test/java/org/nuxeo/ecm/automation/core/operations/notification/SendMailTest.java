@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2017 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,11 +37,12 @@ import org.nuxeo.runtime.test.runner.RuntimeFeature;
 @Features({ RuntimeFeature.class, CoreFeature.class })
 @Deploy("org.nuxeo.runtime.management")
 @Deploy("org.nuxeo.ecm.core.management")
+@Deploy("org.nuxeo.ecm.platform.rendering")
 public class SendMailTest {
 
     protected static final String TOKEN = "ABC";
 
-    private SendMail sendMail = new SendMail();
+    protected final SendMail sendMail = new SendMail();
 
     @Test
     public void shouldReturnNullWhenDocUrlIsNull() {

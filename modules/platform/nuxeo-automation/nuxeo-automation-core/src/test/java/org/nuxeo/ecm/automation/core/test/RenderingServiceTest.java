@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2011 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,23 @@
  */
 package org.nuxeo.ecm.automation.core.test;
 
+import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
+
 import java.net.URL;
 import java.util.List;
 
 import jakarta.inject.Inject;
 
-import org.junit.runner.RunWith;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
-
+import org.junit.runner.RunWith;
 import org.nuxeo.ecm.automation.AutomationService;
 import org.nuxeo.ecm.automation.OperationChain;
 import org.nuxeo.ecm.automation.OperationContext;
+import org.nuxeo.ecm.automation.core.AutomationCoreFeature;
 import org.nuxeo.ecm.automation.core.operations.FetchContextDocument;
 import org.nuxeo.ecm.automation.core.rendering.Renderer;
 import org.nuxeo.ecm.automation.core.rendering.operations.RenderDocument;
@@ -43,21 +45,22 @@ import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.api.DocumentRefList;
+import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.impl.DocumentModelListImpl;
 import org.nuxeo.ecm.core.api.impl.DocumentRefListImpl;
-import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.services.resource.ResourceService;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
+import org.nuxeo.runtime.test.runner.LoggerLevel;
 
 /**
  * @author <a href="mailto:bs@nuxeo.com">Bogdan Stefanescu</a>
  */
 @RunWith(FeaturesRunner.class)
-@Features(CoreFeature.class)
-@Deploy("org.nuxeo.ecm.automation.core")
+@Features(AutomationCoreFeature.class)
+@Deploy("org.nuxeo.ecm.platform.rendering")
 public class RenderingServiceTest {
 
     protected DocumentModel src;
@@ -201,6 +204,22 @@ public class RenderingServiceTest {
             assertEquals(2, blobs.size());
             assertEquals("Hello Source", blobs.get(0).getString());
             assertEquals("Hello Destination", blobs.get(1).getString());
+        }
+    }
+
+    // NXP-33482
+    @Test
+    @LoggerLevel(name = "freemarker.runtime", level = "FATAL") // hide inline template error
+    public void testRenderDocumentWithExecInput() {
+        try (OperationContext ctx = new OperationContext(session)) {
+            ctx.setInput(src.getRef());
+            OperationChain chain = new OperationChain("testRenderDocument");
+            chain.add(RenderDocument.ID)
+                 .set("template", "${\"freemarker.template.utility.Execute\"?new()(\"whoami\")}");
+            var exception = assertThrows(NuxeoException.class, () -> service.run(ctx, chain));
+            assertEquals("Failed to invoke operation Render.Document, Unable to render the inline template",
+                    exception.getMessage());
+            assertEquals(SC_BAD_REQUEST, exception.getStatusCode());
         }
     }
 

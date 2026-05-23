@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import static org.nuxeo.audit.api.LogEntryConstants.LOG_EVENT_ID;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_ID;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_REPOSITORY_ID;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.nuxeo.audit.api.AuditQueryBuilder;
@@ -42,8 +43,24 @@ public interface AuditBackend extends org.nuxeo.ecm.platform.audit.service.Audit
      * Adds given log entries.
      *
      * @param entries the list of log entries.
+     * @apiNote This API will generate the log entry ids.
+     * @deprecated since 2025.16, insertion to audit backend became an internal API, use
+     *             {@link AuditRouter#routeToBackends(List)} instead
      */
+    @Deprecated(since = "2025.16", forRemoval = true)
     void addLogEntries(List<LogEntry> entries);
+
+    /**
+     * Inserts the given log entries into the backend.
+     * 
+     * @param entries the list of log entries
+     * @since 2025.16
+     * @apiNote This API won't generate the log entry ids, the caller is responsible for setting them.
+     */
+    default void insertLogs(Collection<LogEntry> entries) {
+        // let the backend generate the id and log date, as it was the case for addLogEntries
+        addLogEntries(entries.stream().map(entry -> entry.builder().id(null).logDate(null).build()).toList());
+    }
 
     Long getEventsCount(final String eventId);
 

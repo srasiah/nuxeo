@@ -18,6 +18,7 @@
  */
 package org.nuxeo.ecm.core.storage;
 
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.nuxeo.common.function.ThrowableFunction.asFunction;
 
 import java.io.File;
@@ -59,10 +60,6 @@ public class DBCheck implements BackingChecker {
 
     protected static final String PARAM_DB_JDBC_URL = "nuxeo.db.jdbc.url";
 
-    protected static final String PARAM_DB_USER = "nuxeo.db.user";
-
-    protected static final String PARAM_DB_PWD = "nuxeo.db.password";
-
     @Override
     public boolean accepts(ConfigurationHolder configHolder) {
         return !DB_EXCLUDE_CHECK_LIST.contains(configHolder.getProperty(ConfigurationConstants.PARAM_TEMPLATE_DBTYPE));
@@ -102,11 +99,19 @@ public class DBCheck implements BackingChecker {
         var tt = configHolder.instantiateTemplateParser().keepEncryptedAsVar(false);
         String url = tt.processText(connectionUrl);
 
-        String dbUser = configHolder.getProperty(PARAM_DB_USER);
-        String dbPassword = configHolder.getProperty(PARAM_DB_PWD);
         Properties conProps = new Properties();
-        conProps.put("user", dbUser);
-        conProps.put("password", dbPassword);
+        for (var key : configHolder.stringPropertyNames()) {
+            if (key.startsWith("nuxeo.datasource.checker.properties.")) {
+                String value = configHolder.getProperty(key);
+                if (isNotBlank(value)) {
+                    String propValue = tt.processText(value);
+                    if (isNotBlank(propValue)) {
+                        String propKey = key.substring("nuxeo.datasource.checker.properties.".length());
+                        conProps.put(propKey, propValue);
+                    }
+                }
+            }
+        }
         log.debug("Testing URL: {} with: {}", url, conProps);
         Connection con = driver.connect(url, conProps);
         con.close();

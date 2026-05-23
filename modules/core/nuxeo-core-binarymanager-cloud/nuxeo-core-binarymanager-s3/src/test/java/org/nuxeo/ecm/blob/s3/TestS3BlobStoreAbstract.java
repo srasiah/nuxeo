@@ -18,28 +18,10 @@
  */
 package org.nuxeo.ecm.blob.s3;
 
-import static org.junit.Assert.assertEquals;
-
 import org.nuxeo.ecm.core.blob.TestAbstractBlobStoreWithOptimizedCopy;
 import org.nuxeo.runtime.test.runner.Features;
 
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.StorageClass;
-
 @Features(S3BlobProviderFeature.class)
 public abstract class TestS3BlobStoreAbstract extends TestAbstractBlobStoreWithOptimizedCopy {
-
-    protected void assertStorageClass(String key) {
-        S3BlobStoreConfiguration config = ((S3BlobProvider) bp).config;
-        var s3Key = new S3BlobKey(config, key);
-        HeadObjectResponse response = config.amazonS3.headObject(
-                HeadObjectRequest.builder().bucket(config.bucketName).key(s3Key.bucketKey()).build());
-        assertEquals(expectedStorageClass(), response.storageClass());
-    }
-
-    protected StorageClass expectedStorageClass() {
-        return null; // storage class is null for StorageClass.STANDARD;
-    }
 
 }

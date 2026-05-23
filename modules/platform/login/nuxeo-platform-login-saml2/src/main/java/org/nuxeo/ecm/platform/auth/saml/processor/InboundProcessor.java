@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2023-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2023-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,13 +41,13 @@ import org.opensaml.saml.common.messaging.context.navigate.SAMLEntityIDFunction;
 import org.opensaml.saml.saml2.assertion.SAML20AssertionValidator;
 import org.opensaml.saml.saml2.assertion.impl.AudienceRestrictionConditionValidator;
 import org.opensaml.saml.saml2.assertion.impl.BearerSubjectConfirmationValidator;
+import org.opensaml.saml.saml2.assertion.messaging.impl.DefaultAssertionValidationContextBuilder;
 import org.opensaml.saml.saml2.core.LogoutRequest;
 import org.opensaml.saml.saml2.core.LogoutResponse;
 import org.opensaml.saml.saml2.core.Response;
 import org.opensaml.saml.saml2.metadata.RoleDescriptor;
 import org.opensaml.saml.saml2.profile.impl.DecryptAssertions;
 import org.opensaml.saml.saml2.profile.impl.DecryptAttributes;
-import org.opensaml.saml.saml2.profile.impl.DefaultAssertionValidationContextBuilder;
 import org.opensaml.saml.saml2.profile.impl.ValidateAssertions;
 import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
 import org.opensaml.security.credential.UsageType;
@@ -168,7 +168,7 @@ public class InboundProcessor extends AbstractSAMLProcessor {
     }
 
     protected boolean isSuccessSSOResponse(ProfileRequestContext prc) {
-        var message = prc.getInboundMessageContext().getMessage();
+        var message = prc.ensureInboundMessageContext().getMessage();
         return !(message instanceof LogoutRequest) && !(message instanceof LogoutResponse)
                 && prc.getSubcontext(PreviousEventContext.class) == null;
     }

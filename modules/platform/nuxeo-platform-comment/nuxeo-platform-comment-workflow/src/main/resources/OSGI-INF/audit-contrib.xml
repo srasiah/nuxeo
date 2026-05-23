@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component name="org.nuxeo.ecm.platform.comment.workflow.events">
 
-  <extension target="org.nuxeo.audit.service.AuditComponent" point="event">
-    <event name="comments_moderation" />
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
+    <route name="default">
+      <event name="comments_moderation" />
+    </route>
   </extension>
 
 </component>

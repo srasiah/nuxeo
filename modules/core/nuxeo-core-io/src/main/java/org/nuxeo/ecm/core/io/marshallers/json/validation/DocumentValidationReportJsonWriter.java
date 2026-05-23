@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.validation;
 
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
@@ -74,7 +73,7 @@ public class DocumentValidationReportJsonWriter extends ExtensibleEntityJsonWrit
     public static final String ENTITY_TYPE = "validation_report";
 
     public DocumentValidationReportJsonWriter() {
-        super(ENTITY_TYPE, DocumentValidationReport.class);
+        super(ENTITY_TYPE);
     }
 
     @Override
@@ -88,8 +87,7 @@ public class DocumentValidationReportJsonWriter extends ExtensibleEntityJsonWrit
             String messageKey = violation.getMessageKey();
             jg.writeStringField("messageKey", messageKey);
             // invalid value
-            if (violation instanceof ConstraintViolation) {
-                ConstraintViolation cv = (ConstraintViolation) violation;
+            if (violation instanceof ConstraintViolation cv) {
                 // violation message
                 String message = cv.getMessage(ctx.getLocale());
                 jg.writeStringField("message", message);

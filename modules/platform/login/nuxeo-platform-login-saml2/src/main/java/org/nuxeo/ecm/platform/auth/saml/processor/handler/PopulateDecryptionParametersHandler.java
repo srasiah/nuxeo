@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2023-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ package org.nuxeo.ecm.platform.auth.saml.processor.handler;
 import java.util.List;
 import java.util.function.Function;
 
+import jakarta.annotation.Nonnull;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensaml.messaging.context.MessageContext;
@@ -35,7 +37,6 @@ import org.opensaml.xmlsec.context.SecurityParametersContext;
 import org.opensaml.xmlsec.criterion.DecryptionConfigurationCriterion;
 
 import net.shibboleth.shared.component.ComponentInitializationException;
-import net.shibboleth.shared.component.ComponentSupport;
 import net.shibboleth.shared.logic.Constraint;
 import net.shibboleth.shared.resolver.CriteriaSet;
 import net.shibboleth.shared.resolver.ResolverException;
@@ -72,8 +73,7 @@ public class PopulateDecryptionParametersHandler extends AbstractMessageHandler 
      */
     public void setSecurityParametersContextLookupStrategy(
             Function<MessageContext, SecurityParametersContext> strategy) {
-        ComponentSupport.ifInitializedThrowUnmodifiabledComponentException(this);
-
+        checkSetterPreconditions();
         securityParametersContextLookupStrategy = Constraint.isNotNull(strategy,
                 "SecurityParametersContext lookup strategy cannot be null");
     }
@@ -84,8 +84,7 @@ public class PopulateDecryptionParametersHandler extends AbstractMessageHandler 
      * @param strategy lookup strategy
      */
     public void setConfigurationLookupStrategy(Function<MessageContext, List<DecryptionConfiguration>> strategy) {
-        ComponentSupport.ifInitializedThrowUnmodifiabledComponentException(this);
-
+        checkSetterPreconditions();
         configurationLookupStrategy = Constraint.isNotNull(strategy,
                 "DecryptionConfiguration lookup strategy cannot be null");
     }
@@ -96,8 +95,7 @@ public class PopulateDecryptionParametersHandler extends AbstractMessageHandler 
      * @param newResolver resolver to use
      */
     public void setDecryptionParametersResolver(DecryptionParametersResolver newResolver) {
-        ComponentSupport.ifInitializedThrowUnmodifiabledComponentException(this);
-
+        checkSetterPreconditions();
         resolver = Constraint.isNotNull(newResolver, "DecryptionParametersResolver cannot be null");
     }
 
@@ -109,12 +107,12 @@ public class PopulateDecryptionParametersHandler extends AbstractMessageHandler 
             throw new ComponentInitializationException("DecryptionParametersResolver cannot be null");
         } else if (configurationLookupStrategy == null) {
             configurationLookupStrategy = input -> List.of(
-                    SecurityConfigurationSupport.getGlobalDecryptionConfiguration());
+                    SecurityConfigurationSupport.ensureGlobalDecryptionConfiguration());
         }
     }
 
     @Override
-    protected void doInvoke(MessageContext messageContext) throws MessageHandlerException {
+    protected void doInvoke(@Nonnull MessageContext messageContext) throws MessageHandlerException {
 
         log.debug("{} Resolving DecryptionParameters for request", getLogPrefix());
 

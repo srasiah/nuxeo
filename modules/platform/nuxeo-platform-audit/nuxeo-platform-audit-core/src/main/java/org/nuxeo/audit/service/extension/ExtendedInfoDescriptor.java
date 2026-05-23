@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2007-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2007-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,12 @@
  */
 package org.nuxeo.audit.service.extension;
 
+import static org.apache.commons.lang3.ObjectUtils.getIfNull;
+import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
+
+import java.util.Objects;
+
 import org.apache.commons.lang3.BooleanUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XObject;
@@ -33,6 +37,13 @@ import org.nuxeo.runtime.model.Descriptor;
 @XObject("extendedInfo")
 public class ExtendedInfoDescriptor implements Descriptor {
 
+    /** @since 2025.16 */
+    public static final String ALL_EVENTS = "@all";
+
+    /** @since 2015.16 */
+    @XNode("@event")
+    protected String event = ALL_EVENTS;
+
     @XNode("@key")
     private String key;
 
@@ -44,13 +55,20 @@ public class ExtendedInfoDescriptor implements Descriptor {
 
     @Override
     public String getId() {
-        return key;
+        return "%s__%s".formatted(event, key);
+    }
+
+    /** @since 2025.16 */
+    public String getEvent() {
+        return event;
     }
 
     public String getKey() {
         return key;
     }
 
+    /** @deprecated since 2025.16, no replacement */
+    @Deprecated(since = "2025.16", forRemoval = true)
     public void setKey(String value) {
         key = value;
     }
@@ -59,6 +77,8 @@ public class ExtendedInfoDescriptor implements Descriptor {
         return expression;
     }
 
+    /** @deprecated since 2025.16, no replacement */
+    @Deprecated(since = "2025.16", forRemoval = true)
     public void setExpression(String value) {
         expression = value;
     }
@@ -73,49 +93,38 @@ public class ExtendedInfoDescriptor implements Descriptor {
         return enabled;
     }
 
+    /** @deprecated since 2025.16, no replacement */
+    @Deprecated(since = "2025.16", forRemoval = true)
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-    }
-
-    @Override
-    public int hashCode() {
-        return key == null ? 0 : key.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        ExtendedInfoDescriptor other = (ExtendedInfoDescriptor) obj;
-        if (key == null) {
-            if (other.key != null) {
-                return false;
-            }
-        } else if (!key.equals(other.key)) {
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public String toString() {
-        return ToStringBuilder.reflectionToString(this);
     }
 
     @Override
     public ExtendedInfoDescriptor merge(Descriptor o) {
         var other = (ExtendedInfoDescriptor) o;
         var merged = new ExtendedInfoDescriptor();
-        merged.key = key;
-        merged.expression = StringUtils.defaultIfBlank(other.expression, expression);
-        merged.enabled = other.enabled == null ? enabled : other.enabled;
+        merged.event = event; // we merge based on event + key, so no event merging needed
+        merged.key = key; // we merge based on event + key, so no key merging needed
+        merged.expression = defaultIfBlank(other.expression, expression);
+        merged.enabled = getIfNull(other.enabled, enabled);
         return merged;
+    }
+
+    @Override
+    public int hashCode() {
+        return getId().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof ExtendedInfoDescriptor other)) {
+            return false;
+        }
+        return Objects.equals(getId(), other.getId());
+    }
+
+    @Override
+    public String toString() {
+        return ToStringBuilder.reflectionToString(this);
     }
 }

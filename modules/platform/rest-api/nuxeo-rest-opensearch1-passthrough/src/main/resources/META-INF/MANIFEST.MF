@@ -10,5 +10,6 @@ Bundle-Version: 0.0.0.SNAPSHOT
 Bundle-ManifestVersion: 2
 Bundle-SymbolicName: org.nuxeo.ecm.restapi.opensearch1;singleton:=true
 Nuxeo-WebModule: org.nuxeo.ecm.webengine.app.WebEngineModule;name=es;package=org/nuxeo/ecm/restapi/opensearch1;headless=true
-Nuxeo-Component: OSGI-INF/request-filter-service.xml,
+Nuxeo-Component: OSGI-INF/opensearch1-passthrough-contrib.xml,
+ OSGI-INF/request-filter-service.xml,
  OSGI-INF/os-audit-http-readonly-filter.xml

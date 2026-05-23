@@ -49,7 +49,6 @@ import org.nuxeo.ecm.core.blob.BlobWriteContext;
 import org.nuxeo.ecm.core.blob.ByteRange;
 import org.nuxeo.ecm.core.blob.KeyStrategy;
 import org.nuxeo.ecm.core.blob.KeyStrategyDigest;
-import org.nuxeo.ecm.core.blob.KeyStrategyDocId;
 import org.nuxeo.ecm.core.blob.binary.BinaryGarbageCollector;
 
 import com.google.api.gax.paging.Page;
@@ -87,8 +86,6 @@ public class GoogleStorageBlobStore extends AbstractBlobStore {
 
     protected final BinaryGarbageCollector gc;
 
-    protected final boolean useVersion;
-
     public GoogleStorageBlobStore(String blobProviderId, String name, GoogleStorageBlobStoreConfiguration config,
             KeyStrategy keyStrategy) {
         super(blobProviderId, name, keyStrategy);
@@ -100,7 +97,6 @@ public class GoogleStorageBlobStore extends AbstractBlobStore {
         this.allowByteRange = config.getBooleanProperty(ALLOW_BYTE_RANGE);
         this.chunkSize = config.chunkSize;
         this.gc = new GoogleStorageBlobGarbageCollector();
-        useVersion = keyStrategy instanceof KeyStrategyDocId && config.isBucketVersioningEnabled;
     }
 
     @Override
@@ -117,7 +113,7 @@ public class GoogleStorageBlobStore extends AbstractBlobStore {
 
     @Override
     public boolean hasVersioning() {
-        return useVersion;
+        return config.useVersion();
     }
 
     @Override
@@ -147,7 +143,7 @@ public class GoogleStorageBlobStore extends AbstractBlobStore {
                 Blob blob = writer.getResult();
                 if (blob != null) {
                     var blobId = blob.getBlobId();
-                    if (useVersion) {
+                    if (hasVersioning()) {
                         resultKey = key + VER_SEP + blobId.getGeneration();
                     } else {
                         resultKey = key;
@@ -200,7 +196,7 @@ public class GoogleStorageBlobStore extends AbstractBlobStore {
             } else {
                 try {
                     var uploadResult = storage.createFrom(gsKey.blobInfo(), file);
-                    resultKey = useVersion ? key + VER_SEP + uploadResult.getGeneration() : key;
+                    resultKey = hasVersioning() ? key + VER_SEP + uploadResult.getGeneration() : key;
                 } catch (IOException e) {
                     throw new NuxeoException(e);
                 }
@@ -325,7 +321,7 @@ public class GoogleStorageBlobStore extends AbstractBlobStore {
             log.debug("Storing blob with digest: {} to GCS", key);
             try {
                 var uploadResult = storage.createFrom(gsKey.blobInfo(), file);
-                var resultKey = useVersion ? key + VER_SEP + uploadResult.getGeneration() : key;
+                var resultKey = hasVersioning() ? key + VER_SEP + uploadResult.getGeneration() : key;
                 log.debug("Stored blob with key: {} to GCS in {}ms", resultKey, System.currentTimeMillis() - t0);
                 return resultKey;
             } catch (IOException e) {

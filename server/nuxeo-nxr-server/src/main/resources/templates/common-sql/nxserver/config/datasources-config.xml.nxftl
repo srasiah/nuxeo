@@ -5,24 +5,17 @@
   <extension target="org.nuxeo.runtime.datasource" point="datasources">
 <#if nuxeo.db.xaMode == "false">
     <datasource name="${nuxeo.db.commonds}" driverClassName="${nuxeo.db.driver}"
-      url="${nuxeo.db.jdbc.url}" username="${nuxeo.db.user}" password="${nuxeo.db.password}"
-      maxTotal="${nuxeo.db["max-pool-size"]}"
-      minTotal="${nuxeo.db["min-pool-size"]}"
-      maxWaitMillis="${nuxeo.db["blocking-timeout-millis"]}"
-      validationQuery="${nuxeo.db.validationQuery}"
-      cacheState="false" <#-- NXP-29853 workaround for DBCP-568 -->
-      accessToUnderlyingConnectionAllowed="true" />
+      url="${nuxeo.db.jdbc.url}" username="${nuxeo.db.user}" password="${nuxeo.db.password}">
 <#else>
-    <datasource name="${nuxeo.db.commonds}" xaDataSource="${nuxeo.db.xadatasource}"
-      maxTotal="${nuxeo.db["max-pool-size"]}"
-      minTotal="${nuxeo.db["min-pool-size"]}"
-      maxWaitMillis="${nuxeo.db["blocking-timeout-millis"]}"
-      validationQuery="${nuxeo.db.validationQuery}"
-      cacheState="false" <#-- NXP-29853 workaround for DBCP-568 -->
-      accessToUnderlyingConnectionAllowed="true" >
+    <datasource name="${nuxeo.db.commonds}" xaDataSource="${nuxeo.db.xadatasource}">
 <#include "xadatasource-params.ftl" parse=true />
-    </datasource>
 </#if>
+<#list nuxeo.datasource.properties as name, value>
+  <#if value?has_content>
+      <property name="${name}">${value}</property>
+  </#if>
+</#list>
+    </datasource>
 <#if "${nuxeo.quartz.enable}" == "true">
     <link name="jdbc/nxquartz" global="${nuxeo.db.commonds}" type="javax.sql.DataSource" />
     <link name="jdbc/nxquartz_no_tx" global="${nuxeo.db.commonds}" type="javax.sql.DataSource" />

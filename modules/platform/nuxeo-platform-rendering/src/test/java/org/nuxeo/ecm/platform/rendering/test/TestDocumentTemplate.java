@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013-2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
  *     Thierry Delprat
  */
 package org.nuxeo.ecm.platform.rendering.test;
+
+import static org.junit.Assert.assertTrue;
 
 import java.io.Serializable;
 import java.io.StringWriter;
@@ -42,10 +44,9 @@ import org.nuxeo.ecm.platform.rendering.fm.FreemarkerEngine;
 import org.nuxeo.ecm.platform.rendering.wiki.WikiTransformer;
 import org.nuxeo.ecm.platform.rendering.wiki.extensions.FreemarkerMacro;
 import org.nuxeo.ecm.platform.rendering.wiki.extensions.PatternFilter;
+import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
-
-import junit.framework.Assert;
 
 /**
  * @author <a href="mailto:tdelprat@nuxeo.com">Tiry</a>
@@ -54,6 +55,7 @@ import junit.framework.Assert;
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
 @RepositoryConfig(cleanup = Granularity.METHOD)
+@Deploy("org.nuxeo.ecm.platform.rendering")
 public class TestDocumentTemplate {
 
     FreemarkerEngine engine;
@@ -72,8 +74,8 @@ public class TestDocumentTemplate {
         engine.setResourceLocator(new MyResourceLocator());
         WikiTransformer tr = new WikiTransformer();
         tr.getSerializer().addFilter(new PatternFilter("[A-Z]+[a-z]+[A-Z][A-Za-z]*", "<link>$0</link>"));
-        tr.getSerializer().addFilter(
-                new PatternFilter("NXP-[0-9]+", "<a href=\"http://jira.nuxeo.org/browse/$0\">$0</a>"));
+        tr.getSerializer()
+          .addFilter(new PatternFilter("NXP-[0-9]+", "<a href=\"http://jira.nuxeo.org/browse/$0\">$0</a>"));
         tr.getSerializer().registerMacro(new FreemarkerMacro());
         engine.setSharedVariable("wiki", tr);
 
@@ -101,9 +103,9 @@ public class TestDocumentTemplate {
         engine.render("testdata/testlists.ftl", input, writer);
 
         String output = writer.toString();
-        Assert.assertTrue(output.contains("#versionLabel#"));
-        Assert.assertTrue(output.contains("#children#"));
-        Assert.assertTrue(output.contains("A|B|C|"));
-        Assert.assertTrue(output.contains("file3.something 9"));
+        assertTrue(output.contains("#versionLabel#"));
+        assertTrue(output.contains("#children#"));
+        assertTrue(output.contains("A|B|C|"));
+        assertTrue(output.contains("file3.something 9"));
     }
 }

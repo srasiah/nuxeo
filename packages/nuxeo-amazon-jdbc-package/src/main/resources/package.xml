@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package type="addon" name="nuxeo-amazon-jdbc" version="@VERSION@">
+  <title>Amazon JDBC Driver</title>
+  <description>
+    Amazon JDBC Driver Package installs the AWS Advanced JDBC Wrapper within Nuxeo. This package might be used with
+    PostgreSQL or MySQL/MariaDB.
+  </description>
+  <vendor>Nuxeo</vendor>
+  <target-platform>
+    <name>@DISTRIBUTION_NAME@</name>
+    <version>@VERSION@</version>
+  </target-platform>
+  <license>Apache 2.0</license>
+  <license-url>http://www.apache.org/licenses/LICENSE-2.0</license-url>
+</package>

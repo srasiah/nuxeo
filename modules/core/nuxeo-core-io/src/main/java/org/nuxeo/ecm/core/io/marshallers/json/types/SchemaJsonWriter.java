@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,17 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.types;
 
-import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
 import static org.nuxeo.ecm.core.io.registry.reflect.Priorities.REFERENCE;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.ecm.core.io.marshallers.json.ExtensibleEntityJsonWriter;
-import org.nuxeo.ecm.core.io.marshallers.json.OutputStreamWithJsonWriter;
 import org.nuxeo.ecm.core.io.marshallers.json.enrichers.AbstractJsonEnricher;
-import org.nuxeo.ecm.core.io.registry.Writer;
 import org.nuxeo.ecm.core.io.registry.reflect.Setup;
 import org.nuxeo.ecm.core.schema.types.ComplexType;
 import org.nuxeo.ecm.core.schema.types.Field;
@@ -97,7 +92,7 @@ public class SchemaJsonWriter extends ExtensibleEntityJsonWriter<Schema> {
     public static final String FETCH_FIELDS = "fields";
 
     public SchemaJsonWriter() {
-        super(ENTITY_TYPE, Schema.class);
+        super(ENTITY_TYPE);
     }
 
     @Override
@@ -182,19 +177,9 @@ public class SchemaJsonWriter extends ExtensibleEntityJsonWriter<Schema> {
         if (extended) {
             jg.writeObjectFieldStart(field.getName().getLocalName());
             jg.writeStringField("type", typeValue);
-            Writer<Constraint> constraintWriter = registry.getWriter(ctx, Constraint.class, APPLICATION_JSON_TYPE);
-            OutputStream out = new OutputStreamWithJsonWriter(jg);
-            jg.writeArrayFieldStart("constraints");
-            for (Constraint c : field.getConstraints()) {
-                constraintWriter.write(c, Constraint.class, Constraint.class, APPLICATION_JSON_TYPE, out);
-            }
-            jg.writeEndArray();
+            writeEntityArrayField("constraints", field.getConstraints(), jg);
             if (itemConstraints != null) {
-                jg.writeArrayFieldStart("itemConstraints");
-                for (Constraint c : itemConstraints) {
-                    constraintWriter.write(c, Constraint.class, Constraint.class, APPLICATION_JSON_TYPE, out);
-                }
-                jg.writeEndArray();
+                writeEntityArrayField("itemConstraints", itemConstraints, jg);
             }
             jg.writeEndObject();
         } else {

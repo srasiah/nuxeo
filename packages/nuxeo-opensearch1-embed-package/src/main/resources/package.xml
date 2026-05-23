@@ -2,7 +2,9 @@
 <package type="addon" name="nuxeo-opensearch1-embed" version="@VERSION@">
   <title>Nuxeo OpenSearch 1.x Embed</title>
   <description>
-    TODO
+    This package starts an embedded OpenSearch server running in the same JVM as Nuxeo.
+    This embedded mode is only for testing purpose and should NOT BE USED IN PRODUCTION,
+    neither OpenSearch nor Nuxeo can support an embedded installation.
   </description>
   <vendor>Nuxeo</vendor>
   <target-platform>

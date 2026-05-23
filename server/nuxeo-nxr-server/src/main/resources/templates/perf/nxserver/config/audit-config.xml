@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
 <component name="perf-audit-config">
-    <extension target="org.nuxeo.audit.service.AuditComponent" point="event">
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
+    <route name="default">
       <event enabled="false" name="loginSuccess" />
       <event enabled="false" name="logout"/>
-   </extension>
+    </route>
+ </extension>
 </component>

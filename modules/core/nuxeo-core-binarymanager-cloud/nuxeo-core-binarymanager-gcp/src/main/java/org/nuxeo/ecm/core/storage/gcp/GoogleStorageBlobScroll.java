@@ -60,12 +60,12 @@ public class GoogleStorageBlobScroll extends AbstractBlobScroll<GoogleStorageBlo
     public List<String> next() {
         if (blobs == null) {
             BlobListOption fieldsOption;
-            if (store.useVersion) {
+            if (store.hasVersioning()) {
                 fieldsOption = BlobListOption.fields(BlobField.ID, BlobField.SIZE, BlobField.GENERATION);
             } else {
                 fieldsOption = BlobListOption.fields(BlobField.ID, BlobField.SIZE);
             }
-            blobs = this.store.bucket.list(fieldsOption, BlobListOption.versions(store.useVersion),
+            blobs = this.store.bucket.list(fieldsOption, BlobListOption.versions(store.hasVersioning()),
                     BlobListOption.prefix(this.store.bucketPrefix), BlobListOption.pageSize(size));
         } else {
             if (!blobs.hasNextPage()) {
@@ -76,7 +76,7 @@ public class GoogleStorageBlobScroll extends AbstractBlobScroll<GoogleStorageBlo
         List<String> result = new ArrayList<>();
         for (Blob blob : blobs.getValues()) {
             var key = blob.getName().substring(prefixLength);
-            if (store.useVersion) {
+            if (store.hasVersioning()) {
                 key += VER_SEP + blob.getGeneration().toString();
             }
             addTo(result, key, blob::getSize);

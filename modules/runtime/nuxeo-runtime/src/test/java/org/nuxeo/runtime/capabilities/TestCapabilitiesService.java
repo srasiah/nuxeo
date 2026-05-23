@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Kevin Leturc <kleturc@nuxeo.com>
  */
-
 package org.nuxeo.runtime.capabilities;
 
 import static org.junit.Assert.assertEquals;
@@ -37,7 +36,7 @@ public class TestCapabilitiesService {
         var service = new CapabilitiesServiceImpl();
         service.registerCapabilities("testRegistration", Map.of("key", "value"));
 
-        assertCapabilities(service.getCapabilities(), "value");
+        assertCapabilities(service.getCapabilities(), "key", "value");
     }
 
     @Test
@@ -47,16 +46,25 @@ public class TestCapabilitiesService {
         var service = new CapabilitiesServiceImpl();
         service.registerCapabilities("testRegistration", () -> Map.of("key", counter.getAndIncrement()));
 
-        assertCapabilities(service.getCapabilities(), 0);
-        assertCapabilities(service.getCapabilities(), 1);
-        assertCapabilities(service.getCapabilities(), 2);
+        assertCapabilities(service.getCapabilities(), "key", 0);
+        assertCapabilities(service.getCapabilities(), "key", 1);
+        assertCapabilities(service.getCapabilities(), "key", 2);
     }
 
-    protected void assertCapabilities(Capabilities capabilities, Object expectedKeyValue) {
+    @Test
+    public void testRegistrationMergeable() {
+        var service = new CapabilitiesServiceImpl();
+        service.registerCapabilities("testRegistration", Map.of("key1", "value1"));
+        service.registerCapabilities("testRegistration", Map.of("key2", "value2"));
+
+        assertCapabilities(service.getCapabilities(), "key1", "value1");
+        assertCapabilities(service.getCapabilities(), "key2", "value2");
+    }
+
+    protected void assertCapabilities(Capabilities capabilities, String key, Object expectedValue) {
         assertNotNull(capabilities);
         var testRegistration = capabilities.get("testRegistration");
         assertNotNull(testRegistration);
-        assertEquals(1, testRegistration.size());
-        assertEquals(expectedKeyValue, testRegistration.get("key"));
+        assertEquals(expectedValue, testRegistration.get(key));
     }
 }

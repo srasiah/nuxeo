@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@
  */
 package org.nuxeo.ecm.platform.oauth2.providers;
 
-import org.nuxeo.ecm.core.io.marshallers.json.DefaultListJsonWriter;
-import org.nuxeo.ecm.core.io.registry.reflect.Setup;
-
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
 import static org.nuxeo.ecm.core.io.registry.reflect.Priorities.REFERENCE;
+
+import org.nuxeo.ecm.core.io.marshallers.json.DefaultListJsonWriter;
+import org.nuxeo.ecm.core.io.registry.reflect.Setup;
 
 /**
  * @since 9.2
@@ -33,6 +33,6 @@ public class NuxeoOAuth2ServiceProviderListWriter extends DefaultListJsonWriter<
     public static final String ENTITY_TYPE = "nuxeoOAuth2ServiceProviders";
 
     public NuxeoOAuth2ServiceProviderListWriter() {
-        super(ENTITY_TYPE, NuxeoOAuth2ServiceProvider.class);
+        super(ENTITY_TYPE);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
  */
 package org.nuxeo.audit.provider;
 
+import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +30,7 @@ import org.nuxeo.audit.api.AuditQueryBuilder;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.audit.api.LogEntryList;
 import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.query.sql.SQLQueryParser;
 import org.nuxeo.ecm.core.query.sql.model.MultiExpression;
@@ -48,7 +51,11 @@ public class AuditPageProvider extends AbstractPageProvider<LogEntry> implements
 
     private static final long serialVersionUID = 1L;
 
-    protected static final String CORE_SESSION_PROPERTY = "coreSession";
+    /** @since 2025.16 */
+    public static final String BACKEND_NAME_PROPERTY = "backend";
+
+    /** @since 2025.16 */
+    public static final String CORE_SESSION_PROPERTY = "coreSession";
 
     protected String nxqlQuery;
 
@@ -61,12 +68,20 @@ public class AuditPageProvider extends AbstractPageProvider<LogEntry> implements
         return null;
     }
 
+    protected AuditBackend getAuditBackend() {
+        String backendName = DEFAULT_AUDIT_BACKEND;
+        if (getProperties().get(BACKEND_NAME_PROPERTY) instanceof String backendNameProperty) {
+            backendName = backendNameProperty;
+        }
+        return Framework.getService(AuditService.class).getAuditBackend(backendName);
+    }
+
     @Override
     public List<LogEntry> getCurrentPage() {
         long t0 = System.currentTimeMillis();
         if (currentEntries == null) {
             var query = buildQuery();
-            currentEntries = Framework.getService(AuditBackend.class).queryLogs(query);
+            currentEntries = getAuditBackend().queryLogs(query);
             // set total number of results
             setResultsCount(currentEntries.getTotalSize());
 

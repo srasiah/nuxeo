@@ -21,6 +21,10 @@ package org.nuxeo.ecm.platform.userpreferences;
 
 import org.nuxeo.ecm.core.api.CoreSession;
 
+/**
+ * @deprecated since 2025.16, use {@link org.nuxeo.user.preferences.api.UserPreferencesService} instead
+ */
+@Deprecated(since = "2025.16", forRemoval = true)
 public interface UserPreferencesService {
 
     SimpleUserPreferences getSimpleUserPreferences(CoreSession session);

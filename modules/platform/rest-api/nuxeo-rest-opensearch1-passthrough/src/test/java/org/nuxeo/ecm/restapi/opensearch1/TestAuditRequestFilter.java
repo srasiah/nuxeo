@@ -24,10 +24,7 @@ import static org.junit.Assert.assertThrows;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.audit.opensearch1.OpenSearchAuditFeature;
-import org.nuxeo.ecm.core.search.client.opensearch1.IgnoreIfNotOpenSearchSearchClient;
-import org.nuxeo.ecm.core.test.CoreSearchFeature;
 import org.nuxeo.ecm.restapi.opensearch1.filter.AuditRequestFilter;
-import org.nuxeo.runtime.test.runner.ConditionalIgnore;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -36,9 +33,8 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
  * @since 7.4
  */
 @RunWith(FeaturesRunner.class)
-@Features({ OpenSearchAuditFeature.class, CoreSearchFeature.class })
+@Features({ OpenSearchAuditFeature.class, OpenSearchPassthroughFeature.class })
 @Deploy("org.nuxeo.ecm.restapi.opensearch1")
-@ConditionalIgnore(condition = IgnoreIfNotOpenSearchSearchClient.class)
 public class TestAuditRequestFilter {
 
     @Test

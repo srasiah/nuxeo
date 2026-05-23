@@ -40,7 +40,7 @@ public record S3BlobKey(S3BlobStoreConfiguration config, String key) implements 
     @Override
     public String bucketKey() {
         return config.bucketKey(isVersioned() ? key().substring(0, key().indexOf(VER_SEP)) : key());
-    };
+    }
 
     @Override
     public String bucketPrefix() {

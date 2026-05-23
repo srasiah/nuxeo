@@ -29,7 +29,6 @@ import org.apache.logging.log4j.core.LogEvent;
 import org.junit.Test;
 import org.nuxeo.ecm.core.bulk.AbstractTestFullGCOrphanBlobs;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.runtime.test.runner.BlacklistComponent;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.LogCaptureFeature;
@@ -38,7 +37,6 @@ import org.nuxeo.runtime.test.runner.LogCaptureFeature;
  * @since 2023.5
  */
 @Features({ CoreFeature.class, S3BlobProviderFeature.class, LogCaptureFeature.class })
-@BlacklistComponent("org.nuxeo.ecm.core.storage.cloud.requestcontroller.service.contrib")
 public class TestS3FullGCOrphanBlobsSharedStorage extends AbstractTestFullGCOrphanBlobs {
 
     @Inject

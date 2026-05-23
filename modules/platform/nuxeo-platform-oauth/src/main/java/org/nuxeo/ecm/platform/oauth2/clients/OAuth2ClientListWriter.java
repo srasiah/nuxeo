@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ public class OAuth2ClientListWriter extends DefaultListJsonWriter<OAuth2Client> 
     public static final String ENTITY_TYPE = "oauth2Clients";
 
     public OAuth2ClientListWriter() {
-        super(ENTITY_TYPE, OAuth2Client.class);
+        super(ENTITY_TYPE);
     }
 
 }

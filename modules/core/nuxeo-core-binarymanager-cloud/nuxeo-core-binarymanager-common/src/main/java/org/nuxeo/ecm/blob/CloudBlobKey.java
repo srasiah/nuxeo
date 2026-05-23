@@ -49,7 +49,7 @@ public interface CloudBlobKey<T extends CloudBlobStoreConfiguration> {
      * Is the Nuxeo blob key versioned.
      */
     default boolean isVersioned() {
-        return key().indexOf(VER_SEP) > 0;
+        return config().useVersion() && key().indexOf(VER_SEP) > 0;
     }
 
     /**

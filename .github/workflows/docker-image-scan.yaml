@@ -30,7 +30,7 @@ jobs:
           echo imageName = ${{ inputs.imageName }}
 
       - name: Log in to Docker registry
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ${{ env.DOCKER_REGISTRY }}
           username: ${{ env.DOCKER_REGISTRY_USERNAME }}
@@ -40,7 +40,7 @@ jobs:
         run: docker pull ${{ env.DOCKER_REGISTRY }}/${{ inputs.imageName }}
 
       - name: Scan Docker image with Grype - console output
-        uses: anchore/scan-action@40a61b52209e9d50e87917c5b901783d546b12d0 # v7.2.1
+        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
         with:
           image: ${{ env.DOCKER_REGISTRY }}/${{ inputs.imageName }}
           severity-cutoff: medium
@@ -49,7 +49,7 @@ jobs:
       - name: Scan Docker image with Grype - JSON output
         if: always() # necessary as using a failure threshold in the scan step
         id: scan-json
-        uses: anchore/scan-action@40a61b52209e9d50e87917c5b901783d546b12d0 # v7.2.1
+        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
         with:
           image: ${{ env.DOCKER_REGISTRY }}/${{ inputs.imageName }}
           severity-cutoff: medium
@@ -63,13 +63,13 @@ jobs:
       - name: Scan Docker image with Grype - SARIF output
         if: always() # necessary as using a failure threshold in the scan step
         id: scan-sarif
-        uses: anchore/scan-action@40a61b52209e9d50e87917c5b901783d546b12d0 # v7.2.1
+        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
         with:
           image: ${{ env.DOCKER_REGISTRY }}/${{ inputs.imageName }}
           severity-cutoff: medium
 
       - name: Upload SARIF file
         if: always() # necessary as using a failure threshold in the scan step
-        uses: github/codeql-action/upload-sarif@fe4161a26a8629af62121b670040955b330f9af2 # v4.31.6
+        uses: github/codeql-action/upload-sarif@9e907b5e64f6b83e7804b09294d44122997950d6 # v4.32.3
         with:
           sarif_file: ${{ steps.scan-sarif.outputs.sarif }}

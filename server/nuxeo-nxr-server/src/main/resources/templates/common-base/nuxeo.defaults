@@ -120,6 +120,11 @@ nuxeo.picture.views.transaction.timeout.seconds=300
 nuxeo.video.transaction.timeout.seconds=600
 
 ###
+# User Preferences
+nuxeo.user.preferences.max=2000
+nuxeo.user.preferences.sanitizeValues.enabled=true
+nuxeo.user.preferences.listeners.userDeleted.enabled=true
+
 # Collections
 nuxeo.collection.max.size=10000
 
@@ -133,13 +138,12 @@ nuxeo.search.stream.indexingAsync.defaultConcurrency=4
 nuxeo.search.stream.indexingAsync.defaultPartitions=8
 nuxeo.search.stream.reindexing.defaultConcurrency=${nuxeo.bulk.action.reindex.index.concurrency:=4}
 nuxeo.search.stream.reindexing.defaultPartitions=${nuxeo.bulk.action.reindex.index.partitions:=8}
-
 nuxeo.search.default.fulltext.size.max=${elasticsearch.fulltext.size.max:=-1}
 
 nuxeo.search.client.default.name=repository
 nuxeo.search.client.default.scroller.index.name=repository
 
-nuxeo.search.pageproviders.override=${elasticsearch.override.pageproviders:=default_search,default_document_suggestion,DEFAULT_DOCUMENT_SUGGESTION,advanced_document_content,domain_documents,expired_search,default_trash_search,REST_API_SEARCH_ADAPTER,all_collections,simple_search,document_content,section_content,document_trash_content,orderable_document_content,document_picker,GET_TASKS_FOR_ACTORS,GET_TASKS_FOR_ACTORS_OR_DELEGATED_ACTORS,GET_TASKS_FOR_PROCESS,GET_TASKS_FOR_PROCESS_AND_ACTORS,GET_TASKS_FOR_PROCESS_AND_NODE,GET_TASKS_FOR_TARGET_DOCUMENT,GET_TASKS_FOR_TARGET_DOCUMENTS,GET_TASKS_FOR_TARGET_DOCUMENTS_AND_ACTORS,GET_TASKS_FOR_TARGET_DOCUMENTS_AND_ACTORS_OR_DELEGATED_ACTORS}
+nuxeo.search.pageproviders.override=${elasticsearch.override.pageproviders:=default_search,default_document_suggestion,DEFAULT_DOCUMENT_SUGGESTION,advanced_document_content,domain_documents,expired_search,default_trash_search,ADAPTER_CURRENT_DOC_CHILDREN,ADAPTER_REST_API_SEARCH_ADAPTER,all_collections,simple_search,document_content,section_content,document_trash_content,orderable_document_content,document_picker,GET_TASKS_FOR_ACTORS,GET_TASKS_FOR_ACTORS_OR_DELEGATED_ACTORS,GET_TASKS_FOR_PROCESS,GET_TASKS_FOR_PROCESS_AND_ACTORS,GET_TASKS_FOR_PROCESS_AND_NODE,GET_TASKS_FOR_TARGET_DOCUMENT,GET_TASKS_FOR_TARGET_DOCUMENTS,GET_TASKS_FOR_TARGET_DOCUMENTS_AND_ACTORS,GET_TASKS_FOR_TARGET_DOCUMENTS_AND_ACTORS_OR_DELEGATED_ACTORS}
 
 # Kafka
 kafka.check.classpath=${nuxeo.home}/nxserver/bundles/nuxeo-{common,core-api,runtime-stream}*.jar
@@ -282,6 +286,16 @@ metrics.datadog.emptyTimerAsCount=false
 metrics.prometheus.enabled=false
 metrics.prometheus.port=9090
 
+## Dynatrace statsd udp reporter
+metrics.dynatrace.enabled=false
+metrics.dynatrace.pollInterval=60
+metrics.dynatrace.host=localhost
+metrics.dynatrace.port=18125
+metrics.dynatrace.prefix=nuxeo
+metrics.dynatrace.hostname=
+metrics.dynatrace.dimensions=
+metrics.dynatrace.emptyTimerAsCount=false
+
 ## Open tracing
 tracing.attributes.max=128
 tracing.annotations.max=128
@@ -384,6 +398,9 @@ nuxeo.bulk.action.unholdDocumentsAction.defaultConcurrency=2
 nuxeo.bulk.action.unholdDocumentsAction.defaultPartitions=4
 nuxeo.bulk.action.updateReadAcls.defaultConcurrency=1
 nuxeo.bulk.action.updateReadAcls.defaultPartitions=1
+nuxeo.bulk.action.userPreferencesGC.enabled=true
+nuxeo.bulk.action.userPreferencesGC.defaultConcurrency=1
+nuxeo.bulk.action.userPreferencesGC.defaultPartitions=1
 
 # OAuth2 GC
 nuxeo.oauth2.garbageCollectExpiredTokens.enabled=true

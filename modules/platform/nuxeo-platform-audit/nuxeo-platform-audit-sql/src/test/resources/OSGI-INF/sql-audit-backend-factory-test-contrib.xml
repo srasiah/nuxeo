@@ -7,8 +7,10 @@
   </extension>
 
   <!-- re-enable page provider tracking for tests, cf TestAuditPageProviderTracking -->
-  <extension target="org.nuxeo.audit.service.AuditComponent" point="event">
-    <event name="search" enabled="true" />
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
+    <route name="default">
+      <event name="search" enabled="true" />
+    </route>
   </extension>
 
 </component>

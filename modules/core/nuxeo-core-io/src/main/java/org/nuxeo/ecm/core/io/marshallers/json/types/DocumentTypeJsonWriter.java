@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,17 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.types;
 
-import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
 import static org.nuxeo.ecm.core.io.registry.reflect.Priorities.REFERENCE;
 
 import java.io.IOException;
-import java.io.OutputStream;
 
 import org.nuxeo.ecm.core.io.marshallers.json.ExtensibleEntityJsonWriter;
-import org.nuxeo.ecm.core.io.marshallers.json.OutputStreamWithJsonWriter;
 import org.nuxeo.ecm.core.io.marshallers.json.enrichers.AbstractJsonEnricher;
-import org.nuxeo.ecm.core.io.registry.Writer;
 import org.nuxeo.ecm.core.io.registry.reflect.Setup;
 import org.nuxeo.ecm.core.schema.DocumentType;
-import org.nuxeo.ecm.core.schema.types.Schema;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 
@@ -68,7 +62,7 @@ public class DocumentTypeJsonWriter extends ExtensibleEntityJsonWriter<DocumentT
     public static final String ENTITY_TYPE = "docType";
 
     public DocumentTypeJsonWriter() {
-        super(ENTITY_TYPE, DocumentType.class);
+        super(ENTITY_TYPE);
     }
 
     @Override
@@ -84,13 +78,7 @@ public class DocumentTypeJsonWriter extends ExtensibleEntityJsonWriter<DocumentT
             jg.writeString(facet);
         }
         jg.writeEndArray();
-        jg.writeArrayFieldStart("schemas");
-        Writer<Schema> schemaWriter = registry.getWriter(ctx, Schema.class, APPLICATION_JSON_TYPE);
-        for (Schema schema : docType.getSchemas()) {
-            OutputStream out = new OutputStreamWithJsonWriter(jg);
-            schemaWriter.write(schema, Schema.class, Schema.class, APPLICATION_JSON_TYPE, out);
-        }
-        jg.writeEndArray();
+        writeEntityArrayField("schemas", docType.getSchemas(), jg);
     }
 
 }

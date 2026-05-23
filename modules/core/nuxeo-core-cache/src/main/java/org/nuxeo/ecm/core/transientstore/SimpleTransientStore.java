@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.transientstore.api.TransientStore;
 import org.nuxeo.ecm.core.transientstore.api.TransientStoreConfig;
@@ -190,7 +191,8 @@ public class SimpleTransientStore extends AbstractTransientStore {
         if (entry != null) {
             log.debug("Invalidating StorageEntry stored at key: {} form L1 cache", key);
             getL1Cache().invalidate(key);
-            if (config.getTargetMaxSize().isEmpty() || getStorageSize() <= config.getTargetMaxSize().get().toBytes()) {
+            var targetMaxSize = config.getTargetMaxSize().orElseGet(ByteSize::unlimited);
+            if (targetMaxSize == ByteSize.unlimited() || getStorageSize() <= targetMaxSize.toBytes()) {
                 log.debug("Putting StorageEntry at key: {} in L2 cache", key);
                 getL2Cache().put(key, entry);
             }

@@ -53,7 +53,7 @@ public class AzureBlobScroll extends AbstractBlobScroll<AzureBlobProvider> {
         this.prefix = this.store.prefix;
         this.prefixLength = this.prefix.length();
         ListBlobsOptions options = new ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(size);
-        if (store.useVersion) {
+        if (store.hasVersioning()) {
             var details = new BlobListDetails();
             details.setRetrieveVersions(true);
             options.setDetails(details);
@@ -78,7 +78,7 @@ public class AzureBlobScroll extends AbstractBlobScroll<AzureBlobProvider> {
                 continue;
             }
             var key = blob.getName().substring(prefixLength);
-            if (store.useVersion) {
+            if (store.hasVersioning()) {
                 key += VER_SEP + blob.getVersionId();
             }
             addTo(result, key, () -> blob.getProperties().getContentLength());

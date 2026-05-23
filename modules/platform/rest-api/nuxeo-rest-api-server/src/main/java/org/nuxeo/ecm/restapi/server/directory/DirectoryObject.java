@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,16 +118,16 @@ public class DirectoryObject extends PaginableObject<DirectoryEntry> {
     }
 
     @Path("{entryId:((?:(?!/@).)*)}")
-    public Object getEntry(@PathParam("entryId") final String entryId) {
+    public DirectoryEntryObject getEntry(@PathParam("entryId") final String entryId) {
         return withDirectorySession(directory, new DirectorySessionRunner<>() {
 
             @Override
-            Object run(Session session) {
+            DirectoryEntryObject run(Session session) {
                 DocumentModel entry = session.getEntry(entryId);
                 if (entry == null) {
                     throw new WebResourceNotFoundException("Entry not found");
                 }
-                return newObject("directoryEntry", new DirectoryEntry(directory.getName(), entry), entryId);
+                return newObject(DirectoryEntryObject.class, new DirectoryEntry(directory.getName(), entry), entryId);
             }
         });
 

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.validation;
 
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
@@ -67,7 +66,7 @@ public class ConstraintJsonWriter extends ExtensibleEntityJsonWriter<Constraint>
     public static final String ENTITY_TYPE = "validation_constraint";
 
     public ConstraintJsonWriter() {
-        super(ENTITY_TYPE, Constraint.class);
+        super(ENTITY_TYPE);
     }
 
     @Override

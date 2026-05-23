@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Thomas Roger
  */
-
 package org.nuxeo.ecm.restapi.server.rendition;
 
 import jakarta.ws.rs.Path;
@@ -37,8 +36,8 @@ public class RenditionAdapter extends DefaultAdapter {
     public static final String NAME = "rendition";
 
     @Path("{renditionName:((?:(?!/@).)*)}")
-    public Object doGetRendition(@Context Request request, @PathParam("renditionName") String renditionName) {
+    public RenditionObject doGetRendition(@Context Request request, @PathParam("renditionName") String renditionName) {
         DocumentModel doc = getTarget().getAdapter(DocumentModel.class);
-        return newObject("rendition", doc, renditionName);
+        return newObject(RenditionObject.class, doc, renditionName);
     }
 }

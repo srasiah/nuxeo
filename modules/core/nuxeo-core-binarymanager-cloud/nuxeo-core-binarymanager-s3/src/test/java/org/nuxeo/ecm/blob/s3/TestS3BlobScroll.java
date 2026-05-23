@@ -20,19 +20,14 @@ package org.nuxeo.ecm.blob.s3;
 
 import static org.nuxeo.ecm.blob.s3.S3BlobProvider.STORE_SCROLL_NAME;
 
-import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.blob.AbstractTestBlobScroll;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.runtime.test.runner.BlacklistComponent;
 import org.nuxeo.runtime.test.runner.Features;
-import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
 /**
  * @since 2023
  */
-@RunWith(FeaturesRunner.class)
 @Features({ CoreFeature.class, S3BlobProviderFeature.class })
-@BlacklistComponent("org.nuxeo.ecm.core.storage.cloud.requestcontroller.service.contrib")
 public class TestS3BlobScroll extends AbstractTestBlobScroll {
 
     @Override

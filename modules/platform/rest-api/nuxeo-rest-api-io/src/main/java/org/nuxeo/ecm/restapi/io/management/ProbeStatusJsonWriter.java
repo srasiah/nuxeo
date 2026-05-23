@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2019-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nour Al Kotob
  */
-
 package org.nuxeo.ecm.restapi.io.management;
 
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
@@ -40,7 +39,7 @@ public class ProbeStatusJsonWriter extends ExtensibleEntityJsonWriter<ProbeStatu
     public static final String ENTITY_TYPE = "probeStatus";
 
     public ProbeStatusJsonWriter() {
-        super(ENTITY_TYPE, ProbeStatus.class);
+        super(ENTITY_TYPE);
     }
 
     @Override

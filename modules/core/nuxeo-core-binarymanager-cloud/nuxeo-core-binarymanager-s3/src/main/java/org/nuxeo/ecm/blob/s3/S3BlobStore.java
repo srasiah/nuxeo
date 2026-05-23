@@ -60,7 +60,6 @@ import org.nuxeo.ecm.core.blob.BlobWriteContext;
 import org.nuxeo.ecm.core.blob.ByteRange;
 import org.nuxeo.ecm.core.blob.KeyStrategy;
 import org.nuxeo.ecm.core.blob.KeyStrategyDigest;
-import org.nuxeo.ecm.core.blob.KeyStrategyDocId;
 import org.nuxeo.ecm.core.blob.PathStrategy;
 import org.nuxeo.ecm.core.blob.binary.BinaryGarbageCollector;
 import org.nuxeo.ecm.core.io.download.DownloadHelper;
@@ -72,9 +71,7 @@ import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.exception.SdkServiceException;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.BucketVersioningStatus;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
-import software.amazon.awssdk.services.s3.model.GetBucketVersioningResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
@@ -124,11 +121,6 @@ public class S3BlobStore extends AbstractBlobStore {
 
     protected final boolean allowByteRange;
 
-    // note, we may choose to not use versions even in a versioned bucket
-    // if we want the bucket to record and keep old versions for us
-    /** If true, include the object version in the key. */
-    protected final boolean useVersion;
-
     protected volatile Boolean useAsyncDigest;
 
     protected final BinaryGarbageCollector gc;
@@ -143,8 +135,6 @@ public class S3BlobStore extends AbstractBlobStore {
         pathStrategy = config.pathStrategy;
         pathSeparatorIsBackslash = config.pathSeparatorIsBackslash;
         allowByteRange = config.getBooleanProperty(ALLOW_BYTE_RANGE);
-        // don't use versions if we use deduplication (including managed case)
-        useVersion = keyStrategy instanceof KeyStrategyDocId && isBucketVersioningEnabled();
         gc = new S3BlobGarbageCollector();
     }
 
@@ -155,25 +145,9 @@ public class S3BlobStore extends AbstractBlobStore {
                         && sdkServiceException.statusCode() == 404);
     }
 
-    protected boolean isBucketVersioningEnabled() {
-        try {
-            GetBucketVersioningResponse response = amazonS3.getBucketVersioning(b -> b.bucket(bucketName));
-            // if versioning is suspended, created objects won't have versions
-            return response.status().equals(BucketVersioningStatus.ENABLED);
-        } catch (SdkServiceException e) {
-            if (e.statusCode() == 501) {
-                // minio does not implement versioning
-                log.warn("Versioning not implemented for bucket: {}: {}", () -> bucketName, e::getMessage);
-                log.debug(e, e);
-                return false;
-            }
-            throw e;
-        }
-    }
-
     @Override
     public boolean hasVersioning() {
-        return useVersion;
+        return config.useVersion();
     }
 
     @Override
@@ -286,10 +260,11 @@ public class S3BlobStore extends AbstractBlobStore {
             if (config.useServerSideEncryption) {
                 if (isNotBlank(config.serverSideKMSKeyID)) {
                     // SSE-KMS
-                    b.ssekmsKeyId(config.serverSideKMSKeyID);
+                    b.serverSideEncryption(ServerSideEncryption.AWS_KMS).ssekmsKeyId(config.serverSideKMSKeyID);
+
                 } else {
                     // SSE-S3
-                    b.sseCustomerAlgorithm(ServerSideEncryption.AES256.toString());
+                    b.serverSideEncryption(ServerSideEncryption.AES256);
                 }
             }
             setMetadata(b, blobContext);
@@ -301,7 +276,7 @@ public class S3BlobStore extends AbstractBlobStore {
             FileUpload fileUpload = config.transferManager.uploadFile(uploadFileRequestBuilder.build());
             CompletedFileUpload uploadResult = fileUpload.completionFuture().join();
             // if we don't want to use versions, ignore them even though the bucket may be versioned
-            String versionId = useVersion ? uploadResult.response().versionId() : null;
+            String versionId = hasVersioning() ? uploadResult.response().versionId() : null;
             if (log.isDebugEnabled()) {
                 long dtms = System.currentTimeMillis() - t0;
                 log.debug("Wrote s3://{}/{} in {}ms", bucketName, bucketKey, dtms);
@@ -653,7 +628,7 @@ public class S3BlobStore extends AbstractBlobStore {
         CompletedCopy completedCopy = copy.completionFuture().join();
 
         // if we don't want to use versions, ignore them even though the bucket may be versioned
-        String versionId = useVersion ? completedCopy.response().versionId() : null;
+        String versionId = hasVersioning() ? completedCopy.response().versionId() : null;
         logTrace("<--", "copied");
         if (versionId != null) {
             logTrace("hnote right: v=" + versionId);

@@ -43,6 +43,12 @@ nuxeo.s3storage.user.agent.suffix=
 nuxeo.s3storage.useDirectUpload=false
 nuxeo.s3storage.s3DirectUpload.bucket_prefix=s3DirectUpload
 
+nuxeo.s3storage.directdownload=false
+nuxeo.s3storage.directdownload.expire=3600
+# Do not edit the next property, it is an internal fallback
+# nuxeo.s3storage.directdownload is interpreted as map by freemarker
+nuxeo.s3storage.directdownload.enabled=${nuxeo.s3storage.directdownload}
+
 # mandatory
 nuxeo.s3storage.transient.bucket=
 nuxeo.s3storage.transient.roleArn=

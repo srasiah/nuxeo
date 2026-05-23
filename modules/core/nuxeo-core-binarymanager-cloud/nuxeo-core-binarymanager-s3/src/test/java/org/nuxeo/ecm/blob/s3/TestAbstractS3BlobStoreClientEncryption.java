@@ -28,11 +28,13 @@ import org.nuxeo.ecm.core.blob.BlobProvider;
 import org.nuxeo.ecm.core.blob.BlobStore;
 import org.nuxeo.ecm.core.blob.BlobStoreBlobProvider;
 import org.nuxeo.ecm.core.blob.TestAbstractBlobStore;
+import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.RandomBug;
 
 /**
  * @since 2025.0
  */
+@Features(S3BlobProviderFeature.class)
 public abstract class TestAbstractS3BlobStoreClientEncryption extends TestAbstractBlobStore {
 
     @Override

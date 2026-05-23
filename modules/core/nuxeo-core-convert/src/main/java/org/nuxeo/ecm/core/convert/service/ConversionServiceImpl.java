@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -615,8 +615,8 @@ public class ConversionServiceImpl extends DefaultComponent implements Conversio
         gcExecutor = Executors.newSingleThreadScheduledExecutor(
                 ThreadFactories.newThreadFactory("Nuxeo-Convert-GC", true));
         long rateInSeconds = cacheDescriptor.getGcRate().toSeconds();
-        gcExecutor.scheduleAtFixedRate(new ConversionCacheGCTask(cacheDescriptor.getMaxSize().toKibibytes()),
-                rateInSeconds, rateInSeconds, TimeUnit.SECONDS);
+        gcExecutor.scheduleAtFixedRate(new ConversionCacheGCTask(cacheDescriptor.getMaxSize()), rateInSeconds,
+                rateInSeconds, TimeUnit.SECONDS);
     }
 
     public void endGC() {

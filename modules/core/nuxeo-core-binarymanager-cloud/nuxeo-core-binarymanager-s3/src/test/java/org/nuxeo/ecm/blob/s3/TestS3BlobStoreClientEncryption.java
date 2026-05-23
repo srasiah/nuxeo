@@ -31,7 +31,6 @@ import java.nio.file.Path;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.nuxeo.runtime.api.Framework;
-import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.WithFrameworkProperty;
 
 /**
@@ -40,7 +39,6 @@ import org.nuxeo.runtime.test.runner.WithFrameworkProperty;
 @WithFrameworkProperty(name = SYSTEM_PROPERTY_PREFIX + "." + KEYSTORE_PASS_PROPERTY, value = "test_s3")
 @WithFrameworkProperty(name = SYSTEM_PROPERTY_PREFIX + "." + PRIVKEY_ALIAS_PROPERTY, value = "test_s3")
 @WithFrameworkProperty(name = SYSTEM_PROPERTY_PREFIX + "." + PRIVKEY_PASS_PROPERTY, value = "test_s3")
-@Features(S3BlobProviderFeature.class)
 public class TestS3BlobStoreClientEncryption extends TestAbstractS3BlobStoreClientEncryption {
 
     @BeforeClass

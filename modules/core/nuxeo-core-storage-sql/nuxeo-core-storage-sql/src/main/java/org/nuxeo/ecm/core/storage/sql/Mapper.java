@@ -100,6 +100,15 @@ public interface Mapper extends RowMapper {
     // used for reflection
     String CLOSE = "close";
 
+    /**
+     * Reconnects the mapper's underlying connection if needed.
+     * <p>
+     * This is called when a session is borrowed from the pool to ensure the connection is valid.
+     *
+     * @since 2025.14
+     */
+    void connect();
+
     // TODO
     int getTableSize(String tableName);
 
@@ -186,8 +195,8 @@ public interface Mapper extends RowMapper {
      * @return a projection
      * @since 7.10-HF-25, 8.10-HF06, 9.2
      */
-    PartialList<Map<String,Serializable>> queryProjection(String query, String queryType, QueryFilter queryFilter, boolean distinctDocuments,
-            long countUpTo, Object... params);
+    PartialList<Map<String, Serializable>> queryProjection(String query, String queryType, QueryFilter queryFilter,
+            boolean distinctDocuments, long countUpTo, Object... params);
 
     /**
      * Gets the ids for all the ancestors of the given row ids.

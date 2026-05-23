@@ -173,6 +173,11 @@ public class GoogleStorageBlobStoreConfiguration extends CloudBlobStoreConfigura
         return false;
     }
 
+    @Override
+    protected boolean isVersioningEnabled() {
+        return isBucketVersioningEnabled;
+    }
+
     /**
      * Returns a copy of the GoogleStorageBlobStoreConfiguration with a different namespace.
      */

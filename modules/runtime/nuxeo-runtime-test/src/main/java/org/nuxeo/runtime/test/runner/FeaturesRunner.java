@@ -249,7 +249,7 @@ public class FeaturesRunner extends BlockJUnit4ClassRunner {
     }
 
     protected void afterMethodRun(final FrameworkMethod method, final Object test) {
-        apply("afterMethodRun", FORWARD, holder -> holder.feature.afterMethodRun(FeaturesRunner.this, method, test));
+        apply("afterMethodRun", BACKWARD, holder -> holder.feature.afterMethodRun(FeaturesRunner.this, method, test));
     }
 
     protected void afterRun() {

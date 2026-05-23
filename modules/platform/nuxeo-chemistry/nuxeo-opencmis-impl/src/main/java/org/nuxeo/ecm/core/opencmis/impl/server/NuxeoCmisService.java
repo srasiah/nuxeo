@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import static org.apache.chemistry.opencmis.commons.server.CallContext.BINDING_A
 import static org.apache.chemistry.opencmis.commons.server.CallContext.BINDING_BROWSER;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_EVENT_ID;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_ID;
+import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
 import static org.nuxeo.ecm.core.api.event.DocumentEventTypes.DOCUMENT_CREATED;
 import static org.nuxeo.ecm.core.api.event.DocumentEventTypes.DOCUMENT_REMOVED;
 import static org.nuxeo.ecm.core.api.event.DocumentEventTypes.DOCUMENT_UPDATED;
@@ -129,7 +130,7 @@ import org.apache.logging.log4j.Logger;
 import org.nuxeo.audit.api.AuditQueryBuilder;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.audit.api.LogEntryConstants;
-import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.common.utils.Path;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
@@ -1414,10 +1415,11 @@ public class NuxeoCmisService extends AbstractCmisService
      * @return null if not enough elements found with the current page size
      */
     protected List<ObjectData> readAuditLog(String repositoryId, long minId, int max, int pageSize) {
-        var auditBackend = Framework.getService(AuditBackend.class);
-        if (auditBackend == null) {
+        var auditService = Framework.getService(AuditService.class);
+        if (auditService == null) {
             throw new CmisRuntimeException("Cannot find audit service");
         }
+        var auditBackend = auditService.getAuditBackend(DEFAULT_AUDIT_BACKEND);
         var builder = new AuditQueryBuilder().predicate(
                 Predicates.eq(LogEntryConstants.LOG_REPOSITORY_ID, repositoryId))
                                              .and(Predicates.in(LOG_EVENT_ID, DOCUMENT_CREATED, DOCUMENT_UPDATED,
@@ -1484,13 +1486,14 @@ public class NuxeoCmisService extends AbstractCmisService
     }
 
     protected String getLatestChangeLogToken(String repositoryId) {
-        var auditBackend = Framework.getService(AuditBackend.class);
-        if (auditBackend == null) {
+        var auditService = Framework.getService(AuditService.class);
+        if (auditService == null) {
             log.warn("Audit Service not found. latest change log token will be '0'");
             return "0";
             // throw new CmisRuntimeException("Cannot find audit service");
         }
-        long id = auditBackend.getLatestLogId(repositoryId, DOCUMENT_CREATED, DOCUMENT_UPDATED, DOCUMENT_REMOVED);
+        long id = auditService.getAuditBackend(DEFAULT_AUDIT_BACKEND)
+                              .getLatestLogId(repositoryId, DOCUMENT_CREATED, DOCUMENT_UPDATED, DOCUMENT_REMOVED);
         return String.valueOf(id);
     }
 

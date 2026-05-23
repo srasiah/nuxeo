@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ public class OAuth2ClientWriter extends ExtensibleEntityJsonWriter<OAuth2Client>
     public static final String AUTO_GRANT_FIELD = "isAutoGrant";
 
     public OAuth2ClientWriter() {
-        super(ENTITY_TYPE, OAuth2Client.class);
+        super(ENTITY_TYPE);
     }
 
     @Override

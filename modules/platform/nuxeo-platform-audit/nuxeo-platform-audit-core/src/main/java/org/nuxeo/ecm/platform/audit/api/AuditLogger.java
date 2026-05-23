@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import jakarta.annotation.Nullable;
+
 import org.nuxeo.ecm.core.event.Event;
 
 /**
@@ -84,6 +86,7 @@ public interface AuditLogger<L extends LogEntry> {
      * @deprecated since 2025.0, use {@code org.nuxeo.ecm.platform.audit.service.AuditService#buildEntryFromEvent()}
      *             instead
      */
+    @Nullable
     @Deprecated(since = "2025.0", forRemoval = true)
     L buildEntryFromEvent(Event event);
 }

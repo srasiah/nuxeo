@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
@@ -77,7 +77,8 @@ public class RequestValidator {
         }
     }
 
-    public @NotNull String getIndices(String indices) {
+    @Nonnull
+    public String getIndices(String indices) {
         if (indices == null || "*".equals(indices) || "_all".equals(indices)) {
             return StringUtils.join(indexTypes.keySet(), ',');
         }

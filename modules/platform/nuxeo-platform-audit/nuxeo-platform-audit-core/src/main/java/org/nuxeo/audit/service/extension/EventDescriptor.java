@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.BooleanUtils;
+import org.nuxeo.audit.service.AuditComponent;
 import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XNodeList;
 import org.nuxeo.common.xmap.annotation.XObject;
@@ -36,8 +37,10 @@ import org.nuxeo.runtime.model.Descriptor;
  * Really simple auditable event descriptor.
  *
  * @author <a href="mailto:ja@nuxeo.com">Julien Anguenot</a>
+ * @deprecated since 2025.16, use {@link AuditRouteDescriptor} instead
  */
 @XObject("event")
+@Deprecated(since = "2025.16", forRemoval = true)
 public class EventDescriptor implements Descriptor {
 
     @XNode("@name")
@@ -103,5 +106,26 @@ public class EventDescriptor implements Descriptor {
                                                                ExtendedInfoDescriptor::merge),
                                                        map -> new ArrayList<>(map.values())));
         return merged;
+    }
+
+    /** @since 2025.16 */
+    public AuditRouteDescriptor toAuditRoute() {
+        var route = new AuditRouteDescriptor();
+        route.name = "default";
+        route.backendName = AuditComponent.DEFAULT_AUDIT_BACKEND;
+        var routeEvent = new AuditRouteDescriptor.EventDescriptor();
+        routeEvent.name = name;
+        routeEvent.enabled = enabled;
+        route.events = List.of(routeEvent);
+        return route;
+    }
+
+    /** @since 2025.16 */
+    public List<ExtendedInfoDescriptor> toExtendedInfos() {
+        return extendedInfoDescriptors.stream().map(descriptor -> {
+            var merged = descriptor.merge(new ExtendedInfoDescriptor());
+            merged.event = name;
+            return merged;
+        }).toList();
     }
 }

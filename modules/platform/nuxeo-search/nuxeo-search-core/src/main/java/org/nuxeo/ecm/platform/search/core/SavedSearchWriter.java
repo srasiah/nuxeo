@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2016-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 package org.nuxeo.ecm.platform.search.core;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.nuxeo.ecm.core.io.registry.MarshallingConstants.WILDCARD_VALUE;
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
 import static org.nuxeo.ecm.core.io.registry.reflect.Priorities.REFERENCE;
@@ -30,7 +31,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -61,7 +61,7 @@ public class SavedSearchWriter extends ExtensibleEntityJsonWriter<SavedSearch> {
     private SchemaManager schemaManager;
 
     public SavedSearchWriter() {
-        super(ENTITY_TYPE, SavedSearch.class);
+        super(ENTITY_TYPE);
     }
 
     @Override
@@ -86,9 +86,7 @@ public class SavedSearchWriter extends ExtensibleEntityJsonWriter<SavedSearch> {
         }
 
         jg.writeObjectFieldStart("params");
-        Iterator<String> it = params.keySet().iterator();
-        while (it.hasNext()) {
-            String param = it.next();
+        for (String param : params.keySet()) {
             jg.writeStringField(param, search.getNamedParams().get(param));
         }
 
@@ -108,7 +106,7 @@ public class SavedSearchWriter extends ExtensibleEntityJsonWriter<SavedSearch> {
 
         // write document model properties
         Set<String> schemas = ctx.getProperties();
-        if (schemas.size() > 0) {
+        if (!schemas.isEmpty()) {
             jg.writeObjectFieldStart("properties");
             if (schemas.contains(WILDCARD_VALUE)) {
                 // full document
@@ -139,7 +137,7 @@ public class SavedSearchWriter extends ExtensibleEntityJsonWriter<SavedSearch> {
             String prefix = "";
             if (usePrefix) {
                 prefix = schema.getNamespace().prefix;
-                if (prefix == null || prefix.length() == 0) {
+                if (isBlank(prefix)) {
                     prefix = schemaName;
                 }
                 prefix = prefix + ":";

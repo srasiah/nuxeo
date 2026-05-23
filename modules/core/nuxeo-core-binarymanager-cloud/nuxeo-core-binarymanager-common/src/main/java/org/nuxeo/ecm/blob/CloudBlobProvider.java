@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2025-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.commons.lang3.reflect.TypeUtils;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.blob.BlobStoreBlobProvider;
+import org.nuxeo.ecm.core.blob.KeyStrategy;
 
 /**
  * @since 2025.11
@@ -44,5 +45,15 @@ public abstract class CloudBlobProvider<T extends CloudBlobStoreConfiguration> e
             throw new NuxeoException("Unable to initialize BlobProvider with id: " + blobProviderId, e);
         }
         super.initialize(blobProviderId, properties);
+    }
+
+    @Override
+    protected String getDigestAlgorithm() {
+        return config.digestConfiguration.digestAlgorithm;
+    }
+
+    @Override
+    public KeyStrategy getKeyStrategy() {
+        return config.getKeyStrategy();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,13 +35,13 @@ import org.nuxeo.runtime.api.Framework;
 public class GroupObject extends AbstractUMObject<NuxeoGroup> {
 
     @Path("user/{username}")
-    public Object doGetUserToGroup(@PathParam("username") String username) {
+    public UserToGroupObject doGetUserToGroup(@PathParam("username") String username) {
         UserManager um = Framework.getService(UserManager.class);
         NuxeoPrincipal principal = um.getPrincipal(username);
         if (principal == null) {
             throw new WebResourceNotFoundException("User not found");
         }
-        return newObject("userToGroup", principal, currentArtifact);
+        return newObject(UserToGroupObject.class, principal, currentArtifact);
     }
 
     @Override

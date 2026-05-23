@@ -30,11 +30,11 @@ import org.keycloak.KeycloakSecurityContext;
 import org.keycloak.adapters.AdapterTokenStore;
 import org.keycloak.adapters.AdapterUtils;
 import org.keycloak.adapters.KeycloakDeployment;
-import org.keycloak.adapters.OAuthRequestAuthenticator;
 import org.keycloak.adapters.OidcKeycloakAccount;
 import org.keycloak.adapters.RefreshableKeycloakSecurityContext;
-import org.keycloak.adapters.RequestAuthenticator;
 import org.keycloak.adapters.tomcat.PrincipalFactory;
+import org.nuxeo.ecm.platform.ui.web.keycloak.OAuthRequestAuthenticator;
+import org.nuxeo.ecm.platform.ui.web.keycloak.RequestAuthenticator;
 
 /**
  * @author <a href="mailto:ungarida@gmail.com">Davide Ungari</a>
@@ -57,7 +57,7 @@ public class CatalinaRequestAuthenticator extends RequestAuthenticator {
 
     @Override
     protected OAuthRequestAuthenticator createOAuthAuthenticator() {
-        return new OAuthRequestAuthenticator(this, facade, deployment, sslRedirectPort, tokenStore);
+        return new OAuthRequestAuthenticator(this, facade, deployment, sslRedirectPort, tokenStore, request);
     }
 
     @Override

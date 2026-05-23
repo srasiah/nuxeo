@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,20 @@
  */
 package org.nuxeo.audit;
 
+import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
+
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.function.IntFunction;
 
 import jakarta.inject.Inject;
 
 import org.nuxeo.audit.api.LogEntry;
+import org.nuxeo.audit.api.Route;
 import org.nuxeo.audit.service.AuditBackend;
 import org.nuxeo.audit.service.AuditCleanerFeature;
+import org.nuxeo.audit.service.AuditRouter;
 import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.directory.test.DirectoryFeature;
 import org.nuxeo.ecm.core.BaseCoreFeature;
@@ -35,30 +40,46 @@ import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.RunnerFeature;
+import org.nuxeo.runtime.test.runner.RuntimeFeature;
+import org.nuxeo.runtime.test.runner.ServiceProvider;
 import org.nuxeo.runtime.test.runner.TransactionalFeature;
+
+import com.google.inject.Binder;
 
 /**
  * @since 2025.0
  */
 @Deploy("org.nuxeo.runtime.metrics")
 @Deploy("org.nuxeo.ecm.platform.audit")
+@Deploy("org.nuxeo.ecm.core.test:OSGI-INF/test-default-sequencer-contrib.xml")
 @Features({ AuditCleanerFeature.class, BaseCoreFeature.class, DirectoryFeature.class })
 public class AuditCoreFeature implements RunnerFeature {
-
-    @Inject
-    protected AuditBackend backend;
 
     @Inject
     protected TransactionalFeature transactionalFeature;
 
     @Override
     public void initialize(FeaturesRunner runner) {
+        runner.getFeature(RuntimeFeature.class).addServiceProvider(new DefaultAuditBackendProvider());
         runner.getFeature(TransactionalFeature.class)
               .addWaiter(duration -> Framework.getService(AuditService.class).await(duration));
     }
 
+    @Override
+    public void configure(FeaturesRunner runner, Binder binder) {
+        // @deprecated since 2025.16, uncomment following lines when AuditBackend will be removed from services
+        // binder.bind(AuditBackend.class)
+        // .toProvider(() -> Framework.getService(AuditService.class).getAuditBackend(DEFAULT_AUDIT_BACKEND));
+    }
+
     public void generateLogEntries(String docName, String eventPrefix, String categoryPrefix, int nbEntries) {
-        generateLogEntries(nbEntries,
+        generateLogEntries(DEFAULT_AUDIT_BACKEND, docName, eventPrefix, categoryPrefix, nbEntries);
+    }
+
+    /** @since 2025.16 */
+    public void generateLogEntries(String backendName, String docName, String eventPrefix, String categoryPrefix,
+            int nbEntries) {
+        generateLogEntries(backendName, nbEntries,
                 i -> LogEntry.builder(eventPrefix + i, new Date())
                              .category(categoryPrefix + i % 2)
                              .docUUID(docName)
@@ -69,11 +90,34 @@ public class AuditCoreFeature implements RunnerFeature {
     }
 
     public void generateLogEntries(int nbEntries, IntFunction<LogEntry> generator) {
+        generateLogEntries(DEFAULT_AUDIT_BACKEND, nbEntries, generator);
+    }
+
+    /** @since 2025.16 */
+    public void generateLogEntries(String backendName, int nbEntries, IntFunction<LogEntry> generator) {
         var entries = new ArrayList<LogEntry>();
         for (int i = 0; i < nbEntries; i++) {
             entries.add(generator.apply(i));
         }
-        backend.addLogEntries(entries);
+        Framework.getService(AuditRouter.class).routeToBackends(entries, List.of(Route.allEventsTo(backendName)));
         transactionalFeature.nextTransaction();
+    }
+
+    /**
+     * @deprecated since 2025.16, temporary {@link ServiceProvider} to retrieve the
+     *             {@link org.nuxeo.audit.service.AuditComponent#DEFAULT_AUDIT_BACKEND} without leveraging the
+     *             deprecated {@code Framework.getService(AuditBackend.class)} for injection
+     */
+    @SuppressWarnings("DeprecatedIsStillUsed")
+    private static class DefaultAuditBackendProvider extends ServiceProvider<AuditBackend> {
+
+        public DefaultAuditBackendProvider() {
+            super(AuditBackend.class);
+        }
+
+        @Override
+        public AuditBackend get() {
+            return Framework.getService(AuditService.class).getAuditBackend(DEFAULT_AUDIT_BACKEND);
+        }
     }
 }

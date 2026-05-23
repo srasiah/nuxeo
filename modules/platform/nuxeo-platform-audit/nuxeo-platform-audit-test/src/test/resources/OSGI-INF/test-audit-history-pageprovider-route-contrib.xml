@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.audit.history.pageprovider.route.test">
+
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
+    <route name="default">
+      <event name="bonusEvent" />
+    </route>
+  </extension>
+
+</component>

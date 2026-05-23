@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2025-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,10 +35,10 @@ import java.util.Map;
 
 import jakarta.inject.Inject;
 
-import org.apache.commons.lang3.reflect.TypeUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.nuxeo.common.utils.ReflectUtils;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -74,8 +74,7 @@ public abstract class AbstractTransientDataStoreTest<T extends TransientDataStor
     @SuppressWarnings("unchecked")
     public void setUp() {
         var store = transientDataService.getStore(DEFAULT_STORE_ID);
-        var storeType = TypeUtils.getTypeArguments(this.getClass(), AbstractTransientDataStoreTest.class)
-                                 .get(AbstractTransientDataStoreTest.class.getTypeParameters()[0]);
+        var storeType = ReflectUtils.retrieveFirstParameterType(this.getClass(), AbstractTransientDataStoreTest.class);
         assertEquals("Implementation is not the expected one", storeType.getTypeName(), store.getClass().getTypeName());
         this.store = (T) store;
     }

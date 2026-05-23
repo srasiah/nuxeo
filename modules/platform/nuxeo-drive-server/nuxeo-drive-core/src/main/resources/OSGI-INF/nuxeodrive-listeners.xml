@@ -81,9 +81,17 @@
 
   </extension>
 
-  <extension target="org.nuxeo.audit.service.AuditComponent" point="event">
-    <event name="rootRegistered" />
-    <event name="rootUnregistered" />
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
+    <route name="default">
+      <event name="rootRegistered" />
+      <event name="rootUnregistered" />
+    </route>
+    <route name="nuxeoDriveVirtualEvents">
+      <backend name="default" />
+      <predicate class="org.nuxeo.audit.service.route.CategoryLogEntryPredicate">
+        <property name="category">NuxeoDrive</property>
+      </predicate>
+    </route>
   </extension>
 
 </component>

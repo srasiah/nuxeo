@@ -87,6 +87,11 @@ public class RenditionServiceImpl extends DefaultComponent implements RenditionS
     public static final String DEFAULT_RENDITION_EP = "defaultRendition";
 
     /**
+     * @since 2025.13
+     */
+    public static final String RENDITION_TARGET_DOC_TYPES_EP = "targetDocTypes";
+
+    /**
      * @since 8.1
      */
     public static final String STORED_RENDITION_MANAGERS_EP = "storedRenditionManagers";
@@ -288,6 +293,13 @@ public class RenditionServiceImpl extends DefaultComponent implements RenditionS
     public Rendition getRendition(DocumentModel doc, String renditionName, boolean store) {
         RenditionDefinition renditionDefinition = getAvailableRenditionDefinition(doc, renditionName);
         return getRendition(doc, renditionDefinition, store);
+    }
+
+    @Override
+    public String getRenditionTargetDocType(DocumentModel doc) {
+        return Optional.ofNullable(getDescriptor(RENDITION_TARGET_DOC_TYPES_EP, doc.getType()))
+                       .map(d -> ((RenditionTargetDocTypeDescriptor) d).to)
+                       .orElse("File");
     }
 
     /**

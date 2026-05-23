@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import java.io.OutputStream;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -371,20 +372,17 @@ public class OpenSearchAuditBackend extends AbstractAuditBackend {
     }
 
     @Override
-    public void addLogEntries(List<LogEntry> entries) {
+    public void insertLogs(Collection<LogEntry> entries) {
         if (entries.isEmpty()) {
             return;
         }
 
         BulkRequest bulkRequest = new BulkRequest();
-
-        UIDGeneratorService uidGeneratorService = Framework.getService(UIDGeneratorService.class);
-        UIDSequencer seq = uidGeneratorService.getSequencer();
-
         try {
-            List<Long> block = seq.getNextBlock(SEQ_NAME, entries.size());
-            for (int i = 0; i < entries.size(); i++) {
-                LogEntry entry = entries.get(i).builder().id(block.get(i)).logDate(new Date()).build();
+            for (var entry : entries) {
+                if (entry.getId() == 0L || entry.getLogDate() == null) {
+                    throw new IllegalArgumentException("Log entry must have an id and log date to be inserted");
+                }
                 log.debug("Indexing log entry: {}", entry);
                 try (OutputStream out = new BytesStreamOutput(); //
                         XContentBuilder builder = jsonBuilder(out)) {

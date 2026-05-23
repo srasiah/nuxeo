@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2011-2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2011-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,21 +35,18 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
-import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.core.test.annotations.Granularity;
 import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
-import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
+import org.nuxeo.template.RenderingCoreFeature;
 import org.nuxeo.template.api.TemplateInput;
 import org.nuxeo.template.api.adapters.TemplateBasedDocument;
 import org.nuxeo.template.api.adapters.TemplateSourceDocument;
 
 @RunWith(FeaturesRunner.class)
-@Features(CoreFeature.class)
+@Features(RenderingCoreFeature.class)
 @RepositoryConfig(cleanup = Granularity.METHOD)
-@Deploy("org.nuxeo.template.manager.api")
-@Deploy("org.nuxeo.template.manager")
 public class TestAdapters {
 
     @Inject
@@ -94,7 +91,8 @@ public class TestAdapters {
 
         // Test template based doc
 
-        DocumentModel testDoc = session.createDocumentModel(root.getPathAsString(), "templatedDoc", "TemplateBasedFile");
+        DocumentModel testDoc = session.createDocumentModel(root.getPathAsString(), "templatedDoc",
+                "TemplateBasedFile");
         testDoc.setProperty("dublincore", "title", "MyTestDoc");
         testDoc = session.createDocument(testDoc);
 
@@ -106,7 +104,7 @@ public class TestAdapters {
         List<String> templateNames = adapter.getTemplateNames();
         assertNotNull(templateNames);
         assertEquals(1, templateNames.size());
-        assertEquals(templateSource.getName(), templateNames.get(0));
+        assertEquals(templateSource.getName(), templateNames.getFirst());
 
         testDoc = adapter.initializeFromTemplate(templateSource.getName(), true);
 
@@ -114,14 +112,14 @@ public class TestAdapters {
         List<TemplateInput> copiedParams = adapter.getParams(templateSource.getName());
         assertNotNull(copiedParams);
         assertEquals(1, copiedParams.size());
-        assertEquals("field1", copiedParams.get(0).getName());
-        assertEquals("Value1", copiedParams.get(0).getStringValue());
+        assertEquals("field1", copiedParams.getFirst().getName());
+        assertEquals("Value1", copiedParams.getFirst().getStringValue());
 
         // check update
-        copiedParams.get(0).setStringValue("newValue");
+        copiedParams.getFirst().setStringValue("newValue");
         adapter.saveParams(templateSource.getName(), copiedParams, true);
         copiedParams = adapter.getParams(templateSource.getName());
-        assertEquals("newValue", copiedParams.get(0).getStringValue());
+        assertEquals("newValue", copiedParams.getFirst().getStringValue());
 
         // create a second template doc
         DocumentModel template2 = session.createDocumentModel(root.getPathAsString(), "template2", "TemplateSource");

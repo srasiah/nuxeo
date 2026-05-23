@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2021 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2021-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Kevin Leturc <kleturc@nuxeo.com>
  */
-
 package org.nuxeo.launcher.config;
 
 import java.nio.file.Path;
@@ -68,6 +67,13 @@ public final class ConfigurationConstants {
     public static final String PARAM_TEMPLATE_DBTYPE = "nuxeo.db.type";
 
     public static final String PARAM_TEMPLATES_FREEMARKER_EXTENSIONS = "nuxeo.freemarker_parsing_extensions";
+
+    /**
+     * Allows to set the {@link freemarker.core.Configurable#NEW_BUILTIN_CLASS_RESOLVER_KEY} Freemarker settings.
+     * 
+     * @since 2025.14
+     */
+    public static final String PARAM_TEMPLATES_FREEMARKER_NEW_RESOLVER = "nuxeo.freemarker_new_resolver";
 
     /**
      * Absolute or relative PATH to the user chosen templates (comma separated list)

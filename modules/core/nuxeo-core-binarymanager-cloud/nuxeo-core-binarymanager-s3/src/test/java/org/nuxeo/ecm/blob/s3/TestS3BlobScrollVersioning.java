@@ -18,26 +18,12 @@
  */
 package org.nuxeo.ecm.blob.s3;
 
-import static org.nuxeo.ecm.blob.s3.S3BlobProvider.STORE_SCROLL_NAME;
-
-import org.junit.runner.RunWith;
-import org.nuxeo.ecm.core.blob.AbstractTestBlobScroll;
-import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
-import org.nuxeo.runtime.test.runner.Features;
-import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
 /**
  * @since 2025.0
  */
-@RunWith(FeaturesRunner.class)
-@Features({ CoreFeature.class, S3BlobProviderFeature.class })
 @Deploy("org.nuxeo.ecm.core.storage.binarymanager.s3.tests:OSGI-INF/test-blob-provider-s3-record.xml")
-public class TestS3BlobScrollVersioning extends AbstractTestBlobScroll {
-
-    @Override
-    public String getScrollName() {
-        return STORE_SCROLL_NAME;
-    }
+public class TestS3BlobScrollVersioning extends TestS3BlobScroll {
 
 }

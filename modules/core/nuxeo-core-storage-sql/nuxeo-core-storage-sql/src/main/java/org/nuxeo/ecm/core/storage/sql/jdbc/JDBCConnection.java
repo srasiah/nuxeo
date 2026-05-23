@@ -26,6 +26,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.ecm.core.api.ConcurrentUpdateException;
 import org.nuxeo.ecm.core.api.NuxeoException;
+import org.nuxeo.ecm.core.model.Session;
 import org.nuxeo.ecm.core.storage.sql.Mapper.Identification;
 import org.nuxeo.ecm.core.storage.sql.Model;
 import org.nuxeo.ecm.core.storage.sql.jdbc.dialect.Dialect;
@@ -77,6 +78,9 @@ public class JDBCConnection {
 
     protected boolean setClientInfo;
 
+    /** @since 2025.14 */
+    protected boolean sessionPoolReconnectEnabled;
+
     /**
      * Creates a new Mapper.
      *
@@ -88,6 +92,8 @@ public class JDBCConnection {
         this.sqlInfo = sqlInfo;
         dialect = sqlInfo.dialect;
         setClientInfo = Boolean.parseBoolean(Framework.getProperty(SET_CLIENT_INFO_PROP, SET_CLIENT_INFO_DEFAULT));
+        sessionPoolReconnectEnabled = Boolean.parseBoolean(Framework.getProperty(
+                Session.PROP_SESSION_POOL_RECONNECT_ENABLED, Session.PROP_SESSION_POOL_RECONNECT_DEFAULT));
         connect();
     }
 
@@ -125,7 +131,27 @@ public class JDBCConnection {
         return "repository_" + repositoryName;
     }
 
+    /**
+     * Connects to the database.
+     * <p>
+     * When {@code org.nuxeo.session.pool.reconnect.enabled} is true, this closes any existing connection first and gets
+     * a fresh one. This is needed because the previous connection may have been returned to the DBCP pool when the
+     * previous transaction ended (NXP-33457).
+     * <p>
+     * When the property is false, this only gets a connection if there isn't one already (original behavior).
+     */
     public void connect() {
+        if (sessionPoolReconnectEnabled) {
+            // Close any existing connection first - it may be stale from a previous transaction.
+            // We can't rely on isClosed() because DBCP managed connections may not properly
+            // reflect their state after being returned to the pool.
+            closeConnection();
+        } else {
+            // Original behavior: only connect if no connection exists
+            if (connection != null) {
+                return;
+            }
+        }
         try {
             String dataSourceName = getDataSourceName(getRepositoryName());
             connection = ConnectionHelper.getConnection(dataSourceName);

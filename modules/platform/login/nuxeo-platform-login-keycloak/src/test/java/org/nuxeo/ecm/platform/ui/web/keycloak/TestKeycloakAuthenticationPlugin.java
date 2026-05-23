@@ -98,6 +98,7 @@ public class TestKeycloakAuthenticationPlugin {
                 new StringBuffer().append("https://example.com:443/foo/path/to/resource"));
         when(requestMock.getHeaders(anyString())).thenReturn(emptyEnumeration());
         when(requestMock.getScheme()).thenReturn("https");
+        when(requestMock.isSecure()).thenReturn(true);
         when(requestMock.getServerName()).thenReturn("example.com");
         when(requestMock.getServerPort()).thenReturn(443);
         when(requestMock.getContextPath()).thenReturn("/foo");

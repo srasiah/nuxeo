@@ -30,6 +30,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.common.test.configuration.ThirdPartyUnderTest.SystemProperty;
 import org.nuxeo.ecm.core.search.BaseCoreSearchFeature;
+import org.nuxeo.ecm.core.search.SearchClient;
 import org.nuxeo.ecm.core.search.SearchIndexingService;
 import org.nuxeo.ecm.core.search.SearchService;
 import org.nuxeo.ecm.core.search.client.mock.MockSearchClientFeature;
@@ -90,15 +91,16 @@ public class CoreSearchFeature implements RunnerFeature {
      * Returns {@code true} if the implementation is able to drop and initialize the index.
      */
     public boolean dropAndInitIndex() {
-        if (hasMemoryClient() || hasOpenSearchClient()) {
-            var searchService = Framework.getService(SearchService.class);
-            var searchIndex = searchService.getSearchIndex(searchService.getDefaultIndexName());
-            Framework.getService(SearchIndexingService.class)
-                     .getClient(searchIndex.client())
-                     .dropAndInitIndex(searchIndex.index());
-            return true;
+        var searchService = Framework.getService(SearchService.class);
+        var searchIndex = searchService.getSearchIndex(searchService.getDefaultIndexName());
+        if (searchIndex == null) {
+            return false;
         }
-        // no support of index initialization
-        return false;
+        var searchClient = Framework.getService(SearchIndexingService.class).getClient(searchIndex.client());
+        if (searchClient == null || !searchClient.hasCapability(SearchClient.Capability.INIT_INDEX)) {
+            return false;
+        }
+        searchClient.dropAndInitIndex(searchIndex.index());
+        return true;
     }
 }

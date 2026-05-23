@@ -32,13 +32,17 @@ public interface AuditService {
 
     /**
      * @return the event names to write to the audit
+     * @deprecated since 2025.16, no direct replacement see {@link AuditRouter#computeLogEntries(Event)}
      */
+    @Deprecated(since = "2025.16", forRemoval = true)
     Set<String> getAuditableEventNames();
 
     /**
      * @param eventName the event name to write to the audit
      * @return the extended info mappers to apply when writing to the audit
+     * @deprecated since 2025.16, unused
      */
+    @Deprecated(since = "2025.16", forRemoval = true)
     List<ExtendedInfoMapper> getExtendedInfoMappers(String eventName);
 
     /**
@@ -48,7 +52,10 @@ public interface AuditService {
 
     /**
      * Returns a log entry representation of an event.
+     *
+     * @deprecated since 2025.16, use {@link AuditRouter#computeLogEntries(Event)} instead
      */
+    @Deprecated(since = "2025.16", forRemoval = true)
     LogEntry buildEntryFromEvent(Event event);
 
     /**

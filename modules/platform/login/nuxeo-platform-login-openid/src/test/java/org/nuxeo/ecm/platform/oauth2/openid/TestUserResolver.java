@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@
  * Contributors:
  *     Funsho David
  */
-
 package org.nuxeo.ecm.platform.oauth2.openid;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.nuxeo.ecm.platform.oauth2.openid.auth.OpenIDUserInfoStoreImpl.DIRECTORY_NAME;
 
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,7 +37,6 @@ import org.nuxeo.ecm.directory.api.DirectoryService;
 import org.nuxeo.ecm.platform.oauth2.openid.auth.DefaultOpenIDUserInfo;
 import org.nuxeo.ecm.platform.oauth2.openid.auth.EmailBasedUserResolver;
 import org.nuxeo.ecm.platform.oauth2.openid.auth.StoredUserInfoResolver;
-import org.nuxeo.ecm.platform.test.PlatformFeature;
 import org.nuxeo.ecm.platform.usermanager.UserManager;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.api.login.LoginComponent;
@@ -51,10 +48,7 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
  * @since 10.2
  */
 @RunWith(FeaturesRunner.class)
-@Features(PlatformFeature.class)
-@Deploy("org.nuxeo.ecm.platform.login.openid.test:OSGI-INF/openid-connect-provider-registry.xml")
-@Deploy("org.nuxeo.ecm.platform.login.openid.test:OSGI-INF/openid-directory-contrib.xml")
-@Deploy("org.nuxeo.ecm.platform.login.openid.test:OSGI-INF/openid-schema-contrib.xml")
+@Features(OpenIDFeature.class)
 @Deploy("org.nuxeo.ecm.platform.login.openid.test:OSGI-INF/openid-userresolver-contrib.xml")
 public class TestUserResolver {
 
@@ -110,9 +104,9 @@ public class TestUserResolver {
         // Initialize directory
         try (Session session = directoryService.open(DIRECTORY_NAME)) {
             Map<String, Object> infos = new HashMap<>();
-            infos.put("id", "null@null");
+            infos.put("id", "null@provider2");
             infos.put("nuxeoLogin", ADMIN_USERNAME);
-            infos.put("provider", "null");
+            infos.put("provider", "provider2");
             infos.put("email", "devnull@nuxeo.com");
             session.createEntry(infos);
 
@@ -129,8 +123,7 @@ public class TestUserResolver {
                 userInfoResolver.updateUserInfo(doc, info);
 
                 // Assert that the info is updated in the directory
-                doc = Framework.doPrivileged(
-                        () -> session.query(Collections.singletonMap("nuxeoLogin", ADMIN_USERNAME)).get(0));
+                doc = Framework.doPrivileged(() -> session.query(Map.of("nuxeoLogin", ADMIN_USERNAME)).getFirst());
                 assertEquals("test@nuxeo.com", doc.getPropertyValue("openIdUserInfo:email"));
 
             } finally {

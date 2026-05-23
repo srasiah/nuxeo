@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
  *
  * Contributors:
  *     <a href="mailto:grenard@nuxeo.com">Guillaume Renard</a>
- *
  */
-
 package org.nuxeo.ecm.platform.routing.core.io;
 
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
@@ -36,7 +34,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 public class GraphRouteWriter extends ExtensibleEntityJsonWriter<JsonGraphRoute> {
 
     public GraphRouteWriter() {
-        super(ENTITY_TYPE, JsonGraphRoute.class);
+        super(ENTITY_TYPE);
     }
 
     public static final String ENTITY_TYPE = "graph";

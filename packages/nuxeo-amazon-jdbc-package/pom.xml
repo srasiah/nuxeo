@@ -1,0 +1,63 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.nuxeo.packages</groupId>
+    <artifactId>nuxeo-packages</artifactId>
+    <version>2025.16-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>nuxeo-amazon-jdbc-package</artifactId>
+  <packaging>zip</packaging>
+  <name>Nuxeo Amazon JDBC Package</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>software.amazon.jdbc</groupId>
+      <artifactId>aws-advanced-jdbc-wrapper</artifactId>
+    </dependency>
+    <!-- Dependencies for AWS JDBC Wrapper Plugins -->
+    <!--   AWS Secrets Manager Authentication Connection -->
+    <!--   Federated Authentication -->
+    <!--   Okta Authentication Connection -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <!-- Dependencies for AWS JDBC Wrapper Plugins -->
+    <!--   IAM Authentication Connection -->
+    <!--   Federated Authentication -->
+    <!--   Okta Authentication Connection -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>rds</artifactId>
+    </dependency>
+    <!-- Dependencies for AWS JDBC Wrapper Plugins -->
+    <!--   AWS Secrets Manager Authentication Connection -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>secretsmanager</artifactId>
+    </dependency>
+    <!-- Dependencies for AWS JDBC Wrapper Plugins -->
+    <!--   Federated Authentication -->
+    <!--   Okta Authentication Connection -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>sts</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.nuxeo.build</groupId>
+        <artifactId>ant-assembly-maven-plugin</artifactId>
+        <configuration>
+          <buildFiles>
+            <buildFile>${basedir}/src/main/assemble/assembly.xml</buildFile>
+          </buildFiles>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

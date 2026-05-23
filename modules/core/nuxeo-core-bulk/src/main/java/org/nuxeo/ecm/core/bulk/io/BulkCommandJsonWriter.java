@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 public class BulkCommandJsonWriter extends ExtensibleEntityJsonWriter<BulkCommand> {
 
     public BulkCommandJsonWriter() {
-        super(COMMAND_ENTITY_TYPE, BulkCommand.class);
+        super(COMMAND_ENTITY_TYPE);
     }
 
     @Override

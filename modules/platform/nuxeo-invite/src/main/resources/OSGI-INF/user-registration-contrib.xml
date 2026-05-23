@@ -45,10 +45,12 @@
     </configuration>
   </extension>
 
-  <extension target="org.nuxeo.audit.service.AuditComponent" point="event">
-    <event name="registrationSubmitted"/>
-    <event name="registrationAccepted"/>
-    <event name="registrationValidated"/>
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
+    <route name="default">
+      <event name="registrationSubmitted"/>
+      <event name="registrationAccepted"/>
+      <event name="registrationValidated"/>
+    </route>
   </extension>
 
 </component>

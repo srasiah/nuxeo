@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,7 +122,7 @@ public class AutomationResource extends ModuleRoot {
         }
         try {
             OperationType op = service.getOperation(oid);
-            return newObject("operation", op);
+            return newObject(OperationResource.class, op);
         } catch (OperationNotFoundException cause) {
             return new WebResourceNotFoundException("Failed to invoke operation: " + oid, cause);
         }

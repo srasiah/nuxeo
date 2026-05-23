@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,10 @@ public class GroupRootObject extends AbstractUMRootObject<NuxeoGroup> {
      */
     public static final String RESTRICT_ADMINISTRATORS_MEMBERS_PROP = "nuxeo.group.administrators.members.resticted";
 
+    public GroupRootObject() {
+        super(GroupObject.class);
+    }
+
     @Override
     protected NuxeoGroup getArtifact(String id) {
         var group = um.getGroup(id);
@@ -60,6 +64,8 @@ public class GroupRootObject extends AbstractUMRootObject<NuxeoGroup> {
     }
 
     @Override
+    @SuppressWarnings("removal")
+    @Deprecated(since = "2025.14", forRemoval = true)
     protected String getArtifactType() {
         return "group";
     }

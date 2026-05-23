@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 
 import org.nuxeo.ecm.core.api.DocumentModel;
-import org.nuxeo.ecm.webengine.model.Resource;
 import org.nuxeo.ecm.webengine.model.WebAdapter;
 import org.nuxeo.ecm.webengine.model.impl.DefaultAdapter;
 
@@ -39,9 +38,9 @@ public class BlobAdapter extends DefaultAdapter {
     protected DocumentModel doc;
 
     @Path("{fieldPath:((?:(?!/@).)*)}")
-    public Resource doGet(@PathParam("fieldPath") String fieldPath) {
+    public BlobObject doGet(@PathParam("fieldPath") String fieldPath) {
         doc = getTarget().getAdapter(DocumentModel.class);
-        return newObject("blob", fieldPath, doc);
+        return newObject(BlobObject.class, fieldPath, doc);
     }
 
 }

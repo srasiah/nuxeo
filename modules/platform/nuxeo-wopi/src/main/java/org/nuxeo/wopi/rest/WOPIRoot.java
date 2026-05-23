@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Thomas Roger
  */
-
 package org.nuxeo.wopi.rest;
 
 import static org.nuxeo.wopi.Constants.WOPI_BASE_URL_PROPERTY;
@@ -67,7 +66,7 @@ public class WOPIRoot extends ModuleRoot {
     protected HttpHeaders httpHeaders;
 
     @Path("/files/{fileId}")
-    public Object filesResource(@PathParam("fileId") FileInfo fileInfo) {
+    public FilesEndpoint filesResource(@PathParam("fileId") FileInfo fileInfo) {
         // prefix thread name for logging purpose
         return prefixThreadName(() -> {
             // verify proof key
@@ -82,7 +81,7 @@ public class WOPIRoot extends ModuleRoot {
             CoreSession session = context.getCoreSession();
             DocumentModel doc = getDocument(session, fileInfo.docId);
             Blob blob = getBlob(doc, fileInfo.xpath);
-            return newObject("wopiFiles", session, doc, blob, fileInfo.xpath);
+            return newObject(FilesEndpoint.class, session, doc, blob, fileInfo.xpath);
         });
     }
 

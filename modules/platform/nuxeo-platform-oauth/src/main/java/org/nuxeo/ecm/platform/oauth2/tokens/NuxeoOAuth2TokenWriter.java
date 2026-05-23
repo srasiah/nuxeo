@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
  */
 package org.nuxeo.ecm.platform.oauth2.tokens;
 
+import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
 import static org.nuxeo.ecm.core.io.registry.reflect.Priorities.REFERENCE;
 
@@ -41,7 +42,7 @@ public class NuxeoOAuth2TokenWriter extends ExtensibleEntityJsonWriter<NuxeoOAut
     public static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
     public NuxeoOAuth2TokenWriter() {
-        super(ENTITY_TYPE, NuxeoOAuth2Token.class);
+        super(ENTITY_TYPE);
     }
 
     @Override
@@ -52,8 +53,7 @@ public class NuxeoOAuth2TokenWriter extends ExtensibleEntityJsonWriter<NuxeoOAut
         jg.writeStringField("clientId", token.getClientId());
         jg.writeBooleanField("isShared", token.isShared());
         jg.writeArrayFieldStart("sharedWith");
-        String sharedWithStr = token.getSharedWith();
-        String[] sharedWith = sharedWithStr == null ? new String[0] : token.getSharedWith().split(",");
+        String[] sharedWith = defaultString(token.getSharedWith()).split(",");
         for (String user : sharedWith) {
             jg.writeString(user.trim());
         }

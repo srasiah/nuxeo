@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
  * Contributors:
  *     Funsho David
  */
-
 package org.nuxeo.ecm.automation.core.operations.services.bulk.validation;
 
 import static org.nuxeo.ecm.automation.core.operations.services.bulk.AutomationBulkAction.ACTION_NAME;
 import static org.nuxeo.ecm.automation.core.operations.services.bulk.AutomationBulkAction.OPERATION_ID;
 import static org.nuxeo.ecm.automation.core.operations.services.bulk.AutomationBulkAction.OPERATION_PARAMETERS;
+
 import java.util.ArrayList;
 
 import org.junit.Test;
@@ -50,16 +50,13 @@ public class TestAutomationBulkValidation extends AbstractTestBulkActionValidati
         String query = "SELECT * FROM Document";
         String repository = "test";
         String user = "test";
-        BulkCommand command = createBuilder(ACTION_NAME, query, repository, user).param(OPERATION_ID, "fake")
-                                                                                 .build();
+        BulkCommand command = createBuilder(ACTION_NAME, query, repository, user).param(OPERATION_ID, "fake").build();
         assertInvalidCommand(command, "Unknown operation id fake in command: " + command);
 
-        command = createBuilder(ACTION_NAME, query, repository, user).param(OPERATION_ID, new ArrayList<>())
-                                                                     .build();
+        command = createBuilder(ACTION_NAME, query, repository, user).param(OPERATION_ID, new ArrayList<>()).build();
         assertInvalidCommand(command, "Invalid " + OPERATION_ID + " in command: " + command);
 
-        command = createBuilder(ACTION_NAME, query, repository, user).param(OPERATION_PARAMETERS, false)
-                                                                     .build();
+        command = createBuilder(ACTION_NAME, query, repository, user).param(OPERATION_PARAMETERS, false).build();
         assertInvalidCommand(command, "Invalid " + OPERATION_PARAMETERS + " in command: " + command);
     }
 

@@ -18,6 +18,11 @@
  */
 package org.nuxeo.ecm.blob;
 
+import static org.nuxeo.ecm.core.blob.BlobProviderDescriptor.RECORD;
+import static org.nuxeo.ecm.core.blob.BlobStoreBlobProvider.DIGEST_KEY_STRATEGY;
+import static org.nuxeo.ecm.core.blob.BlobStoreBlobProvider.KEY_STRATEGY_PROPERTY;
+import static org.nuxeo.ecm.core.blob.BlobStoreBlobProvider.MANAGED_KEY_STRATEGY;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -25,6 +30,10 @@ import org.nuxeo.ecm.core.blob.AbstractBlobStoreConfiguration;
 import org.nuxeo.ecm.core.blob.BlobProviderDescriptor;
 import org.nuxeo.ecm.core.blob.CachingConfiguration;
 import org.nuxeo.ecm.core.blob.DigestConfiguration;
+import org.nuxeo.ecm.core.blob.KeyStrategy;
+import org.nuxeo.ecm.core.blob.KeyStrategyDigest;
+import org.nuxeo.ecm.core.blob.KeyStrategyDocId;
+import org.nuxeo.ecm.core.blob.KeyStrategyManaged;
 
 /**
  * Abstract blob store configuration for cloud providers.
@@ -57,12 +66,16 @@ public abstract class CloudBlobStoreConfiguration extends AbstractBlobStoreConfi
 
     public final long directDownloadExpire;
 
+    protected final KeyStrategy keyStrategy;
+
     /**
      * Is Object Lock/Hold feature enabled by the storage.
      *
      * @since 2025.8
      */
     public boolean retentionEnabled;
+
+    protected Boolean useVersion;
 
     public CloudBlobStoreConfiguration(String systemPropertyPrefix, Map<String, String> properties) throws IOException {
         super(systemPropertyPrefix, properties);
@@ -72,7 +85,42 @@ public abstract class CloudBlobStoreConfiguration extends AbstractBlobStoreConfi
 
         directDownload = parseDirectDownload();
         directDownloadExpire = parseDirectDownloadExpire();
+
+        boolean hasDigest = properties.get(DIGEST_ALGORITHM_PROPERTY) != null;
+        if (Boolean.parseBoolean(properties.get(RECORD)) && !hasDigest) {
+            keyStrategy = KeyStrategyDocId.instance();
+        } else {
+            String strKeyStrategy = properties.getOrDefault(KEY_STRATEGY_PROPERTY, DIGEST_KEY_STRATEGY);
+            var tmpKeyStrategy = new KeyStrategyDigest(digestConfiguration.digestAlgorithm);
+            if (MANAGED_KEY_STRATEGY.equals(strKeyStrategy)) {
+                keyStrategy = new KeyStrategyManaged(tmpKeyStrategy);
+            } else {
+                keyStrategy = tmpKeyStrategy;
+            }
+        }
     }
+
+    /**
+     * @since 2025.15
+     */
+    public KeyStrategy getKeyStrategy() {
+        return keyStrategy;
+    }
+
+    /**
+     * @since 2025.15
+     */
+    public boolean useVersion() {
+        if (useVersion == null) {
+            useVersion = keyStrategy instanceof KeyStrategyDocId && isVersioningEnabled();
+        }
+        return useVersion;
+    }
+
+    /**
+     * @since 2025.15
+     */
+    protected abstract boolean isVersioningEnabled();
 
     protected boolean parseDirectDownload() {
         return Boolean.parseBoolean(getProperty(BlobProviderDescriptor.DIRECTDOWNLOAD_PROPERTY));

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2019-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,19 +17,25 @@
  *     Thomas Roger
  *     Nour Al Kotob
  */
-
 package org.nuxeo.ecm.restapi.server.management;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.nuxeo.common.utils.ReflectUtils.downgradeCast;
+
+import java.util.List;
 
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 
+import org.nuxeo.connect.packages.PackageManager;
+import org.nuxeo.connect.update.Package;
 import org.nuxeo.ecm.admin.runtime.RuntimeInstrospection;
 import org.nuxeo.ecm.admin.runtime.SimplifiedServerInfo;
 import org.nuxeo.ecm.webengine.model.WebObject;
 import org.nuxeo.ecm.webengine.model.impl.AbstractResource;
 import org.nuxeo.ecm.webengine.model.impl.ResourceTypeImpl;
+import org.nuxeo.runtime.api.Framework;
 
 /**
  * @since 11.3
@@ -38,9 +44,21 @@ import org.nuxeo.ecm.webengine.model.impl.ResourceTypeImpl;
 @Produces(APPLICATION_JSON)
 public class DistributionObject extends AbstractResource<ResourceTypeImpl> {
 
+    protected PackageManager pm;
+
+    @Override
+    protected void initialize(Object... args) {
+        this.pm = Framework.getService(PackageManager.class);
+    }
+
     @GET
     public SimplifiedServerInfo doGet() {
         return RuntimeInstrospection.getInfo();
     }
 
+    @GET
+    @Path("/packages")
+    public List<Package> doGetPackages() {
+        return downgradeCast(pm.listInstalledPackages());
+    }
 }

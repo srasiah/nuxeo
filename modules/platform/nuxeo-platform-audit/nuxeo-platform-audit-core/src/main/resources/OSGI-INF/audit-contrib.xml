@@ -5,107 +5,90 @@
     <backend name="default" factory="${nuxeo.audit.backend.default.factory:=}" />
   </extension>
 
-  <extension target="org.nuxeo.audit.service.AuditComponent" point="event">
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
     <documentation>
       Those default auditable events match Nuxeo core base events.
       <p />
       If you are sending new Nuxeo core events and want them audited, this is the place to declare them NXAudit side.
     </documentation>
 
-    <!-- login events -->
-    <event name="loginSuccess" />
-    <event name="loginFailed" />
-    <event name="logout" />
-    <!-- document event -->
-    <event name="documentCreated" />
-    <event name="documentCreatedByCopy" />
-    <event name="documentDuplicated" />
-    <event name="documentMoved" />
-    <event name="documentRemoved" />
-    <event name="documentModified" />
-    <event name="documentLocked" />
-    <event name="documentUnlocked" />
-    <event name="documentSecurityUpdated" />
-    <event name="lifecycle_transition_event" />
-    <event name="documentCheckedIn" />
-    <event name="proxyRemoved" />
-    <event name="versionRemoved" />
-    <event name="documentProxyPublished" />
-    <event name="sectionContentPublished" />
-    <event name="documentRestored" />
-    <event name="download" />
-    <event name="documentTrashed" />
-    <event name="documentUntrashed" />
-    <event name="addedToCollection" />
-    <event name="removedFromCollection" />
-    <!-- blob events -->
-    <event name="blobDigestUpdated">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.oldKey}" key="oldKey" />
-        <extendedInfo expression="${message.properties.oldDigest}" key="oldDigest" />
-        <extendedInfo expression="${message.properties.newKey}" key="newKey" />
-        <extendedInfo expression="${message.properties.newDigest}" key="newDigest" />
-      </extendedInfos>
-    </event>
-    <!-- retention events -->
-    <event name="retentionActiveChanged">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.retentionActive}" key="retentionActive" />
-      </extendedInfos>
-    </event>
-    <event name="afterMakeRecord" />
-    <event name="afterSetRetention" />
-    <event name="afterExtendRetention" />
-    <event name="retentionExpired" />
-    <event name="afterSetLegalHold" />
-    <event name="afterRemoveLegalHold" />
-    <!-- user and group events -->
-    <event name="user_created">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.id}" key="id" />
-      </extendedInfos>
-    </event>
-    <event name="user_deleted">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.id}" key="id" />
-      </extendedInfos>
-    </event>
-    <event name="user_modified">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.id}" key="id" />
-      </extendedInfos>
-    </event>
-    <event name="group_created">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.id}" key="id" />
-      </extendedInfos>
-    </event>
-    <event name="group_deleted">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.id}" key="id" />
-      </extendedInfos>
-    </event>
-    <event name="group_modified">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.id}" key="id" />
-      </extendedInfos>
-    </event>
-    <event name="search">
-      <extendedInfos>
-        <extendedInfo expression="${message.properties.searchDocumentModelAsJson}" key="searchDocumentModel" />
-        <extendedInfo expression="${message.properties.aggregates}" key="aggregates" />
-        <extendedInfo expression="${message.properties.aggregatesMatches}" key="aggregatesMatches" />
-        <extendedInfo expression="${message.properties.effectiveQuery}" key="effectiveQuery" />
-        <extendedInfo expression="${message.properties.pageIndex}" key="pageIndex" />
-        <extendedInfo expression="${message.properties.resultsCountInPage}" key="resultsCountInPage" />
-        <extendedInfo expression="${message.properties.resultsCount}" key="resultsCount" />
-        <extendedInfo expression="${message.properties.pageProviderName}" key="pageProviderName" />
-        <extendedInfo expression="${message.properties.queryParams}" key="queryParams" />
-        <extendedInfo expression="${message.properties.params}" key="params" />
-        <extendedInfo expression="${message.properties.executionTimeMs}" key="executionTimeMs" />
-        <extendedInfo expression="${message.properties.searchFields}" key="searchFields" />
-      </extendedInfos>
-    </event>
+    <route name="default">
+      <backend name="default" />
+      <!-- login events -->
+      <event name="loginSuccess" />
+      <event name="loginFailed" />
+      <event name="logout" />
+      <!-- document event -->
+      <event name="documentCreated" />
+      <event name="documentCreatedByCopy" />
+      <event name="documentDuplicated" />
+      <event name="documentMoved" />
+      <event name="documentRemoved" />
+      <event name="documentModified" />
+      <event name="documentLocked" />
+      <event name="documentUnlocked" />
+      <event name="documentSecurityUpdated" />
+      <event name="lifecycle_transition_event" />
+      <event name="documentCheckedIn" />
+      <event name="proxyRemoved" />
+      <event name="versionRemoved" />
+      <event name="documentProxyPublished" />
+      <event name="sectionContentPublished" />
+      <event name="documentRestored" />
+      <event name="download" />
+      <event name="documentTrashed" />
+      <event name="documentUntrashed" />
+      <event name="addedToCollection" />
+      <event name="removedFromCollection" />
+      <!-- blob events -->
+      <event name="blobDigestUpdated" />
+      <!-- retention events -->
+      <event name="retentionActiveChanged" />
+      <event name="afterMakeRecord" />
+      <event name="afterSetRetention" />
+      <event name="afterExtendRetention" />
+      <event name="retentionExpired" />
+      <event name="afterSetLegalHold" />
+      <event name="afterRemoveLegalHold" />
+      <!-- user and group events -->
+      <event name="user_created" />
+      <event name="user_deleted" />
+      <event name="user_modified" />
+      <event name="group_created" />
+      <event name="group_deleted" />
+      <event name="group_modified" />
+      <event name="search" />
+    </route>
+  </extension>
+
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="extendedInfo">
+    <extendedInfo event="blobDigestUpdated" key="oldKey" expression="${message.properties.oldKey}" />
+    <extendedInfo event="blobDigestUpdated" key="oldDigest" expression="${message.properties.oldDigest}" />
+    <extendedInfo event="blobDigestUpdated" key="newKey" expression="${message.properties.newKey}" />
+    <extendedInfo event="blobDigestUpdated" key="newDigest" expression="${message.properties.newDigest}" />
+
+    <extendedInfo event="retentionActiveChanged" key="retentionActive" expression="${message.properties.retentionActive}" />
+
+    <extendedInfo event="user_created" key="id" expression="${message.properties.id}" />
+    <extendedInfo event="user_deleted" key="id" expression="${message.properties.id}" />
+    <extendedInfo event="user_modified" key="id" expression="${message.properties.id}" />
+
+    <extendedInfo event="group_created" key="id" expression="${message.properties.id}" />
+    <extendedInfo event="group_deleted" key="id" expression="${message.properties.id}" />
+    <extendedInfo event="group_modified" key="id" expression="${message.properties.id}" />
+
+    <extendedInfo event="search" key="searchDocumentModel" expression="${message.properties.searchDocumentModelAsJson}" />
+    <extendedInfo event="search" key="aggregates" expression="${message.properties.aggregates}" />
+    <extendedInfo event="search" key="aggregatesMatches" expression="${message.properties.aggregatesMatches}" />
+    <extendedInfo event="search" key="effectiveQuery" expression="${message.properties.effectiveQuery}" />
+    <extendedInfo event="search" key="pageIndex" expression="${message.properties.pageIndex}" />
+    <extendedInfo event="search" key="resultsCountInPage" expression="${message.properties.resultsCountInPage}" />
+    <extendedInfo event="search" key="resultsCount" expression="${message.properties.resultsCount}" />
+    <extendedInfo event="search" key="pageProviderName" expression="${message.properties.pageProviderName}" />
+    <extendedInfo event="search" key="queryParams" expression="${message.properties.queryParams}" />
+    <extendedInfo event="search" key="params" expression="${message.properties.params}" />
+    <extendedInfo event="search" key="executionTimeMs" expression="${message.properties.executionTimeMs}" />
+    <extendedInfo event="search" key="searchFields" expression="${message.properties.searchFields}" />
   </extension>
 
 </component>

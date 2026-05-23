@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.audit.api.LogEntry;
-import org.nuxeo.audit.service.AuditService;
+import org.nuxeo.audit.service.AuditRouter;
 import org.nuxeo.ecm.core.event.Event;
 import org.nuxeo.ecm.core.event.stream.DomainEventProducer;
 import org.nuxeo.lib.stream.codec.Codec;
@@ -62,16 +62,14 @@ public class AuditDomainEventProducer extends DomainEventProducer {
 
     @Override
     public void addEvent(Event event) {
-        var auditService = Framework.getService(AuditService.class);
         if (event == null) {
             return;
         }
-        if (auditService.getAuditableEventNames().contains(event.getName())) {
-            LogEntry entry = auditService.buildEntryFromEvent(event);
-            if (entry != null) {
-                records.add(buildRecordFromEvent(entry));
-            }
-        }
+        Framework.getService(AuditRouter.class)
+                 .computeLogEntries(event)
+                 .stream()
+                 .map(this::buildRecordFromEvent)
+                 .forEach(records::add);
     }
 
     protected Record buildRecordFromEvent(LogEntry entry) {

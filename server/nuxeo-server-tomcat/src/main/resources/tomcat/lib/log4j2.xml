@@ -236,6 +236,9 @@
     <!-- Hide warning from KAFKA-17141 to be removed once fixed (Kafka 3.9.0) -->
     <Logger name="org.apache.kafka.clients.admin.KafkaAdminClient" level="error" />
 
+    <!-- Hide error from freemarker to not log inline template rendering issues -->
+    <Logger name="freemarker.runtime" level="fatal" />
+
     <Logger name="org.hibernate" level="warn" />
     <Logger name="net.sf.ehcache.hibernate.EhCacheProvider" level="error" />
     <Logger name="org.hibernate.hql.internal.ast.tree.FromElementType" level="error" />

@@ -107,6 +107,10 @@ public interface SearchClient extends AutoCloseable {
     void close();
 
     enum Capability {
-        INDEXING, HIGHLIGHT, AGGREGATE, MULTI_REPOSITORIES
+        INIT_INDEX, // The search client can initialize the index configuration @since 2025.16
+        INDEXING, // The search client handles indexing of document
+        AGGREGATE, // Search with aggregate supported
+        HIGHLIGHT, // Search with highlight supported
+        MULTI_REPOSITORIES // Search on multiple repositories supported
     }
 }

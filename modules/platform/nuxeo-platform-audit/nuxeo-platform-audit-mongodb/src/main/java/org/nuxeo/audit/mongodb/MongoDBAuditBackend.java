@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -52,7 +53,6 @@ import org.nuxeo.ecm.core.io.registry.context.RenderingContext;
 import org.nuxeo.ecm.core.query.sql.model.QueryBuilder;
 import org.nuxeo.ecm.core.storage.mongodb.query.MongoDBQuerySearchBuilder;
 import org.nuxeo.ecm.core.storage.mongodb.query.MongoDBSearchConverter;
-import org.nuxeo.ecm.core.uidgen.UIDGeneratorService;
 import org.nuxeo.ecm.core.uidgen.UIDSequencer;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.runtime.api.Framework;
@@ -200,18 +200,15 @@ public class MongoDBAuditBackend extends AbstractAuditBackend {
     }
 
     @Override
-    public void addLogEntries(List<LogEntry> entries) {
+    public void insertLogs(Collection<LogEntry> entries) {
         if (entries.isEmpty()) {
             return;
         }
-
-        UIDGeneratorService uidGeneratorService = Framework.getService(UIDGeneratorService.class);
-        UIDSequencer seq = uidGeneratorService.getSequencer();
-
         List<Document> documents = new ArrayList<>(entries.size());
-        List<Long> block = seq.getNextBlock(SEQ_NAME, entries.size());
-        for (int i = 0; i < entries.size(); i++) {
-            LogEntry entry = entries.get(i).builder().id(block.get(i)).logDate(new Date()).build();
+        for (var entry : entries) {
+            if (entry.getId() == 0L || entry.getLogDate() == null) {
+                throw new IllegalArgumentException("Log entry must have an id and log date to be inserted");
+            }
             log.debug("Indexing log entry Id: {}, with logDate : {}, for docUUID: {}", entry.getId(),
                     entry.getLogDate(), entry.getDocUUID());
             documents.add(MongoDBAuditEntryWriter.asDocument(entry));

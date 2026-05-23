@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ public class MigrationJsonWriter extends ExtensibleEntityJsonWriter<Migration> {
     public static final String ENTITY_TYPE = "migration";
 
     public MigrationJsonWriter() {
-        super(ENTITY_TYPE, Migration.class);
+        super(ENTITY_TYPE);
     }
 
     @Override

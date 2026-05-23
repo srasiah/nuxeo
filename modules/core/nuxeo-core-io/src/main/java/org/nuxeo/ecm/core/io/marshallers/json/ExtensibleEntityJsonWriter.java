@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
@@ -32,6 +31,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.reflect.TypeUtils;
+import org.nuxeo.common.utils.ReflectUtils;
 import org.nuxeo.ecm.core.io.marshallers.json.enrichers.Enriched;
 import org.nuxeo.ecm.core.io.registry.MarshallerRegistry;
 import org.nuxeo.ecm.core.io.registry.Writer;
@@ -64,9 +64,21 @@ public abstract class ExtensibleEntityJsonWriter<EntityType> extends AbstractJso
     private final Type genericType;
 
     /**
+     * @param entityType the "entity-type" Json property value
+     */
+    public ExtensibleEntityJsonWriter(String entityType) {
+        super();
+        this.entityType = entityType;
+        genericType = TypeUtils.parameterize(Enriched.class,
+                ReflectUtils.retrieveFirstParameterType(getClass(), ExtensibleEntityJsonWriter.class));
+    }
+
+    /**
      * @param entityType The "entity-type" Json property value.
      * @param entityClass The entity type.
+     * @deprecated since 2025.14, use {@link #ExtensibleEntityJsonWriter(String)} instead
      */
+    @Deprecated(since = "2025.14", forRemoval = true)
     public ExtensibleEntityJsonWriter(String entityType, Class<EntityType> entityClass) {
         super();
         this.entityType = entityType;
@@ -86,12 +98,12 @@ public abstract class ExtensibleEntityJsonWriter<EntityType> extends AbstractJso
         try {
             WrappedContext wrappedCtx = ctx.wrap().controlDepth();
             Set<String> enrichers = ctx.getEnrichers(entityType);
-            if (enrichers.size() > 0) {
+            if (!enrichers.isEmpty()) {
                 boolean hasEnrichers = false;
                 Enriched<EntityType> enriched = null;
                 for (String enricherName : enrichers) {
                     span.addAnnotation("json#write " + entityType + ".enricher." + enricherName);
-                    try (Closeable resource = wrappedCtx.with(ENTITY_ENRICHER_NAME, enricherName).open()) {
+                    try (Closeable ignored = wrappedCtx.with(ENTITY_ENRICHER_NAME, enricherName).open()) {
                         @SuppressWarnings("rawtypes")
                         Collection<Writer<Enriched>> writers = registry.getAllWriters(ctx, Enriched.class,
                                 this.genericType, APPLICATION_JSON_TYPE);

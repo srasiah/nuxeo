@@ -19,6 +19,7 @@
 package org.nuxeo.audit.sql;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,8 +57,13 @@ public class SQLAuditBackend extends AbstractAuditBackend {
     }
 
     @Override
-    public void addLogEntries(List<LogEntry> entries) {
-        backend.addLogEntries(entries.stream().map(TO_LOG_ENTRY_SQL_MAPPER).collect(Collectors.toList()));
+    public void insertLogs(Collection<LogEntry> entries) {
+        backend.addLogEntries(entries.stream()
+                                     // clear id and log date, this backend won't have full multi backend support
+                                     .map(entry -> entry.builder().id(null).logDate(null).build())
+                                     // map to deprecated LogEntry implementation
+                                     .map(TO_LOG_ENTRY_SQL_MAPPER)
+                                     .collect(Collectors.toList()));
     }
 
     @Override

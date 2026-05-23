@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Kevin Leturc <kleturc@nuxeo.com>
  */
-
 package org.nuxeo.ecm.restapi.io.capabilities;
 
 import static org.nuxeo.common.function.ThrowableBiConsumer.asBiConsumer;
@@ -40,7 +39,7 @@ public class CapabilitiesJsonWriter extends ExtensibleEntityJsonWriter<Capabilit
     public static final String ENTITY_TYPE = "capabilities";
 
     public CapabilitiesJsonWriter() {
-        super(ENTITY_TYPE, Capabilities.class);
+        super(ENTITY_TYPE);
     }
 
     @Override

@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.audit.test.multi.route.several.matching">
+
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
+    <route name="default">
+      <backend name="default" />
+      <event name="commonEvent" />
+      <event name="twiceSameBackendEvent" />
+    </route>
+    <route name="other">
+      <backend name="other" />
+      <event name="commonEvent" />
+    </route>
+    <route name="twice-with-default">
+      <backend name="default" />
+      <event name="twiceSameBackendEvent" />
+    </route>
+  </extension>
+
+</component>

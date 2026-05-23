@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ package org.nuxeo.ecm.automation.core.test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,6 +37,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.audit.test.AuditFeature;
 import org.nuxeo.ecm.automation.AutomationService;
 import org.nuxeo.ecm.automation.OperationContext;
@@ -100,7 +102,7 @@ public class TestDocumentAuditPageProviderOperation {
 
         @Override
         public void populate(CoreSession session) {
-            var auditBackend = Framework.getService(AuditBackend.class);
+            var auditBackend = Framework.getService(AuditService.class).getAuditBackend(DEFAULT_AUDIT_BACKEND);
 
             DocumentModel section = session.createDocumentModel("/", "section", "Folder");
             section = session.createDocument(section);
@@ -299,7 +301,7 @@ public class TestDocumentAuditPageProviderOperation {
 
         var entries = (List<LogEntry>) service.run(ctx, AuditPageProviderOperation.ID, params);
 
-        long lastId = entries.get(entries.size() - 1).getId();
+        long lastId = entries.getLast().getId();
 
         Properties namedParams = new Properties();
         namedParams.put("bas:logId", "" + lastId);
@@ -307,7 +309,7 @@ public class TestDocumentAuditPageProviderOperation {
 
         entries = (List<LogEntry>) service.run(ctx, AuditPageProviderOperation.ID, params);
 
-        assertEquals(lastId + 1, entries.get(0).getId());
+        assertEquals(lastId + 1, entries.getFirst().getId());
     }
 
 }

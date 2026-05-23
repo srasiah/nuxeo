@@ -30,6 +30,8 @@ import java.net.URL;
 import org.nuxeo.ecm.blob.AbstractCloudBlobProviderFeature;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.blob.BlobManagerFeature;
+import org.nuxeo.ecm.core.blob.DocumentBlobManagerFeature;
+import org.nuxeo.ecm.core.bulk.CoreBulkFeature;
 import org.nuxeo.runtime.model.URLStreamRef;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -67,7 +69,7 @@ import org.osgi.framework.Bundle;
  *
  * @since 2021.12
  */
-@Features(BlobManagerFeature.class)
+@Features({ BlobManagerFeature.class, CoreBulkFeature.class, DocumentBlobManagerFeature.class })
 @Deploy("org.nuxeo.ecm.core.storage.binarymanager.s3")
 @Deploy("org.nuxeo.ecm.core.storage.binarymanager.s3.tests")
 public class S3BlobProviderFeature extends AbstractCloudBlobProviderFeature {

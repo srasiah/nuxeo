@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.audit.test.multi.route.basic.other">
+
+  <extension target="org.nuxeo.audit.service.AuditComponent" point="routes">
+    <route name="other">
+      <backend name="other" />
+      <event name="otherEvent" />
+    </route>
+  </extension>
+
+</component>

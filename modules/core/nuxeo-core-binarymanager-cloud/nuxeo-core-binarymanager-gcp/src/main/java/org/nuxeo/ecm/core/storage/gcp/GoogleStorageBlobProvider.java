@@ -27,7 +27,6 @@ import org.nuxeo.ecm.blob.CloudBlobProvider;
 import org.nuxeo.ecm.core.blob.BlobStore;
 import org.nuxeo.ecm.core.blob.CachingBlobStore;
 import org.nuxeo.ecm.core.blob.CachingConfiguration;
-import org.nuxeo.ecm.core.blob.DigestConfiguration;
 import org.nuxeo.ecm.core.blob.KeyStrategy;
 import org.nuxeo.ecm.core.blob.KeyStrategyDigest;
 import org.nuxeo.ecm.core.blob.TransactionalBlobStore;
@@ -45,8 +44,6 @@ public class GoogleStorageBlobProvider extends CloudBlobProvider<GoogleStorageBl
 
     public static final String STORE_SCROLL_NAME = "googleStorageBlobScroll";
 
-    protected DigestConfiguration digestConfiguration;
-
     @Override
     public void close() {
         // Do nothing
@@ -54,7 +51,6 @@ public class GoogleStorageBlobProvider extends CloudBlobProvider<GoogleStorageBl
 
     @Override
     protected BlobStore getBlobStore(String blobProviderId, Map<String, String> properties) throws IOException {
-        digestConfiguration = new DigestConfiguration(SYSTEM_PROPERTY_PREFIX, properties);
         KeyStrategy keyStrategy = getKeyStrategy();
         BlobStore store = new GoogleStorageBlobStore(blobProviderId, "googleStorage", config, keyStrategy);
         boolean caching = !config.getBooleanProperty("nocache");
@@ -82,11 +78,6 @@ public class GoogleStorageBlobProvider extends CloudBlobProvider<GoogleStorageBl
             store = new TransactionalBlobStore(blobProviderId, store, transientStore);
         }
         return store;
-    }
-
-    @Override
-    protected String getDigestAlgorithm() {
-        return digestConfiguration.digestAlgorithm;
     }
 
     @Override

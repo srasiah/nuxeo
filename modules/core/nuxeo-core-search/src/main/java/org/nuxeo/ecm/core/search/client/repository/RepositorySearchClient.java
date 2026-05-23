@@ -72,12 +72,7 @@ public class RepositorySearchClient extends AbstractSearchClient {
     @Override
     public boolean hasCapability(Capability capability) {
         return switch (capability) {
-            // not needed
-            case INDEXING -> false;
-            // not supported
-            case HIGHLIGHT -> false;
-            case AGGREGATE -> false;
-            case MULTI_REPOSITORIES -> false;
+            default -> false;
         };
     }
 

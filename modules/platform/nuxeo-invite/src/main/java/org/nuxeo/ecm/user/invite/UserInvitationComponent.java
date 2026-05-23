@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2011-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2011-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,10 +12,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  * Contributors:
- * Nuxeo - initial API and implementation
+ *     Nuxeo - initial API and implementation
  */
-
 package org.nuxeo.ecm.user.invite;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -24,11 +24,8 @@ import static org.nuxeo.ecm.user.invite.RegistrationRules.FIELD_CONFIGURATION_NA
 import static org.nuxeo.ecm.user.invite.UserInvitationService.ValidationMethod.EMAIL;
 import static org.nuxeo.ecm.user.invite.UserRegistrationConfiguration.DEFAULT_CONFIGURATION_NAME;
 
-import java.io.IOException;
 import java.io.Serializable;
-import java.io.StringReader;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +34,7 @@ import java.util.Set;
 import jakarta.mail.MessagingException;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.ecm.core.api.CoreSession;
@@ -69,10 +67,6 @@ import org.nuxeo.mail.MailService;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.ComponentInstance;
 import org.nuxeo.runtime.model.DefaultComponent;
-
-import freemarker.template.Configuration;
-import freemarker.template.Template;
-import freemarker.template.TemplateException;
 
 public class UserInvitationComponent extends DefaultComponent implements UserInvitationService {
 
@@ -286,7 +280,7 @@ public class UserInvitationComponent extends DefaultComponent implements UserInv
                            .build());
                 target.setACP(acp, true);
                 // test Validation Method
-            } else if (StringUtils.equals(EMAIL.toString(), validationMethod)) {
+            } else if (Strings.CS.equals(EMAIL.toString(), validationMethod)) {
                 sendValidationEmail(additionnalInfo, doc);
             }
 
@@ -504,17 +498,11 @@ public class UserInvitationComponent extends DefaultComponent implements UserInv
     }
 
     private String renderSubjectTemplate(String emailTitle, Map<String, Serializable> input) {
-        Configuration stringCfg = rh.getEngineConfiguration();
-        Writer out;
         try {
-            Template templ = new Template("subjectTemplate", new StringReader(emailTitle), stringCfg);
-            out = new StringWriter();
-            templ.process(input, out);
-            out.flush();
-        } catch (IOException | TemplateException e) {
+            return rh.getRenderingEngine().renderInline(emailTitle, input);
+        } catch (RenderingException e) {
             throw new NuxeoException("Error while rendering email subject: ", e);
         }
-        return out.toString();
     }
 
     protected static boolean isTestModeSet() {

@@ -32,16 +32,12 @@ import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
 import org.nuxeo.ecm.core.api.impl.UserPrincipal;
-import org.nuxeo.ecm.core.search.client.opensearch1.IgnoreIfNotOpenSearchSearchClient;
-import org.nuxeo.ecm.core.test.CoreSearchFeature;
 import org.nuxeo.ecm.restapi.opensearch1.filter.DefaultSearchRequestFilter;
-import org.nuxeo.runtime.test.runner.ConditionalIgnore;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
 @RunWith(FeaturesRunner.class)
-@Features(CoreSearchFeature.class)
-@ConditionalIgnore(condition = IgnoreIfNotOpenSearchSearchClient.class)
+@Features(OpenSearchPassthroughFeature.class)
 public class TestSearchRequestFilter {
 
     private static final String INDICES = "nxutest";
@@ -94,7 +90,7 @@ public class TestSearchRequestFilter {
     public void testUriSearch() {
         DefaultSearchRequestFilter filter = new DefaultSearchRequestFilter();
         filter.init(getNonAdminCoreSession(), INDICES, "size=2&q=dc%5C%3Atitle:Workspaces", null);
-        assertEquals(filter.getUrl(), "/nxutest/_search?size=2");
+        assertEquals("/nxutest/_search?size=2", filter.getUrl());
         assertEquals(minifyPayload("""
                 {
                   "query": {
@@ -127,7 +123,7 @@ public class TestSearchRequestFilter {
         DefaultSearchRequestFilter filter = new DefaultSearchRequestFilter();
         filter.init(getNonAdminCoreSession(), INDICES,
                 "q=dc\\:title:Workspaces&pretty&df=dc:title&default_operator=AND", null);
-        assertEquals(filter.getUrl(), "/nxutest/_search?pretty");
+        assertEquals("/nxutest/_search?pretty", filter.getUrl());
         assertEquals(minifyPayload("""
                 {
                   "query": {

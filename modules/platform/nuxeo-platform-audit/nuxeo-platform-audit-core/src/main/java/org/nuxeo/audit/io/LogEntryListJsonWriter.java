@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ public class LogEntryListJsonWriter extends DefaultListJsonWriter<LogEntry> {
     public static final String ENTITY_TYPE = "logEntries";
 
     public LogEntryListJsonWriter() {
-        super(ENTITY_TYPE, LogEntry.class);
+        super(ENTITY_TYPE);
     }
 
 }

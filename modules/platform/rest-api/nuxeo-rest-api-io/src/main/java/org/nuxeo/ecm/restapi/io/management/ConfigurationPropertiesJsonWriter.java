@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2023-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ public class ConfigurationPropertiesJsonWriter extends ExtensibleEntityJsonWrite
             Environment.SERVER_STATUS_KEY);
 
     public ConfigurationPropertiesJsonWriter() {
-        super(ENTITY_TYPE, ConfigurationProperties.class);
+        super(ENTITY_TYPE);
     }
 
     @Override

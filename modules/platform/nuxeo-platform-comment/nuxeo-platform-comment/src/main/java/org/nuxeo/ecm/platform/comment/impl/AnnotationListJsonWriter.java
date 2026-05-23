@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Funsho David
  */
-
 package org.nuxeo.ecm.platform.comment.impl;
 
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
@@ -35,6 +34,6 @@ public class AnnotationListJsonWriter extends DefaultListJsonWriter<Annotation> 
     public static final String ENTITY_TYPE = "annotations";
 
     public AnnotationListJsonWriter() {
-        super(ENTITY_TYPE, Annotation.class);
+        super(ENTITY_TYPE);
     }
 }

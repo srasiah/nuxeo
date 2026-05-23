@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2022 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2022-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,12 @@
  */
 package org.nuxeo.ecm.core.event;
 
+import jakarta.inject.Inject;
+
+import org.nuxeo.ecm.core.api.CoreInstance;
+import org.nuxeo.ecm.core.api.CoreSession;
+import org.nuxeo.ecm.core.api.NuxeoPrincipal;
+import org.nuxeo.ecm.core.event.impl.EventContextImpl;
 import org.nuxeo.runtime.cluster.ClusterFeature;
 import org.nuxeo.runtime.stream.RuntimeStreamFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
@@ -30,11 +36,23 @@ import org.nuxeo.runtime.test.runner.TransactionalFeature;
  */
 @Deploy("org.nuxeo.ecm.core.event")
 @Deploy("org.nuxeo.ecm.core.event.test:OSGI-INF/test-scheduler-without-start-delay-config.xml")
-@Features({
+@Features({ //
         RuntimeStreamFeature.class, // needed for domain event
         TransactionalFeature.class, // needed for domain event
         ClusterFeature.class // needed for scheduler service
 })
 public class CoreEventFeature implements RunnerFeature {
 
+    @Inject
+    protected EventService eventService;
+
+    public void fireEvent(String eventName) {
+        CoreSession session = CoreInstance.getCoreSession("default");
+        NuxeoPrincipal principal = session == null ? null : session.getPrincipal();
+        EventContext ctx = new EventContextImpl(session, principal);
+        Event event = ctx.newEvent(eventName);
+        event.setInline(false);
+        event.setImmediate(true);
+        eventService.fireEvent(event);
+    }
 }

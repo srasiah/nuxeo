@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
  */
 package org.nuxeo.audit.api.job;
 
+import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -25,6 +27,7 @@ import java.util.List;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.audit.api.LogEntryBuilder;
 import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.ecm.core.api.security.SecurityConstants;
 import org.nuxeo.runtime.api.Framework;
 
@@ -66,7 +69,7 @@ public class JobHistoryHelper {
     }
 
     protected AuditBackend getAuditBackend() {
-        return Framework.getService(AuditBackend.class);
+        return Framework.getService(AuditService.class).getAuditBackend(DEFAULT_AUDIT_BACKEND);
     }
 
     /**

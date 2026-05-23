@@ -19,12 +19,10 @@
 package org.nuxeo.ecm.blob.s3;
 
 import org.nuxeo.runtime.test.runner.Deploy;
-import org.nuxeo.runtime.test.runner.Features;
 
 /**
  * @since 2023.17
  */
-@Features(S3BlobProviderFeature.class)
 @Deploy("org.nuxeo.ecm.core.storage.binarymanager.s3.tests:OSGI-INF/test-blob-provider-s3-kms-client-side.xml")
 public class TestS3BlobStoreKmsClientEncryption extends TestAbstractS3BlobStoreClientEncryption {
 

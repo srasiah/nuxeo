@@ -18,6 +18,8 @@
  */
 package org.nuxeo.ecm.restapi.opensearch1.filter;
 
+import static org.nuxeo.ecm.restapi.opensearch1.OpenSearchPassthroughComponent.PASSTHROUGH_ELASTICSEARCH_AUDIT_ENABLED_PROPERTY;
+
 import org.json.JSONException;
 import org.nuxeo.audit.opensearch1.OpenSearchAuditBackend;
 import org.nuxeo.audit.service.AuditBackend;
@@ -34,21 +36,28 @@ public class AuditRequestFilter extends AbstractSearchRequestFilterImpl {
 
     @Override
     public void init(CoreSession session, String indices, String rawQuery, String payload) {
-        RequestValidator validator = new RequestValidator();
-        principal = session.getPrincipal();
-        if (!principal.isAdministrator()) {
-            throw new IllegalArgumentException("Invalid index submitted: " + indices);
-        }
-        var auditBackend = Framework.getService(AuditBackend.class);
-        if (!(auditBackend instanceof OpenSearchAuditBackend osAuditBackend)) {
-            throw new IllegalStateException("Invalid configured audit backend");
-        }
-        this.indices = osAuditBackend.getIndexName();
-        this.rawQuery = rawQuery;
-        this.payload = validator.getPayload(payload);
-        if (payload == null && !principal.isAdministrator()) {
-            // here we turn the UriSearch query_string into a body search
-            extractPayloadFromQuery();
+        try {
+            RequestValidator validator = new RequestValidator();
+            principal = session.getPrincipal();
+            if (!principal.isAdministrator()) {
+                throw new IllegalArgumentException("Invalid index submitted: " + indices);
+            }
+            if (!Framework.isBooleanPropertyTrue(PASSTHROUGH_ELASTICSEARCH_AUDIT_ENABLED_PROPERTY)) {
+                throw new IllegalArgumentException("Audit OpenSearch passthrough is disabled");
+            }
+            var auditBackend = Framework.getService(AuditBackend.class);
+            if (!(auditBackend instanceof OpenSearchAuditBackend osAuditBackend)) {
+                throw new IllegalArgumentException("Invalid configured audit backend");
+            }
+            this.indices = osAuditBackend.getIndexName();
+            this.rawQuery = rawQuery;
+            this.payload = validator.getPayload(payload);
+            if (payload == null && !principal.isAdministrator()) {
+                // here we turn the UriSearch query_string into a body search
+                extractPayloadFromQuery();
+            }
+        } catch (NoClassDefFoundError e) {
+            throw new IllegalArgumentException("Audit OpenSearch Backend is not installed", e);
         }
     }
 

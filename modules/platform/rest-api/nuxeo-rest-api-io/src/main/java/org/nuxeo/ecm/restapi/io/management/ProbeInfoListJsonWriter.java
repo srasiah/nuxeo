@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2019-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nour Al Kotob
  */
-
 package org.nuxeo.ecm.restapi.io.management;
 
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
@@ -35,6 +34,6 @@ public class ProbeInfoListJsonWriter extends DefaultListJsonWriter<ProbeInfo> {
     public static final String ENTITY_TYPE = "probes";
 
     public ProbeInfoListJsonWriter() {
-        super(ENTITY_TYPE, ProbeInfo.class);
+        super(ENTITY_TYPE);
     }
 }

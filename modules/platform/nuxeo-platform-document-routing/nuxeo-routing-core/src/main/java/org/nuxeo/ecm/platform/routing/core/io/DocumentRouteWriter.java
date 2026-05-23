@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
  *
  * Contributors:
  *     <a href="mailto:grenard@nuxeo.com">Guillaume Renard</a>
- *
  */
-
 package org.nuxeo.ecm.platform.routing.core.io;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
@@ -73,7 +71,7 @@ public class DocumentRouteWriter extends ExtensibleEntityJsonWriter<DocumentRout
     private SchemaManager schemaManager;
 
     public DocumentRouteWriter() {
-        super(ENTITY_TYPE, DocumentRoute.class);
+        super(ENTITY_TYPE);
     }
 
     @Override

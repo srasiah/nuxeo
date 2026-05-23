@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ public class SequencerJsonWriter extends ExtensibleEntityJsonWriter<Sequencer> {
     public static final String ENTITY_TYPE = "sequencer";
 
     public SequencerJsonWriter() {
-        super(ENTITY_TYPE, Sequencer.class);
+        super(ENTITY_TYPE);
     }
 
     @Override

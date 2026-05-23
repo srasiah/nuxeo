@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,7 +114,7 @@ public class SAMLAuthenticationProvider
         try {
             // don't use InitializationService.initialize
             // because it tries to configure MetricRegistry for version 4.x whereas we have 5.x
-            new org.opensaml.core.xml.config.XMLObjectProviderInitializer().init();
+            new org.opensaml.core.xml.config.impl.XMLObjectProviderInitializer().init();
             new org.opensaml.saml.config.impl.XMLObjectProviderInitializer().init();
             new org.opensaml.xmlsec.config.impl.XMLObjectProviderInitializer().init();
             new GlobalParserPoolInitializer().init();

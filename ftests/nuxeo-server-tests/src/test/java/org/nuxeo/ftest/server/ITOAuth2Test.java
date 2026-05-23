@@ -32,10 +32,10 @@ import static org.nuxeo.ecm.platform.oauth2.Constants.CODE_RESPONSE_TYPE;
 import static org.nuxeo.ecm.platform.oauth2.Constants.REDIRECT_URI_PARAM;
 import static org.nuxeo.ecm.platform.oauth2.Constants.RESPONSE_TYPE_PARAM;
 import static org.nuxeo.ecm.platform.oauth2.Constants.STATE_PARAM;
-import static org.nuxeo.ecm.platform.oauth2.NuxeoOAuth2Servlet.ENDPOINT_AUTH_SUBMIT;
-import static org.nuxeo.ecm.platform.oauth2.NuxeoOAuth2Servlet.ENDPOINT_TOKEN;
+import static org.nuxeo.ecm.platform.oauth2.NuxeoOAuth2Servlet.AUTHORIZE_SUBMIT_ENDPOINT;
 import static org.nuxeo.ecm.platform.oauth2.NuxeoOAuth2Servlet.ERROR_DESCRIPTION_PARAM;
 import static org.nuxeo.ecm.platform.oauth2.NuxeoOAuth2Servlet.ERROR_PARAM;
+import static org.nuxeo.ecm.platform.oauth2.NuxeoOAuth2Servlet.TOKEN_ENDPOINT;
 import static org.nuxeo.ecm.platform.oauth2.OAuth2Error.ACCESS_DENIED;
 import static org.nuxeo.ecm.platform.oauth2.clients.OAuth2ClientService.OAUTH2CLIENT_DIRECTORY_NAME;
 import static org.nuxeo.ecm.platform.oauth2.request.AuthorizationRequest.MISSING_REQUIRED_FIELD_MESSAGE;
@@ -211,8 +211,7 @@ public class ITOAuth2Test {
     public void testAuthorizationSubmitErrors() {
         // Call a GET request on /oauth2/authorize_submit
         OAuth2ErrorPage errorPage = getErrorPage(testUserClient, "/oauth2/authorize_submit");
-        errorPage.checkDescription(
-                String.format("The /oauth2/%s endpoint only accepts POST requests.", ENDPOINT_AUTH_SUBMIT));
+        errorPage.checkDescription("The /oauth2" + AUTHORIZE_SUBMIT_ENDPOINT + " endpoint only accepts POST requests.");
 
         // Simulate an empty client_id parameter
         OAuth2GrantPage grantPage = getDefaultGrantPage(testUserClient);
@@ -349,8 +348,7 @@ public class ITOAuth2Test {
     public void testTokenGetRequest() {
         // Call a GET request on /oauth2/token
         OAuth2ErrorPage errorPage = getErrorPage(unauthenticatedClient, "/oauth2/token");
-        errorPage.checkDescription(
-                String.format("The /oauth2/%s endpoint only accepts POST requests.", ENDPOINT_TOKEN));
+        errorPage.checkDescription("The /oauth2" + TOKEN_ENDPOINT + " endpoint only accepts POST requests.");
     }
 
     @Test
@@ -420,7 +418,7 @@ public class ITOAuth2Test {
     }
 
     protected OAuth2Token getOAuth2Token(Map<String, String> params) {
-        return unauthenticatedClient.buildPostRequest("/oauth2/" + ENDPOINT_TOKEN)
+        return unauthenticatedClient.buildPostRequest("/oauth2" + TOKEN_ENDPOINT)
                                     .entity(params)
                                     .executeAndThen(new JsonNodeHandler(),
                                             node -> new OAuth2Token(node.get("access_token").textValue(),

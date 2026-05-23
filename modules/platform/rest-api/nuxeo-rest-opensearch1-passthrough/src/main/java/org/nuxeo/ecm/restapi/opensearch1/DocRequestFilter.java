@@ -18,7 +18,7 @@
  */
 package org.nuxeo.ecm.restapi.opensearch1;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.annotation.Nonnull;
 
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
 
@@ -57,7 +57,8 @@ public class DocRequestFilter {
         this(principal, indices, documentId, rawQuery);
     }
 
-    protected @NotNull String getUrl() {
+    @Nonnull
+    protected String getUrl() {
         String url = "/" + indices + "/_doc/" + documentId;
         if (rawQuery != null) {
             url += "?" + rawQuery;

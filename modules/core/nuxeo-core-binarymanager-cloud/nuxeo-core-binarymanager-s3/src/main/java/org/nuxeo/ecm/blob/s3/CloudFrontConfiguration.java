@@ -23,7 +23,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
-import org.nuxeo.ecm.blob.CloudBlobStoreConfiguration;
+import org.nuxeo.ecm.core.blob.AbstractBlobStoreConfiguration;
 import org.nuxeo.runtime.api.Framework;
 
 /**
@@ -31,7 +31,7 @@ import org.nuxeo.runtime.api.Framework;
  *
  * @since 11.1
  */
-public class CloudFrontConfiguration extends CloudBlobStoreConfiguration {
+public class CloudFrontConfiguration extends AbstractBlobStoreConfiguration {
 
     public static final String CLOUDFRONT_ENABLED_PROPERTY = "cloudfront.enabled";
 

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
  */
 package org.nuxeo.drive.listener;
 
+import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +27,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.audit.api.LogEntry;
-import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.drive.service.NuxeoDriveEvents;
 import org.nuxeo.ecm.core.event.Event;
 import org.nuxeo.ecm.core.event.EventBundle;
@@ -52,8 +54,9 @@ public class NuxeoDriveVirtualEventLogger implements PostCommitFilteringEventLis
 
     @Override
     public void handleEvent(EventBundle events) {
-        var auditBackend = Framework.getService(AuditBackend.class);
-        if (auditBackend != null) {
+        var auditService = Framework.getService(AuditService.class);
+        if (auditService != null) {
+            var auditBackend = auditService.getAuditBackend(DEFAULT_AUDIT_BACKEND);
             for (Event event : events) {
                 EventContext ctx = event.getContext();
                 Object[] args = ctx.getArguments();

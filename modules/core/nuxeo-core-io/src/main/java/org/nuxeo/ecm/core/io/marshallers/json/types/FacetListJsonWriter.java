@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2015 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nicolas Chapurlat <nchapurlat@nuxeo.com>
  */
-
 package org.nuxeo.ecm.core.io.marshallers.json.types;
 
 import static org.nuxeo.ecm.core.io.registry.reflect.Instantiations.SINGLETON;
@@ -37,7 +36,7 @@ public class FacetListJsonWriter extends DefaultListJsonWriter<CompositeType> {
     public static final String ENTITY_TYPE = "facets";
 
     public FacetListJsonWriter() {
-        super(ENTITY_TYPE, CompositeType.class);
+        super(ENTITY_TYPE);
     }
 
 }

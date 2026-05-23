@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,21 +19,20 @@
 package org.nuxeo.ecm.platform.oauth2.openid;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+
+import jakarta.inject.Inject;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
-import org.nuxeo.runtime.test.runner.RuntimeFeature;
-
-import jakarta.inject.Inject;
 
 @RunWith(FeaturesRunner.class)
-@Features(RuntimeFeature.class)
-@Deploy("org.nuxeo.ecm.platform.login.openid.test")
+@Features(OpenIDFeature.class)
+@Deploy("org.nuxeo.ecm.platform.login.openid.test:OSGI-INF/openid-google-contrib.xml")
 public class TestOpenIDProviders {
 
     @Inject
@@ -47,7 +46,9 @@ public class TestOpenIDProviders {
         OpenIDConnectProvider provider = registry.getProvider("TestingGoogleOpenIDConnect");
         assertNotNull(provider);
 
-        assertTrue(OpenIDConnectHelper.getEnabledProviders().size() > 0);
+        var enabledProviders = OpenIDConnectHelper.getEnabledProviders();
+        assertNotNull(enabledProviders);
+        assertFalse(enabledProviders.isEmpty());
 
         OpenIDConnectProvider provider2 = registry.getProvider("TestingGoogleOpenIDConnect2");
         assertNotNull(provider2);
