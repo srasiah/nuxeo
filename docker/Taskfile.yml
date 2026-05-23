@@ -4,25 +4,44 @@ version: '3'
 dotenv: ['.env']
 
 vars:
-  # Use dotenv/.env values when set; these defaults mirror the Makefile ?= assignments.
+  # Taskfile v3 dotenv values are not available to sh: commands in vars, so we read
+  # .env directly via grep. Precedence: shell/CLI env > .env file > hardcoded default.
   DOCKER_REGISTRY:
-    sh: echo "${DOCKER_REGISTRY:-docker.platform.dev.nuxeo.com}"
+    sh: |
+      v=$(grep -m1 '^DOCKER_REGISTRY=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${DOCKER_REGISTRY:-${v:-docker.platform.dev.nuxeo.com}}"
   DOCKER_BASE_IMAGE_NAME:
-    sh: echo "${DOCKER_BASE_IMAGE_NAME:-{{.DOCKER_REGISTRY}}/nuxeo}"
+    sh: |
+      v=$(grep -m1 '^DOCKER_BASE_IMAGE_NAME=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${DOCKER_BASE_IMAGE_NAME:-${v:-{{.DOCKER_REGISTRY}}/nuxeo}}"
   DOCKER_BENCHMARK_IMAGE_NAME:
-    sh: echo "${DOCKER_BENCHMARK_IMAGE_NAME:-{{.DOCKER_REGISTRY}}/nuxeo-benchmark}"
+    sh: |
+      v=$(grep -m1 '^DOCKER_BENCHMARK_IMAGE_NAME=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${DOCKER_BENCHMARK_IMAGE_NAME:-${v:-{{.DOCKER_REGISTRY}}/nuxeo-benchmark}}"
   DOCKER_PLATFORMS:
-    sh: echo "${DOCKER_PLATFORMS:-linux/amd64,linux/arm64}"
+    sh: |
+      v=$(grep -m1 '^DOCKER_PLATFORMS=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${DOCKER_PLATFORMS:-${v:-linux/amd64,linux/arm64}}"
   DOCKER_IMAGE_TAG:
-    sh: echo "${DOCKER_IMAGE_TAG:-2025.x}"
+    sh: |
+      v=$(grep -m1 '^DOCKER_IMAGE_TAG=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${DOCKER_IMAGE_TAG:-${v:-2025.x}}"
   TARGETPLATFORM:
-    sh: echo "${TARGETPLATFORM:-linux/amd64}"
+    sh: |
+      v=$(grep -m1 '^TARGETPLATFORM=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${TARGETPLATFORM:-${v:-linux/amd64}}"
   REVISION:
-    sh: echo "${REVISION:-2025.9-SNAPSHOT}"
+    sh: |
+      v=$(grep -m1 '^REVISION=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${REVISION:-${v:-2025.9-SNAPSHOT}}"
   BUILD_TAG:
-    sh: echo "${BUILD_TAG:-local}"
+    sh: |
+      v=$(grep -m1 '^BUILD_TAG=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${BUILD_TAG:-${v:-local}}"
   VERSION:
-    sh: echo "${VERSION:-{{.DOCKER_IMAGE_TAG}}}"
+    sh: |
+      v=$(grep -m1 '^VERSION=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${VERSION:-${v:-{{.DOCKER_IMAGE_TAG}}}}"
   SCM_REF:
     sh: git rev-parse HEAD 2>/dev/null || echo "local"
   MAVEN_OPTS: "-Xmx4g -Xms2g -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
@@ -263,6 +282,7 @@ tasks:
 
   info:
     desc: Display current build configuration
+    silent: true
     cmds:
       - echo "Container Build Configuration:"
       - echo ""
@@ -293,8 +313,11 @@ tasks:
       - |
         {{.CONTAINER_ENGINE}} info --format '  Registry: {{"{{"}}.IndexServerAddress{{"}}"}}' 2>/dev/null || true
       - |
-        if {{.CONTAINER_ENGINE}} info --format '{{"{{"}}.Username{{"}}"}}' 2>/dev/null | grep -q '.'; then
-          echo "  Logged in"
+        REG={{.DOCKER_REGISTRY}}
+        case "$REG" in *.*|*:*) ;; *) REG="docker.io" ;; esac
+        USER=$({{.CONTAINER_ENGINE}} login --get-login "$REG" 2>/dev/null)
+        if [ -n "$USER" ]; then
+          echo "  Logged in as $USER ($REG)"
         else
-          echo "  Not logged in"
+          echo "  Not logged in to $REG"
         fi
