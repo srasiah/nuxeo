@@ -1,0 +1,286 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: '3'
+
+dotenv: ['.env']
+
+vars:
+  # Use dotenv/.env values when set; these defaults mirror the Makefile ?= assignments.
+  DOCKER_REGISTRY:
+    sh: echo "${DOCKER_REGISTRY:-docker.platform.dev.nuxeo.com}"
+  DOCKER_BASE_IMAGE_NAME:
+    sh: echo "${DOCKER_BASE_IMAGE_NAME:-{{.DOCKER_REGISTRY}}/nuxeo}"
+  DOCKER_BENCHMARK_IMAGE_NAME:
+    sh: echo "${DOCKER_BENCHMARK_IMAGE_NAME:-{{.DOCKER_REGISTRY}}/nuxeo-benchmark}"
+  DOCKER_PLATFORMS:
+    sh: echo "${DOCKER_PLATFORMS:-linux/amd64,linux/arm64}"
+  DOCKER_IMAGE_TAG:
+    sh: echo "${DOCKER_IMAGE_TAG:-2025.x}"
+  TARGETPLATFORM:
+    sh: echo "${TARGETPLATFORM:-linux/amd64}"
+  REVISION:
+    sh: echo "${REVISION:-2025.9-SNAPSHOT}"
+  BUILD_TAG:
+    sh: echo "${BUILD_TAG:-local}"
+  VERSION:
+    sh: echo "${VERSION:-{{.DOCKER_IMAGE_TAG}}}"
+  SCM_REF:
+    sh: git rev-parse HEAD 2>/dev/null || echo "local"
+  MAVEN_OPTS: "-Xmx4g -Xms2g -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+  MAVEN_COMMON: "-B -DskipTests -Dnuxeo.skip.enforcer=true"
+
+  # Prefer podman over docker when both are installed.
+  CONTAINER_ENGINE:
+    sh: command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo "docker"
+  CONTAINER_ENGINE_NAME:
+    sh: basename $(command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo docker)
+
+  # Architecture-specific build profile.
+  ARCH_PROFILE:
+    sh: "case $(uname -m) in arm64|aarch64) echo arm64;; *) echo amd64;; esac"
+  DOCKER_PLATFORM:
+    sh: "case $(uname -m) in arm64|aarch64) echo linux/arm64;; *) echo linux/amd64;; esac"
+
+  # Derived image refs — always computed from other vars.
+  DOCKER_BASE_IMAGE: "{{.DOCKER_BASE_IMAGE_NAME}}:{{.DOCKER_IMAGE_TAG}}"
+  DOCKER_BENCHMARK_IMAGE: "{{.DOCKER_BENCHMARK_IMAGE_NAME}}:{{.DOCKER_IMAGE_TAG}}"
+
+  # Set DOCKER_HOST for Maven Docker plugin compatibility.
+  # For Docker, preserves an existing $DOCKER_HOST if already set (mirrors Makefile `ifndef DOCKER_HOST`).
+  # Note: readlink -f requires GNU coreutils on macOS (brew install coreutils).
+  DOCKER_HOST:
+    sh: |
+      ENGINE=$(basename $(command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo docker))
+      if [ "$ENGINE" = "podman" ]; then
+        SOCKET=$(podman info --format '{{"{{"}}.Host.RemoteSocket.Path{{"}}"}}' 2>/dev/null)
+        # Strip any existing unix:// prefix then re-add it (podman may return a URI or a bare path)
+        [ -n "$SOCKET" ] && echo "unix://${SOCKET#unix://}"
+      elif [ -n "$DOCKER_HOST" ]; then
+        echo "$DOCKER_HOST"
+      else
+        echo "unix:///var/run/docker.sock"
+      fi
+
+  JAVA_HOME:
+    sh: dirname $(dirname $(readlink -f $(which javac 2>/dev/null) 2>/dev/null) 2>/dev/null) 2>/dev/null || echo ""
+
+env:
+  MAVEN_OPTS: "{{.MAVEN_OPTS}}"
+  JAVA_HOME: "{{.JAVA_HOME}}"
+  DOCKER_HOST: "{{.DOCKER_HOST}}"
+  # Enable BuildKit for Docker builds; not needed for Podman.
+  DOCKER_BUILDKIT:
+    sh: |
+      ENGINE=$(basename $(command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo docker))
+      [ "$ENGINE" = "docker" ] && echo "1" || echo ""
+  # Mirror Makefile's `GIT_APT_TOKEN := $(GIT_PAT_TOKEN)` alias.
+  GIT_APT_TOKEN:
+    sh: echo "${GIT_PAT_TOKEN:-}"
+
+tasks:
+  default:
+    desc: Build both base and benchmark images
+    deps: [build-base, build-benchmark]
+
+  build-distrib:
+    desc: Build Nuxeo distribution (prerequisite for images)
+    dir: ..
+    cmds:
+      - echo "Building Nuxeo distribution..."
+      - mvn install -Pdistrib -DskipTests -Drevision={{.REVISION}}
+      - echo "Distribution build complete"
+
+  deploy:
+    desc: Deploy Nuxeo distribution to registry
+    dir: ..
+    cmds:
+      - echo "Deploying Nuxeo distribution..."
+      - |
+        mvn clean deploy -Pdeploy -DskipTests -Drevision={{.REVISION}} \
+          -DCI_API_V4_URL={{.CI_API_V4_URL}} -DCI_PROJECT_ID={{.CI_PROJECT_ID}}
+      - echo "Deployment complete"
+
+  build-parent:
+    desc: Build parent distribution only (no Docker images)
+    dir: ../parent
+    cmds:
+      - echo "Building nuxeo-parent..."
+      - mvn clean install -DskipTests -Drevision={{.REVISION}}
+      - echo "nuxeo-parent build complete"
+
+  build-base:
+    desc: Build nuxeo base image (skips distrib rebuild)
+    dir: nuxeo
+    cmds:
+      - echo "Building base image with {{.CONTAINER_ENGINE_NAME}} -- {{.DOCKER_BASE_IMAGE}}"
+      - echo "  Platform -- {{.DOCKER_PLATFORM}}"
+      - echo "  Architecture Profile -- {{.ARCH_PROFILE}}"
+      - echo "  Docker Host -- {{.DOCKER_HOST}}"
+      - |
+        mvn install {{.MAVEN_COMMON}} \
+          -P{{.ARCH_PROFILE}} \
+          -Drevision={{.REVISION}} \
+          -Ddocker.platforms={{.DOCKER_PLATFORM}} \
+          -Ddocker.image.name={{.DOCKER_BASE_IMAGE}}
+      - echo "Base image build complete"
+      - "{{.CONTAINER_ENGINE}} tag {{.DOCKER_BASE_IMAGE}} {{.DOCKER_BASE_IMAGE_NAME}}:{{.REVISION}}"
+      - task: clean-orphans
+        ignore_error: true
+
+  build-base-full:
+    desc: Build nuxeo base image with full distrib rebuild
+    cmds:
+      - task: build-distrib
+      - task: build-base
+
+  build-benchmark:
+    desc: Build nuxeo-benchmark image (skips distrib rebuild)
+    dir: nuxeo-benchmark
+    cmds:
+      - echo "Building benchmark image with {{.CONTAINER_ENGINE_NAME}} -- {{.DOCKER_BENCHMARK_IMAGE}}"
+      - echo "  Platform -- {{.DOCKER_PLATFORM}}"
+      - echo "  Base image -- {{.DOCKER_BASE_IMAGE}}"
+      - echo "  Docker Host -- {{.DOCKER_HOST}}"
+      - |
+        mvn install {{.MAVEN_COMMON}} \
+          -P{{.ARCH_PROFILE}} \
+          -Drevision={{.REVISION}} \
+          -Ddocker.base.image={{.DOCKER_BASE_IMAGE}} \
+          -Ddocker.platforms={{.DOCKER_PLATFORM}} \
+          -Ddocker.buildx.enabled=true \
+          -Ddocker.image.name={{.DOCKER_BENCHMARK_IMAGE}}
+      - echo "Benchmark image build complete"
+      - task: clean-orphans
+        ignore_error: true
+
+  build-benchmark-full:
+    desc: Build nuxeo-benchmark image with full distrib rebuild
+    cmds:
+      - task: build-distrib
+      - task: build-benchmark
+
+  build-and-push:
+    desc: Build and push both images
+    cmds:
+      - task: build-and-push-base
+      - task: build-and-push-benchmark
+
+  build-and-push-base:
+    desc: Build and push base image
+    cmds:
+      - task: build-base
+      - task: push-base
+
+  build-and-push-benchmark:
+    desc: Build and push benchmark image
+    cmds:
+      - task: build-benchmark
+      - task: push-benchmark
+
+  push:
+    desc: Push both images to registry
+    deps: [push-base, push-benchmark]
+
+  push-platform:
+    desc: Push both images for a specific platform
+    deps: [push-base-platform, push-benchmark-platform]
+
+  push-base:
+    desc: Push base image to registry
+    cmds:
+      - echo "Pushing base image {{.DOCKER_BASE_IMAGE}}..."
+      - "{{.CONTAINER_ENGINE}} push {{.DOCKER_BASE_IMAGE}}"
+      - echo "Base image pushed successfully"
+
+  push-base-platform:
+    desc: Push base image for a specific platform to registry
+    cmds:
+      - echo "Pushing base image {{.DOCKER_BASE_IMAGE}} ({{.TARGETPLATFORM}})..."
+      - "{{.CONTAINER_ENGINE}} push {{.DOCKER_BASE_IMAGE}} --platform {{.TARGETPLATFORM}}"
+      - echo "Base image pushed successfully"
+
+  push-benchmark:
+    desc: Push benchmark image to registry
+    cmds:
+      - echo "Pushing benchmark image {{.DOCKER_BENCHMARK_IMAGE}}..."
+      - "{{.CONTAINER_ENGINE}} push {{.DOCKER_BENCHMARK_IMAGE}}"
+      - echo "Benchmark image pushed successfully"
+
+  push-benchmark-platform:
+    desc: Push benchmark image for a specific platform to registry
+    cmds:
+      - echo "Pushing benchmark image {{.DOCKER_BENCHMARK_IMAGE}} ({{.TARGETPLATFORM}})..."
+      - "{{.CONTAINER_ENGINE}} push {{.DOCKER_BENCHMARK_IMAGE}} --platform {{.TARGETPLATFORM}}"
+      - echo "Benchmark image pushed successfully"
+
+  nuxeo-run:
+    desc: Run a nuxeo container
+    cmds:
+      - |
+        if {{.CONTAINER_ENGINE}} ps -a --format '{{"{{"}}.Names{{"}}"}}' | grep -wq nuxeo; then
+          echo "Container 'nuxeo' already exists. Use 'task nuxeo-rm' to remove it first."
+        else
+          echo "Starting nuxeo container from {{.DOCKER_BENCHMARK_IMAGE}}..."
+          {{.CONTAINER_ENGINE}} run -d --name nuxeo -p 8080:8080 {{.DOCKER_BENCHMARK_IMAGE}}
+          echo "Nuxeo is running at http://localhost:8080"
+        fi
+
+  nuxeo-stop:
+    desc: Stop the nuxeo container
+    cmds:
+      - echo "Stopping nuxeo container..."
+      - "{{.CONTAINER_ENGINE}} stop nuxeo || echo 'No running container named nuxeo'"
+
+  nuxeo-start:
+    desc: Start the nuxeo container
+    cmds:
+      - echo "Starting nuxeo container..."
+      - "{{.CONTAINER_ENGINE}} start nuxeo || echo 'No container named nuxeo found'"
+
+  nuxeo-rm:
+    desc: Remove the nuxeo container
+    cmds:
+      - echo "Removing nuxeo container..."
+      - "{{.CONTAINER_ENGINE}} rm nuxeo -f || echo 'No container named nuxeo to remove'"
+
+  clean-orphans:
+    desc: Remove dangling images
+    cmds:
+      - echo "Removing dangling images..."
+      - "{{.CONTAINER_ENGINE}} image prune --force --filter 'dangling=true' || echo 'No orphan images to clean'"
+
+  info:
+    desc: Display current build configuration
+    cmds:
+      - echo "Container Build Configuration:"
+      - echo ""
+      - printf '%-30s %s\n' "Container Engine:" "{{.CONTAINER_ENGINE}} ({{.CONTAINER_ENGINE_NAME}})"
+      - printf '%-30s %s\n' "DOCKER_HOST:" "{{.DOCKER_HOST}}"
+      - printf '%-30s %s\n' "DOCKER_REGISTRY:" "{{.DOCKER_REGISTRY}}"
+      - printf '%-30s %s\n' "DOCKER_BASE_IMAGE:" "{{.DOCKER_BASE_IMAGE}}"
+      - printf '%-30s %s\n' "DOCKER_BENCHMARK_IMAGE:" "{{.DOCKER_BENCHMARK_IMAGE}}"
+      - printf '%-30s %s\n' "DOCKER_IMAGE_TAG:" "{{.DOCKER_IMAGE_TAG}}"
+      - printf '%-30s %s\n' "TARGETPLATFORM:" "{{.TARGETPLATFORM}}"
+      - printf '%-30s %s\n' "Detected Platform:" "{{.DOCKER_PLATFORM}}"
+      - printf '%-30s %s\n' "Architecture Profile:" "{{.ARCH_PROFILE}}"
+      - printf '%-30s %s\n' "REVISION:" "{{.REVISION}}"
+      - printf '%-30s %s\n' "BUILD_TAG:" "{{.BUILD_TAG}}"
+      - printf '%-30s %s\n' "SCM_REF:" "{{.SCM_REF}}"
+      - printf '%-30s %s\n' "VERSION:" "{{.VERSION}}"
+      - printf '%-30s %s\n' "MAVEN_OPTS:" "{{.MAVEN_OPTS}}"
+      - printf '%-30s %s\n' "MAVEN_COMMON:" "{{.MAVEN_COMMON}}"
+      - printf '%-30s %s\n' "CI_API_V4_URL:" "{{.CI_API_V4_URL}}"
+      - printf '%-30s %s\n' "CI_PROJECT_ID:" "{{.CI_PROJECT_ID}}"
+      - echo ""
+      - echo "{{.CONTAINER_ENGINE_NAME}} Status:"
+      - |
+        {{.CONTAINER_ENGINE}} version --format '  Version: {{"{{"}}.Server.Version{{"}}"}}' 2>/dev/null \
+          || {{.CONTAINER_ENGINE}} version --format '  Version: {{"{{"}}.Version{{"}}"}}' 2>/dev/null \
+          || echo "  {{.CONTAINER_ENGINE_NAME}} not available"
+      - |
+        {{.CONTAINER_ENGINE}} info --format '  Registry: {{"{{"}}.IndexServerAddress{{"}}"}}' 2>/dev/null || true
+      - |
+        if {{.CONTAINER_ENGINE}} info --format '{{"{{"}}.Username{{"}}"}}' 2>/dev/null | grep -q '.'; then
+          echo "  Logged in"
+        else
+          echo "  Not logged in"
+        fi
