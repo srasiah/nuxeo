@@ -79,20 +79,23 @@ vars:
         echo "unix:///var/run/docker.sock"
       fi
 
-  # Prefer JAVA_HOME from environment; if unset, read .env directly so ~/... paths expand
-  # correctly (godotenv does not expand ~ in dotenv values). Falls back to detecting javac.
-  # Note: readlink -f requires GNU coreutils on macOS (brew install coreutils).
+  JAVA_VERSION:
+    sh: |
+      v=$(grep -m1 '^JAVA_VERSION=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${JAVA_VERSION:-${v:-current}}"
+
+  # Derive JAVA_HOME from JAVA_VERSION (sdkman path) when set in .env or CLI env.
+  # Precedence: JAVA_VERSION (.env / CLI) > inherited JAVA_HOME > fallback to sdkman current.
   JAVA_HOME:
     sh: |
-      if [ -n "$JAVA_HOME" ]; then
+      JV=$(grep -m1 '^JAVA_VERSION=' .env 2>/dev/null | cut -d= -f2-)
+      JV="${JAVA_VERSION:-$JV}"
+      if [ -n "$JV" ]; then
+        echo "$HOME/.sdkman/candidates/java/$JV"
+      elif [ -n "$JAVA_HOME" ]; then
         echo "$JAVA_HOME"
       else
-        JH=$(grep '^JAVA_HOME=' .env 2>/dev/null | cut -d= -f2- | sed "s|^~|$HOME|")
-        if [ -n "$JH" ]; then
-          echo "$JH"
-        else
-          dirname $(dirname $(readlink -f $(which javac 2>/dev/null) 2>/dev/null) 2>/dev/null) 2>/dev/null || echo ""
-        fi
+        echo "$HOME/.sdkman/candidates/java/current"
       fi
 
 env:
@@ -299,6 +302,7 @@ tasks:
       - printf '%-30s %s\n' "BUILD_TAG:" "{{.BUILD_TAG}}"
       - printf '%-30s %s\n' "SCM_REF:" "{{.SCM_REF}}"
       - printf '%-30s %s\n' "VERSION:" "{{.VERSION}}"
+      - printf '%-30s %s\n' "JAVA_VERSION:" "{{.JAVA_VERSION}}"
       - printf '%-30s %s\n' "JAVA_HOME:" "{{.JAVA_HOME}}"
       - printf '%-30s %s\n' "MAVEN_OPTS:" "{{.MAVEN_OPTS}}"
       - printf '%-30s %s\n' "MAVEN_COMMON:" "{{.MAVEN_COMMON}}"
