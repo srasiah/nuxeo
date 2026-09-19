@@ -5458,15 +5458,14 @@
     <profile>
         <id>deploy</id>
         <modules>
-            <module>ftests</module>
             <module>packages</module>
             <module>server</module>
             <module>parent</module>
         </modules>
         <distributionManagement>
             <repository>
-                <id>gitlab-maven</id>
-                <url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>
+                <id>${DISTRIBUTION_ID}</id>
+                <url>${DISTRIBUTION_URL}</url>
             </repository>
         </distributionManagement>
     </profile>

@@ -50,6 +50,14 @@ vars:
     sh: |
       v=$(grep -m1 '^BUILD_TAG=' .env 2>/dev/null | cut -d= -f2-)
       echo "${BUILD_TAG:-${v:-local}}"
+  DISTRIBUTION_ID:
+    sh: |
+      v=$(grep -m1 '^DISTRIBUTION_ID=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${DISTRIBUTION_ID:-$v}"
+  DISTRIBUTION_URL:
+    sh: |
+      v=$(grep -m1 '^DISTRIBUTION_URL=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${DISTRIBUTION_URL:-$v}"
   VERSION:
     sh: |
       v=$(grep -m1 '^VERSION=' .env 2>/dev/null | cut -d= -f2-)
@@ -141,7 +149,7 @@ tasks:
       - echo "Deploying Nuxeo distribution..."
       - |
         mvn clean deploy -Pdeploy -DskipTests -Drevision={{.REVISION}} \
-          -DCI_API_V4_URL={{.CI_API_V4_URL}} -DCI_PROJECT_ID={{.CI_PROJECT_ID}}
+          -DDISTRIBUTION_ID={{.DISTRIBUTION_ID}} -DDISTRIBUTION_URL={{.DISTRIBUTION_URL}}
       - echo "Deployment complete"
 
   build-parent:
@@ -357,8 +365,8 @@ tasks:
       - printf '%-30s %s\n' "JAVA_HOME:" "{{.JAVA_HOME}}"
       - printf '%-30s %s\n' "MAVEN_OPTS:" "{{.MAVEN_OPTS}}"
       - printf '%-30s %s\n' "MAVEN_COMMON:" "{{.MAVEN_COMMON}}"
-      - printf '%-30s %s\n' "CI_API_V4_URL:" "{{.CI_API_V4_URL}}"
-      - printf '%-30s %s\n' "CI_PROJECT_ID:" "{{.CI_PROJECT_ID}}"
+      - printf '%-30s %s\n' "DISTRIBUTION_ID:" "{{.DISTRIBUTION_ID}}"
+      - printf '%-30s %s\n' "DISTRIBUTION_URL:" "{{.DISTRIBUTION_URL}}"
       - echo ""
       - echo "{{.CONTAINER_ENGINE_NAME}} Status:"
       - |
