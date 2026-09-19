@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2011 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2011-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import jakarta.inject.Inject;
 
@@ -43,13 +42,11 @@ import org.nuxeo.ecm.core.api.NuxeoGroup;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
 import org.nuxeo.ecm.core.api.security.SecurityConstants;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.task.TaskService;
 import org.nuxeo.ecm.platform.task.dashboard.DashBoardItem;
-import org.nuxeo.ecm.platform.task.providers.UserTaskPageProvider;
 import org.nuxeo.ecm.platform.usermanager.UserManager;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -60,7 +57,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
  */
 @RunWith(FeaturesRunner.class)
 @Features({ CoreFeature.class, DirectoryFeature.class })
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.platform.content.template")
 @Deploy("org.nuxeo.ecm.platform.usermanager")
 @Deploy("org.nuxeo.ecm.platform.task.core")
@@ -104,9 +100,9 @@ public class TaskPageProvidersTest {
         taskService.createTask(session, administrator, document, "Test Task Name 2", actors, false, "test directive",
                 "test comment", calendar.getTime(), null, null);
         // NXP-18868 create task without document (task from workflow without document)
-        taskService.createTaskForProcess(session, administrator, Collections.emptyList(), null, "Test Task Name 3",
-                "Task1a34", "a6dd157e-143d-4e03-a3cf-d33482c8de36", null, actors, false, "test directive",
-                "test comment", calendar.getTime(), null, null, null);
+        taskService.createTaskForProcess(session, administrator, List.of(), null, "Test Task Name 3", "Task1a34",
+                "a6dd157e-143d-4e03-a3cf-d33482c8de36", null, actors, false, "test directive", "test comment",
+                calendar.getTime(), null, null, null);
         session.save();
     }
 
@@ -169,10 +165,10 @@ public class TaskPageProvidersTest {
 
     @SuppressWarnings("unchecked")
     private PageProvider<DashBoardItem> getPageProvider(String pageProviderName) {
-        Map<String, Serializable> properties = Collections.singletonMap(UserTaskPageProvider.CORE_SESSION_PROPERTY,
-                (Serializable) session);
-        return (PageProvider<DashBoardItem>) ppService.getPageProvider(pageProviderName, null, null, null, properties,
-                (Object[]) null);
+        return (PageProvider<DashBoardItem>) ppService.getPageProvider(PageProviderSpec.builder(pageProviderName)
+                                                                                       .property(CORE_SESSION_PROPERTY,
+                                                                                               (Serializable) session)
+                                                                                       .build());
 
     }
 

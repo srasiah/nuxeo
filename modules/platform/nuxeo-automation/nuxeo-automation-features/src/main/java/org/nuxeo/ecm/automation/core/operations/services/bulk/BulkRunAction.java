@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import static jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN;
 import static jakarta.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static org.nuxeo.ecm.automation.core.operations.services.bulk.AbstractAutomationBulkAction.OPERATION_ID;
 import static org.nuxeo.ecm.automation.core.operations.services.bulk.AutomationBulkActionUi.ACTION_NAME;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -51,6 +52,7 @@ import org.nuxeo.ecm.core.query.sql.NXQL;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 
 /**
  * Automation operation that can run an http enabled Bulk Action.
@@ -75,6 +77,9 @@ public class BulkRunAction {
 
     @Context
     protected CoreSession session;
+
+    @Context
+    protected PageProviderService pageProviderService;
 
     @Param(name = "query", required = false)
     protected String query;
@@ -136,8 +141,14 @@ public class BulkRunAction {
                     SC_BAD_REQUEST);
         }
 
-        PageProvider<?> provider = PageProviderHelper.getPageProvider(session, def, namedParameters, null, null, null,
-                null, null, quickFilters, queryParams != null ? queryParams.toArray(new String[0]) : null);
+        PageProvider<?> provider = pageProviderService.getPageProvider(
+                PageProviderSpec.builder(def)
+                                .searchDocument(PageProviderHelper.getSearchDocumentModel(session, def.getName(),
+                                        namedParameters))
+                                .quickFiltersByNames(quickFilters)
+                                .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                .parameters(queryParams)
+                                .build());
         query = PageProviderHelper.buildQueryStringWithAggregates(provider);
 
         if (query.contains("?")) {

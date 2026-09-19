@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,14 @@
  */
 package org.nuxeo.ecm.automation.core.operations.services.bulk;
 
-import static java.util.Collections.singletonMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.Serializable;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +53,7 @@ import org.nuxeo.ecm.core.test.annotations.Granularity;
 import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
-import org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -102,7 +101,7 @@ public class TestBulkRunAction {
     public void testSetPropertyActionFromAutomationQuery() throws Exception {
 
         DocumentModel model = session.getDocument(new PathRef("/default-domain/workspaces/test"));
-        String nxql = String.format("SELECT * from ComplexDoc where ecm:parentId='%s'", model.getId());
+        String nxql = "SELECT * from ComplexDoc where ecm:parentId='%s'".formatted(model.getId());
 
         String title = "test title";
         String description = "test description";
@@ -129,7 +128,7 @@ public class TestBulkRunAction {
 
         String commandId = runResult.getId();
 
-        boolean waitResult = (boolean) service.run(ctx, BulkWaitForAction.ID, singletonMap("commandId", commandId));
+        boolean waitResult = (boolean) service.run(ctx, BulkWaitForAction.ID, Map.of("commandId", commandId));
         assertTrue("Bulk action didn't finish", waitResult);
 
         txFeature.nextTransaction();
@@ -176,16 +175,17 @@ public class TestBulkRunAction {
 
         String commandId = runResult.getId();
 
-        boolean waitResult = (boolean) service.run(ctx, BulkWaitForAction.ID, singletonMap("commandId", commandId));
+        boolean waitResult = (boolean) service.run(ctx, BulkWaitForAction.ID, Map.of("commandId", commandId));
         assertTrue("Bulk action didn't finish", waitResult);
 
         txFeature.nextTransaction();
 
         @SuppressWarnings("unchecked")
-        PageProvider<DocumentModel> pageProvider = (PageProvider<DocumentModel>) ppService.getPageProvider("bulkPP",
-                null, null, null,
-                Collections.singletonMap(CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY, (Serializable) session),
-                model.getId());
+        PageProvider<DocumentModel> pageProvider = (PageProvider<DocumentModel>) ppService.getPageProvider(
+                PageProviderSpec.builder("bulkPP")
+                                .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                .parameters(model.getId())
+                                .build());
 
         for (DocumentModel child : pageProvider.getCurrentPage()) {
             assertEquals(title, child.getTitle());
@@ -275,7 +275,7 @@ public class TestBulkRunAction {
     public void testInvalidActionParameters() throws Exception {
 
         DocumentModel model = session.getDocument(new PathRef("/default-domain/workspaces/test"));
-        String nxql = String.format("SELECT * from ComplexDoc where ecm:parentId='%s'", model.getId());
+        String nxql = "SELECT * from ComplexDoc where ecm:parentId='%s'".formatted(model.getId());
 
         Map<String, Serializable> params = new HashMap<>();
         params.put("action", SetPropertiesAction.ACTION_NAME);
@@ -298,8 +298,7 @@ public class TestBulkRunAction {
     public void testExcludeDocs() throws Exception {
         // List doc ids that match a query
         DocumentModel model = session.getDocument(new PathRef("/default-domain/workspaces/test"));
-        String nxql = String.format("SELECT * from ComplexDoc WHERE ecm:parentId='%s' AND ecm:isProxy = 0",
-                model.getId());
+        String nxql = "SELECT * from ComplexDoc WHERE ecm:parentId='%s' AND ecm:isProxy = 0".formatted(model.getId());
         List<String> ids = session.query(nxql).stream().map(DocumentModel::getId).toList();
         assertTrue(ids.size() > 2);
 
@@ -320,7 +319,7 @@ public class TestBulkRunAction {
         BulkStatus runResult = (BulkStatus) service.run(ctx, BulkRunAction.ID, params);
         assertNotNull(runResult);
         String commandId = runResult.getId();
-        boolean waitResult = (boolean) service.run(ctx, BulkWaitForAction.ID, singletonMap("commandId", commandId));
+        boolean waitResult = (boolean) service.run(ctx, BulkWaitForAction.ID, Map.of("commandId", commandId));
         assertTrue("Bulk action didn't finish", waitResult);
         txFeature.nextTransaction();
 

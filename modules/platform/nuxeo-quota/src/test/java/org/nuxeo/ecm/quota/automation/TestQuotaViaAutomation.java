@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2011 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,6 @@ import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.DocumentRef;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.quota.count.QuotaFeature;
 import org.nuxeo.ecm.quota.size.QuotaAware;
 import org.nuxeo.ecm.quota.size.QuotaAwareDocumentFactory;
@@ -49,7 +47,6 @@ import org.nuxeo.runtime.transaction.TransactionHelper;
  */
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.quota")
 @Deploy("org.nuxeo.ecm.automation.core")
 public class TestQuotaViaAutomation {
@@ -171,7 +168,7 @@ public class TestQuotaViaAutomation {
     @Test
     public void testGetQuotasViaAutomation() throws Exception {
         addContent();
-            
+
         SimpleQuotaInfo sqi_firstFile = getQuotaInfo(firstFileRef);
         SimpleQuotaInfo sqi_secondFile = getQuotaInfo(secondFileRef);
         SimpleQuotaInfo sqi_firstSubFolder = getQuotaInfo(firstSubFolderRef);
@@ -190,7 +187,7 @@ public class TestQuotaViaAutomation {
         DocumentModel docFile = session.getDocument(firstFileRef);
         assertEquals(100L, docFile.getPropertyValue("dss:innerSize"));
         assertQuota(sqi_firstFile, 100L, 100L);
-            
+
         txFeature.nextTransaction();
     }
 

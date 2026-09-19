@@ -19,7 +19,7 @@
 package org.nuxeo.audit.service.extension;
 
 import static org.apache.commons.lang3.BooleanUtils.toBooleanDefaultIfNull;
-import static org.apache.commons.lang3.ObjectUtils.firstNonNull;
+import static org.apache.commons.lang3.ObjectUtils.getIfNull;
 import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
@@ -50,6 +50,9 @@ public class AuditRouteDescriptor implements Descriptor {
     @XNode("@name")
     protected String name;
 
+    @XNode("@copy")
+    protected String copy;
+
     @XNode("backend@name")
     protected String backendName;
 
@@ -62,6 +65,11 @@ public class AuditRouteDescriptor implements Descriptor {
     @Override
     public String getId() {
         return name;
+    }
+
+    @Override
+    public String getCopyId() {
+        return copy;
     }
 
     public String getName() {
@@ -89,20 +97,12 @@ public class AuditRouteDescriptor implements Descriptor {
     public AuditRouteDescriptor merge(Descriptor o) {
         var other = (AuditRouteDescriptor) o;
         var merged = new AuditRouteDescriptor();
-        merged.name = name; // we merge based on name, so no name merging needed
+        merged.name = getIfNull(other.name, name);
+        merged.copy = getIfNull(other.copy, copy);
         merged.backendName = defaultIfBlank(other.backendName, backendName);
-        merged.predicates = merge(other.predicates, predicates);
-        merged.events = merge(events, other.events);
+        merged.predicates = Descriptor.merge(other.predicates, predicates);
+        merged.events = Descriptor.merge(other.events, events);
         return merged;
-    }
-
-    @SuppressWarnings("unchecked")
-    protected <D extends Descriptor> List<D> merge(List<D> first, List<D> second) {
-        var map = new HashMap<String, D>();
-        first.forEach(descriptor -> map.put(descriptor.getId(), descriptor));
-        second.forEach(descriptor -> map.merge(descriptor.getId(), descriptor,
-                (previous, current) -> (D) previous.merge(current)));
-        return new ArrayList<>(map.values());
     }
 
     @XObject("predicate")
@@ -156,8 +156,8 @@ public class AuditRouteDescriptor implements Descriptor {
         public PredicateDescriptor merge(Descriptor o) {
             var other = (PredicateDescriptor) o;
             var merged = new PredicateDescriptor();
-            merged.name = name; // we merge based on name, so no name merging needed
-            merged.predicateClass = firstNonNull(other.predicateClass, predicateClass);
+            merged.name = getIfNull(other.name, name);
+            merged.predicateClass = getIfNull(other.predicateClass, predicateClass);
             merged.properties = new HashMap<>(properties);
             merged.properties.putAll(other.properties);
             return merged;
@@ -190,8 +190,8 @@ public class AuditRouteDescriptor implements Descriptor {
         public EventDescriptor merge(Descriptor o) {
             var other = (EventDescriptor) o;
             var merged = new EventDescriptor();
-            merged.name = name; // we merge based on name, so no name merging needed
-            merged.enabled = firstNonNull(other.enabled, enabled);
+            merged.name = getIfNull(other.name, name);
+            merged.enabled = getIfNull(other.enabled, enabled);
             return merged;
         }
 

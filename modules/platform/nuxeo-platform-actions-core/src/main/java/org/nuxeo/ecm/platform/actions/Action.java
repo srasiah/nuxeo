@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo SA (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@
  */
 package org.nuxeo.ecm.platform.actions;
 
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.ObjectUtils.getIfNull;
 import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
 
@@ -199,7 +198,7 @@ public class Action implements Serializable, Cloneable, Comparable<Action>, Desc
 
     public String getLabel() {
         if (label == null) {
-            return defaultIfNull(getStringProperty("label"), getId());
+            return getIfNull(getStringProperty("label"), getId());
         }
         return label;
     }
@@ -518,19 +517,19 @@ public class Action implements Serializable, Cloneable, Comparable<Action>, Desc
     public Action merge(Descriptor o) {
         var other = (Action) o;
         var merged = new Action();
-        merged.id = id;
-        merged.enabled = defaultIfNull(other.enabled, enabled);
-        merged.icon = defaultIfNull(other.icon, icon);
+        merged.id = getIfNull(other.id, id);
+        merged.enabled = getIfNull(other.enabled, enabled);
+        merged.icon = getIfNull(other.icon, icon);
         var categoriesSet = new LinkedHashSet<>(List.of(getIfNull(categories, () -> new String[] {})));
         categoriesSet.addAll(List.of(getIfNull(other.categories, () -> new String[] {})));
         merged.categories = categoriesSet.toArray(String[]::new);
-        merged.label = defaultIfNull(other.label, label);
-        merged.link = defaultIfNull(other.link, link);
+        merged.label = getIfNull(other.label, label);
+        merged.link = getIfNull(other.link, link);
         merged.confirm = defaultIfBlank(other.confirm, confirm);
-        merged.help = defaultIfNull(other.help, help);
-        merged.immediate = defaultIfNull(other.immediate, immediate);
-        other.accessKey = defaultIfNull(other.accessKey, accessKey);
-        merged.type = defaultIfNull(other.type, type);
+        merged.help = getIfNull(other.help, help);
+        merged.immediate = getIfNull(other.immediate, immediate);
+        other.accessKey = getIfNull(other.accessKey, accessKey);
+        merged.type = getIfNull(other.type, type);
         merged.order = other.order > 0 ? other.order : order;
         var filterIdsSet = new LinkedHashSet<>(getIfNull(filterIds, List::of));
         filterIdsSet.addAll(getIfNull(other.filterIds, List::of));

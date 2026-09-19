@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2023-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2023-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,8 +46,6 @@ import org.nuxeo.ecm.core.repository.RepositoryService;
 import org.nuxeo.ecm.core.storage.mongodb.IgnoreIfNotDBSMongoDBRepository;
 import org.nuxeo.ecm.core.storage.sql.IgnoreIfNotVCSRepository;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.capabilities.CapabilitiesService;
 import org.nuxeo.runtime.migration.MigrationService;
@@ -63,7 +61,6 @@ import org.nuxeo.runtime.test.runner.WithFrameworkProperty;
  */
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @WithFrameworkProperty(name = "nuxeo.test.repository.disable.blobKeys", value = "true")
 public class TestBlobKeysBulkMigrator {
 

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2022 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2022-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,8 +34,6 @@ import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.DummyBlobProvider;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -45,7 +43,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
  */
 @RunWith(FeaturesRunner.class)
 @Features(BlobManagerFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.core.test.tests:OSGI-INF/test-coldStorage-blob-provider.xml")
 public class TestColdStorageBlobStore {
 

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,8 +45,6 @@ import org.nuxeo.ecm.core.api.IdRef;
 import org.nuxeo.ecm.core.api.security.ACE;
 import org.nuxeo.ecm.core.api.security.ACL;
 import org.nuxeo.ecm.core.api.security.ACP;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.directory.Session;
 import org.nuxeo.ecm.directory.api.DirectoryService;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
@@ -62,7 +60,6 @@ import org.nuxeo.runtime.test.runner.TransactionalFeature;
  */
 @RunWith(FeaturesRunner.class)
 @Features({ PermissionsFeature.class, PlatformFeature.class })
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.permissions")
 public class TestPermissionListener {
 

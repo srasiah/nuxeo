@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,8 +51,6 @@ import org.nuxeo.ecm.core.api.security.ACL;
 import org.nuxeo.ecm.core.api.security.ACP;
 import org.nuxeo.ecm.core.api.security.SecurityConstants;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.platform.comment.api.Comment;
 import org.nuxeo.ecm.platform.comment.api.CommentManager;
 import org.nuxeo.ecm.platform.comment.api.ExternalEntity;
@@ -67,7 +65,6 @@ import org.nuxeo.runtime.transaction.TransactionHelper;
  * @since 10.3
  */
 @RunWith(FeaturesRunner.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Features(CommentFeature.class)
 public abstract class AbstractTestCommentManager {
 
@@ -432,9 +429,9 @@ public abstract class AbstractTestCommentManager {
 
         // test get replies
         assertEquals(Set.of(c3, c4),
-                new HashSet<>(commentManager.getComments(session, List.of(c1.getId(), c2.getId()))));
+                new HashSet<>(commentManager.getComments(session, Set.of(c1.getId(), c2.getId()))));
         assertEquals(Set.of(c1, c2, c3, c4),
-                new HashSet<>(commentManager.getComments(session, List.of(commentedDocModel.getId()))));
+                new HashSet<>(commentManager.getComments(session, Set.of(commentedDocModel.getId()))));
     }
 
     @Test

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2016-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,8 +45,6 @@ import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.api.impl.DocumentModelListImpl;
 import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.platform.video.VideoFeature;
 import org.nuxeo.ecm.platform.video.VideoHelper;
 import org.nuxeo.ecm.platform.video.VideoInfo;
@@ -64,7 +62,6 @@ import org.nuxeo.runtime.test.runner.TransactionalFeature;
  */
 @RunWith(FeaturesRunner.class)
 @Features(VideoFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 public class TestVideoToolsOperations extends BaseVideoToolsTest {
 
     public static final String WATERMARK_PICTURE = "test-data/logo.jpeg";

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,8 +43,6 @@ import org.nuxeo.ecm.core.api.security.ACP;
 import org.nuxeo.ecm.core.event.EventService;
 import org.nuxeo.ecm.core.event.impl.EventContextImpl;
 import org.nuxeo.ecm.core.security.UpdateACEStatusListener;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.tokenauth.TokenAuthenticationServiceFeature;
 import org.nuxeo.ecm.tokenauth.service.TokenAuthenticationService;
 import org.nuxeo.runtime.test.runner.Features;
@@ -57,7 +55,6 @@ import org.nuxeo.runtime.transaction.TransactionHelper;
  */
 @RunWith(FeaturesRunner.class)
 @Features({ PermissionsFeature.class, TokenAuthenticationServiceFeature.class })
-@RepositoryConfig(cleanup = Granularity.METHOD)
 public class TestPermissionForTransientUsers {
 
     @Inject

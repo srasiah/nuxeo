@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  * Contributors:
  *     Nuxeo - initial API and implementation
  */
-
 package org.nuxeo.ecm.platform.content.template.tests;
 
 import static org.junit.Assert.assertEquals;
@@ -43,8 +42,6 @@ import org.nuxeo.ecm.core.api.security.ACE;
 import org.nuxeo.ecm.core.api.security.ACL;
 import org.nuxeo.ecm.core.api.security.ACP;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.platform.content.template.service.ContentFactoryDescriptor;
 import org.nuxeo.ecm.platform.content.template.service.ContentTemplateService;
 import org.nuxeo.ecm.platform.content.template.service.ContentTemplateServiceImpl;
@@ -58,7 +55,6 @@ import org.nuxeo.runtime.test.runner.LogCaptureFeature;
 
 @RunWith(FeaturesRunner.class)
 @Features({ CoreFeature.class, LogCaptureFeature.class })
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.platform.content.template.tests:test-content-template-framework.xml")
 @Deploy("org.nuxeo.ecm.platform.content.template.tests:test-content-template-contrib.xml")
 @Deploy("org.nuxeo.ecm.platform.content.template.tests:test-content-template-listener.xml")

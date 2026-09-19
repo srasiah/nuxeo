@@ -3,7 +3,7 @@
   <parent>
     <groupId>org.nuxeo</groupId>
     <artifactId>nuxeo-ecm</artifactId>
-    <version>2025.16-SNAPSHOT</version>
+    <version>2025.21-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -216,6 +216,11 @@
     <dependency>
       <groupId>org.nuxeo.packages</groupId>
       <artifactId>nuxeo-uidgen-sql-package</artifactId>
+      <type>zip</type>
+    </dependency>
+    <dependency>
+      <groupId>org.nuxeo.packages</groupId>
+      <artifactId>nuxeo-webdav-package</artifactId>
       <type>zip</type>
     </dependency>
     <dependency>

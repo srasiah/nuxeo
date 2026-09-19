@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@ import static jakarta.servlet.http.HttpServletResponse.SC_REQUEST_TIMEOUT;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.lang.Math.max;
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY;
+import static org.nuxeo.ecm.core.search.SearchServiceImpl.getFromClause;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.Serializable;
 import java.time.Duration;
@@ -32,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
@@ -56,6 +56,7 @@ import org.nuxeo.ecm.core.search.SearchService;
 import org.nuxeo.ecm.core.work.api.WorkManager;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.query.nxql.SearchServicePageProvider;
 import org.nuxeo.ecm.webengine.model.WebObject;
 import org.nuxeo.ecm.webengine.model.impl.AbstractResource;
@@ -102,7 +103,8 @@ public class SearchObject extends AbstractResource<ResourceTypeImpl> {
     @Path("{documentId}/reindex")
     public BulkStatus doIndexingOnDocument(@PathParam("documentId") String documentId,
             @QueryParam("queryLimit") @DefaultValue("-1") Long queryLimit, @QueryParam("index") List<String> indexes) {
-        String query = String.format("Select * From Document where %s = '%s' or %s = '%s'", //
+        String query = "Select * From %s where %s = '%s' or %s = '%s'".formatted( //
+                getFromClause(), //
                 NXQL.ECM_UUID, documentId, //
                 NXQL.ECM_ANCESTORID, documentId);
         return performIndexing(query, queryLimit, indexes);
@@ -195,10 +197,12 @@ public class SearchObject extends AbstractResource<ResourceTypeImpl> {
     protected Map<String, Serializable> extractResultInfo(SearchIndex searchIndex, String nxql, long pageSize) {
         PageProviderService pageProviderService = Framework.getService(PageProviderService.class);
         PageProviderDefinition ppdef = pageProviderService.getPageProviderDefinition(CHECK_SEARCH_NXQL_PP);
-        HashMap<String, Serializable> params = new HashMap<>();
-        params.put(CORE_SESSION_PROPERTY, (Serializable) ctx.getCoreSession());
-        var pp = (SearchServicePageProvider) pageProviderService.getPageProvider(CHECK_SEARCH_NXQL_PP, ppdef, null,
-                null, pageSize, 0L, params);
+        var pp = (SearchServicePageProvider) pageProviderService.getPageProvider(
+                PageProviderSpec.builder(ppdef)
+                                .pageSize(pageSize)
+                                .currentPage(0L)
+                                .property(CORE_SESSION_PROPERTY, (Serializable) ctx.getCoreSession())
+                                .build());
         pp.setSearchIndexes(List.of(searchIndex));
         pp.setParameters(new String[] { nxql });
         long start = System.currentTimeMillis();
@@ -211,7 +215,7 @@ public class SearchObject extends AbstractResource<ResourceTypeImpl> {
         ret.put("resultsCount", pp.getResultsCount());
         ret.put("resultsCountLimit", pp.getResultsCountLimit());
         ret.put("order", pp.getSortInfo());
-        ret.put("results", (Serializable) res.stream().map(DocumentModel::getId).collect(Collectors.toList()));
+        ret.put("results", (Serializable) res.stream().map(DocumentModel::getId).toList());
         return ret;
     }
 

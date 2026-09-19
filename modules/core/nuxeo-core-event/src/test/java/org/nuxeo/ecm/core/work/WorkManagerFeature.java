@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import org.nuxeo.ecm.core.event.CoreEventFeature;
 import org.nuxeo.ecm.core.work.api.WorkManager;
 import org.nuxeo.runtime.RuntimeServiceException;
 import org.nuxeo.runtime.api.Framework;
-import org.nuxeo.runtime.test.runner.Deploy;
+import org.nuxeo.runtime.kv.RuntimeKeyValueStoreFeature;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.RunnerFeature;
@@ -48,8 +48,10 @@ import org.nuxeo.runtime.test.runner.TransactionalFeature.Waiter;
  *
  * @since 10.3
  */
-@Deploy("org.nuxeo.runtime.kv") // for stream work manager
-@Features(CoreEventFeature.class)
+@Features({ //
+        CoreEventFeature.class, //
+        RuntimeKeyValueStoreFeature.class, // for stream work manager
+})
 public class WorkManagerFeature implements RunnerFeature {
 
     private static final Logger log = LogManager.getLogger(WorkManagerFeature.class);

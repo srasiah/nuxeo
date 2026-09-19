@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,11 @@
  */
 package org.nuxeo.drive.adapter.impl;
 
-import static org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.nuxeo.drive.adapter.FileItem;
 import org.nuxeo.drive.adapter.FileSystemItem;
@@ -37,6 +35,7 @@ import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.api.Framework;
 
 /**
@@ -71,10 +70,12 @@ public class CollectionSyncRootFolderItem extends DefaultSyncRootFolderItem {
     public List<FileSystemItem> getChildren() {
         CoreSession session = CoreInstance.getCoreSession(repositoryName, principal);
         PageProviderService pageProviderService = Framework.getService(PageProviderService.class);
-        Map<String, Serializable> props = new HashMap<>();
-        props.put(CORE_SESSION_PROPERTY, (Serializable) session);
         PageProvider<DocumentModel> childrenPageProvider = (PageProvider<DocumentModel>) pageProviderService.getPageProvider(
-                CollectionConstants.COLLECTION_CONTENT_PAGE_PROVIDER, null, null, 0L, props, docId);
+                PageProviderSpec.builder(CollectionConstants.COLLECTION_CONTENT_PAGE_PROVIDER)
+                                .currentPage(0L)
+                                .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                .parameters(docId)
+                                .build());
         List<DocumentModel> dmChildren = childrenPageProvider.getCurrentPage();
 
         List<FileSystemItem> children = new ArrayList<>(dmChildren.size());

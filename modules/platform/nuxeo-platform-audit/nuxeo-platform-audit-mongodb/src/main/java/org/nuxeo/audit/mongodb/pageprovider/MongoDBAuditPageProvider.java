@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import org.nuxeo.ecm.core.api.SortInfo;
 import org.nuxeo.ecm.platform.query.api.AbstractPageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.query.api.PredicateDefinition;
 import org.nuxeo.ecm.platform.query.api.PredicateFieldDefinition;
 import org.nuxeo.ecm.platform.query.api.QuickFilter;
@@ -63,7 +64,11 @@ public class MongoDBAuditPageProvider extends AbstractPageProvider<LogEntry> imp
 
     private static final String EMPTY_QUERY = "{}";
 
-    public static final String CORE_SESSION_PROPERTY = "coreSession";
+    /**
+     * @deprecated since 2025.20, use {@link PageProviderSpec#CORE_SESSION_PROPERTY} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
+    public static final String CORE_SESSION_PROPERTY = PageProviderSpec.CORE_SESSION_PROPERTY;
 
     /**
      * @deprecated since 2025.0, unused
@@ -78,8 +83,8 @@ public class MongoDBAuditPageProvider extends AbstractPageProvider<LogEntry> imp
 
     protected CoreSession getCoreSession() {
         Object session = getProperties().get(CORE_SESSION_PROPERTY);
-        if (session instanceof CoreSession) {
-            return (CoreSession) session;
+        if (session instanceof CoreSession coreSession) {
+            return coreSession;
         }
         return null;
     }
@@ -245,8 +250,8 @@ public class MongoDBAuditPageProvider extends AbstractPageProvider<LogEntry> imp
                     value = searchDocumentModel.getProperty(fieldDef[fidx].getSchema(), fieldDef[fidx].getName());
                 }
                 // Convert Calendar objects
-                if (value instanceof Calendar) {
-                    value = ((Calendar) value).getTime();
+                if (value instanceof Calendar calendar) {
+                    value = calendar.getTime();
                 }
                 val[fidx] = value;
             }
@@ -328,12 +333,12 @@ public class MongoDBAuditPageProvider extends AbstractPageProvider<LogEntry> imp
             return false;
         }
         for (Object v : val) {
-            if (v instanceof String) {
-                if (!((String) v).isEmpty()) {
+            if (v instanceof String s) {
+                if (!s.isEmpty()) {
                     return true;
                 }
-            } else if (v instanceof String[]) {
-                if (((String[]) v).length > 0) {
+            } else if (v instanceof String[] strings) {
+                if (strings.length > 0) {
                     return true;
                 }
             } else if (v != null) {

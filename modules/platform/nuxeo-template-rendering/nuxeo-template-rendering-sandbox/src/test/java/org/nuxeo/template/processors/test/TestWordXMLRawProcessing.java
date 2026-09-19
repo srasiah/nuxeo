@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2011 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2011-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,8 +37,6 @@ import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -50,7 +48,6 @@ import org.nuxeo.template.processors.docx.WordXMLRawTemplateProcessor;
 
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.template.manager.api")
 @Deploy("org.nuxeo.template.manager")
 public class TestWordXMLRawProcessing {
@@ -91,7 +88,8 @@ public class TestWordXMLRawProcessing {
         templateDoc.setProperty("file", "content", fileBlob);
         templateDoc = session.createDocument(templateDoc);
 
-        DocumentModel testDoc = session.createDocumentModel(root.getPathAsString(), "templatedDoc", "TemplateBasedFile");
+        DocumentModel testDoc = session.createDocumentModel(root.getPathAsString(), "templatedDoc",
+                "TemplateBasedFile");
         testDoc.setProperty("dublincore", "title", "MyTestDoc");
         fileBlob.setFilename("sample templatet.docx");
         // testDoc.setProperty("file", "content", fileBlob);

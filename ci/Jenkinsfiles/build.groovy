@@ -19,7 +19,7 @@
  */
 import groovy.transform.Field
 
-library identifier: "platform-ci-shared-library@v0.0.75"
+library identifier: "platform-ci-shared-library@v0.0.88"
 
 // we can not allocate directly the variable, we have to use an `if` to make Jenkins Groovy working
 def abortPrevious = false
@@ -238,7 +238,6 @@ pipeline {
     AWS_CREDENTIALS_SECRET = 'aws-credentials'
     AZURE_CREDENTIALS_SECRET = 'azure-credentials'
     AWS_SES_MAIL_SENDER = 'platform@hyland.com'
-    GITHUB_WORKFLOW_DOCKER_SCAN = 'docker-image-scan.yaml'
   }
 
   stages {
@@ -263,12 +262,9 @@ pipeline {
           """
           sh """
             # root POM
-            mvn ${MAVEN_CLI_ARGS} -Pdistrib,docker versions:set -DnewVersion=${VERSION} -DgenerateBackupPoms=false
+            mvn ${MAVEN_CLI_ARGS} -Pdistrib,docker,parent versions:set -DnewVersion=${VERSION} -DgenerateBackupPoms=false
             perl -i -pe 's|<nuxeo.platform.version>.*?</nuxeo.platform.version>|<nuxeo.platform.version>${VERSION}</nuxeo.platform.version>|' pom.xml
             perl -i -pe 's|org.nuxeo.ecm.product.version=.*|org.nuxeo.ecm.product.version=${VERSION}|' server/nuxeo-nxr-server/src/main/resources/templates/nuxeo.defaults
-
-            # nuxeo-parent POM
-            perl -i -pe 's|<version>.*?</version>|<version>${VERSION}</version>|' parent/pom.xml
 
             # nuxeo-promote-packages POM
             # only replace the first <version> occurence
@@ -453,45 +449,6 @@ pipeline {
                   dockerRun(image, 'nuxeoctl start')
                   echo 'Run image as an arbitrary user (800)'
                   dockerRun(image, 'nuxeoctl start', '800')
-                }
-              }
-            }
-          }
-        }
-
-        stage('Scan Docker image') {
-          when {
-            anyOf {
-              expression {
-                !nxUtils.isPullRequest()
-              }
-              expression {
-                pullRequest.labels.contains('docker-scan')
-              }
-              changeset "docker/**"
-            }
-          }
-          steps {
-            container('maven') {
-              nxWithGitHubStatus(context: 'docker/scan', message: 'Scan Docker image') {
-                script {
-                  def imageName = "${DOCKER_NAMESPACE}/${NUXEO_IMAGE_NAME}:${VERSION}"
-                  echo """
-                  ----------------------------------------
-                  Scan Docker image
-                  ----------------------------------------
-                  Image full name: ${DOCKER_REGISTRY}/${imageName}
-                  """
-                  nxGitHub.runAndWatchWorkflow(
-                    workflowId: "${GITHUB_WORKFLOW_DOCKER_SCAN}",
-                    branch: "${CHANGE_BRANCH}",
-                    rawFields: [
-                      internalRegistry: true,
-                      imageName: "${imageName}",
-                    ],
-                    sha: "${GIT_COMMIT}",
-                    exitStatus: true
-                  )
                 }
               }
             }
@@ -710,8 +667,7 @@ pipeline {
               sh './prepare-patches'
             }
             sh """
-              mvn ${MAVEN_CLI_ARGS} -Pdistrib -DskipTests deploy
-              mvn ${MAVEN_CLI_ARGS} -f parent/pom.xml deploy
+              mvn ${MAVEN_CLI_ARGS} -Pdistrib,parent -DskipTests deploy
 
               # update back nuxeo-parent version to CURRENT_VERSION version
               mvn ${MAVEN_CLI_ARGS} -f parent/pom.xml versions:set -DnewVersion=${CURRENT_VERSION} -DgenerateBackupPoms=false
@@ -761,6 +717,36 @@ pipeline {
             echo "Push Docker images to Docker registry ${PRIVATE_DOCKER_REGISTRY}"
             dockerDeploy("${PRIVATE_DOCKER_REGISTRY}", "${NUXEO_IMAGE_NAME}")
             dockerDeploy("${PRIVATE_DOCKER_REGISTRY}", "${NUXEO_BENCHMARK_IMAGE_NAME}")
+          }
+        }
+      }
+    }
+
+    stage('Scan for vulnerabilities') {
+      when {
+        expression {
+          !nxUtils.isPullRequest()
+        }
+      }
+      steps {
+        container('maven') {
+          nxWithGitHubStatus(context: 'scan-vulnerabilities', message: 'Scan Docker image and Nuxeo packages for vulnerabilities') {
+            script {
+              echo """
+              ----------------------------------------
+              Scan Docker image and Nuxeo packages
+              ----------------------------------------""".stripIndent()
+              def parameters = [
+                string(name: 'NUXEO_BRANCH', value: CHANGE_BRANCH),
+              ]
+              nxUtils.buildWrapped(
+                job: 'nuxeo/lts/scan-nuxeo',
+                parameters: parameters,
+                // Don't wait, as the downstream job doesn't fail if it finds some vulnerabilities, it just creates
+                // some Jira issues and notify in Teams. Thus, the current build cannot be blocked.
+                wait: false,
+              )
+            }
           }
         }
       }

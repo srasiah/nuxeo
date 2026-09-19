@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,8 +97,6 @@ import org.nuxeo.ecm.core.storage.dbs.IgnoreIfNotDBSRepository;
 import org.nuxeo.ecm.core.storage.mongodb.IgnoreIfDBSMongoDBRepository;
 import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.core.test.StorageConfiguration;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.ConditionalIgnore;
 import org.nuxeo.runtime.test.runner.Deploy;
@@ -110,7 +108,6 @@ import org.nuxeo.runtime.transaction.TransactionHelper;
 
 @RunWith(FeaturesRunner.class)
 @Features({ CoreFeature.class, LogCaptureFeature.class })
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.core.convert.plugins")
 @Deploy("org.nuxeo.ecm.core.test.tests:OSGI-INF/test-repo-core-types-contrib-2.xml")
 @Deploy("org.nuxeo.ecm.core.test.tests:OSGI-INF/test-repo-query-core-types-contrib.xml")

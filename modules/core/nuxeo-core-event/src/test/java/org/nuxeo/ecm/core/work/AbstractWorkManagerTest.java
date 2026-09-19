@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2012-2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2012-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,7 +72,6 @@ import io.dropwizard.metrics5.SharedMetricRegistries;
 
 @RunWith(FeaturesRunner.class)
 @Features({ CoreEventFeature.class, FileEventsTrackingFeature.class })
-@Deploy("org.nuxeo.runtime.kv")
 @Deploy("org.nuxeo.ecm.core.event.test:OSGI-INF/test-default-workmanager-config.xml")
 @Deploy("org.nuxeo.ecm.core.event.test:test-workmanager-queue-config.xml")
 public abstract class AbstractWorkManagerTest {
@@ -250,7 +249,7 @@ public abstract class AbstractWorkManagerTest {
 
     @Before
     public void before() {
-        assertTrue(persistent() == service.supportsProcessingDisabling());
+        assertEquals(persistent(), service.supportsProcessingDisabling());
         try {
             service.awaitCompletion(60, TimeUnit.SECONDS);
         } catch (InterruptedException e) {

@@ -4,14 +4,22 @@
   <parent>
     <groupId>org.nuxeo.runtime</groupId>
     <artifactId>nuxeo-runtime-parent</artifactId>
-    <version>2025.16-SNAPSHOT</version>
+    <version>2025.21-SNAPSHOT</version>
   </parent>
 
   <artifactId>nuxeo-runtime-cluster</artifactId>
   <name>Nuxeo Runtime Cluster Configuration</name>
 
   <dependencies>
+    <!-- Java specifications -->
+    <dependency>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
+    </dependency>
 
+    <!-- Libraries -->
+
+    <!-- Nuxeo dependencies -->
     <dependency>
       <groupId>org.nuxeo.common</groupId>
       <artifactId>nuxeo-common</artifactId>
@@ -22,18 +30,21 @@
     </dependency>
     <dependency>
       <groupId>org.nuxeo.runtime</groupId>
-      <artifactId>nuxeo-runtime-kv</artifactId>
+      <artifactId>nuxeo-runtime-jtajca</artifactId>
     </dependency>
     <dependency>
       <groupId>org.nuxeo.runtime</groupId>
-      <artifactId>nuxeo-runtime-jtajca</artifactId>
+      <artifactId>nuxeo-runtime-kv</artifactId>
     </dependency>
 
+    <!-- Test libraries -->
+
+    <!-- Nuxeo test dependencies -->
     <dependency>
-      <groupId>jakarta.validation</groupId>
-      <artifactId>jakarta.validation-api</artifactId>
+      <groupId>org.nuxeo.runtime</groupId>
+      <artifactId>nuxeo-runtime-kv</artifactId>
+      <type>test-jar</type>
     </dependency>
-
     <dependency>
       <groupId>org.nuxeo.runtime</groupId>
       <artifactId>nuxeo-runtime-test</artifactId>

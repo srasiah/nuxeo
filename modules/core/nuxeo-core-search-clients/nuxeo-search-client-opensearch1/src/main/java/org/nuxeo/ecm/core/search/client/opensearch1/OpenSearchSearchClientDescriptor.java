@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2025-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
  */
 package org.nuxeo.ecm.core.search.client.opensearch1;
 
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
+import static org.apache.commons.lang3.ObjectUtils.getIfNull;
 import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
 
 import java.util.HashMap;
@@ -66,18 +66,17 @@ public class OpenSearchSearchClientDescriptor implements Descriptor {
     }
 
     public String getClientId() {
-        return defaultIfNull(clientId, "search/" + name);
+        return getIfNull(clientId, "search/" + name);
     }
 
     @Override
     public Descriptor merge(Descriptor o) {
         var other = (OpenSearchSearchClientDescriptor) o;
         var merged = new OpenSearchSearchClientDescriptor();
-        merged.name = name; // we merge based on name, so no name merging needed
-        merged.enabled = defaultIfNull(other.enabled, enabled);
+        merged.name = getIfNull(other.name, name);
+        merged.enabled = getIfNull(other.enabled, enabled);
         merged.clientId = defaultIfBlank(other.clientId, clientId);
-        merged.searchIndexes = new HashMap<>(searchIndexes);
-        other.searchIndexes.forEach((k, v) -> merged.searchIndexes.merge(k, v, SearchIndex::merge));
+        merged.searchIndexes = Descriptor.merge(other.searchIndexes, searchIndexes);
         return merged;
     }
 

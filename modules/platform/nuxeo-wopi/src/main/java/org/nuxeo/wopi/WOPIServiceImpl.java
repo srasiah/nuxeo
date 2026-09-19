@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,6 +101,9 @@ public class WOPIServiceImpl extends DefaultComponent implements WOPIService {
     // extension => wopi action => wopi action url
     protected Map<String, Map<String, String>> extensionActionURLs = new HashMap<>();
 
+    // extension => favicon url (from WOPI discovery)
+    protected Map<String, String> extensionFavIconURLs = new HashMap<>();
+
     protected PublicKey proofKey;
 
     protected PublicKey oldProofKey;
@@ -133,10 +136,16 @@ public class WOPIServiceImpl extends DefaultComponent implements WOPIService {
     public void stop(ComponentContext context) {
         checkFileInfoUpdater = null;
         discoveryURL = null;
+        clearDiscoveryState();
+        unregisterInvalidator();
+    }
+
+    protected void clearDiscoveryState() {
+        extensionAppNames.clear();
+        extensionActionURLs.clear();
+        extensionFavIconURLs.clear();
         proofKey = null;
         oldProofKey = null;
-
-        unregisterInvalidator();
     }
 
     protected boolean hasDiscoveryURL() {
@@ -190,14 +199,21 @@ public class WOPIServiceImpl extends DefaultComponent implements WOPIService {
         }
 
         List<String> supportedAppNames = getSupportedAppNames();
+        clearDiscoveryState();
         netZone.getApps().stream().filter(app -> supportedAppNames.contains(app.getName())).forEach(this::registerApp);
         log.debug("Successfully loaded WOPI discovery: WOPI enabled");
 
         WOPIDiscovery.ProofKey pk = discovery.getProofKey();
         proofKey = ProofKeyHelper.getPublicKey(pk.getModulus(), pk.getExponent());
-        oldProofKey = ProofKeyHelper.getPublicKey(pk.getOldModulus(), pk.getOldExponent());
         log.debug("Registered proof key: {}", proofKey);
-        log.debug("Registered old proof key: {}", oldProofKey);
+        // old proof key may not be available on a fresh Office Online Server that hasn't undergone key rotation
+        if (isNotBlank(pk.getOldModulus()) && isNotBlank(pk.getOldExponent())) {
+            oldProofKey = ProofKeyHelper.getPublicKey(pk.getOldModulus(), pk.getOldExponent());
+            log.debug("Registered old proof key: {}", oldProofKey);
+        } else {
+            oldProofKey = null;
+            log.debug("No old proof key available in WOPI discovery");
+        }
         return true;
     }
 
@@ -220,6 +236,9 @@ public class WOPIServiceImpl extends DefaultComponent implements WOPIService {
     protected void registerApp(WOPIDiscovery.App app) {
         app.getActions().forEach(action -> {
             extensionAppNames.put(action.getExt(), app.getName());
+            if (isNotBlank(app.getFavIconUrl())) {
+                extensionFavIconURLs.put(action.getExt(), app.getFavIconUrl());
+            }
             var url = action.getUrl();
             int firstArg = url.indexOf("<");
             if (firstArg > 0) {
@@ -261,6 +280,12 @@ public class WOPIServiceImpl extends DefaultComponent implements WOPIService {
         return extensionActionURLs.getOrDefault(extension, Collections.emptyMap()).get(action);
     }
 
+    @Override
+    public String getFavIconURL(Blob blob) {
+        String extension = getExtension(blob);
+        return extension != null ? extensionFavIconURLs.get(extension) : null;
+    }
+
     protected String getExtension(Blob blob) {
         String filename = blob.getFilename();
         if (filename == null) {
@@ -288,7 +313,7 @@ public class WOPIServiceImpl extends DefaultComponent implements WOPIService {
         boolean res = ProofKeyHelper.verifyProofKey(proofKey, proofKeyHeader, expectedProofBytes);
         if (!res && isNotBlank(oldProofKeyHeader)) {
             res = ProofKeyHelper.verifyProofKey(proofKey, oldProofKeyHeader, expectedProofBytes);
-            if (!res) {
+            if (!res && oldProofKey != null) {
                 res = ProofKeyHelper.verifyProofKey(oldProofKey, proofKeyHeader, expectedProofBytes);
             }
         }

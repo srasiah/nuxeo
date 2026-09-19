@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,13 @@
  */
 package org.nuxeo.runtime;
 
+import static org.apache.commons.lang3.ObjectUtils.getIfNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Test;
 import org.nuxeo.runtime.model.Descriptor;
@@ -57,9 +60,9 @@ public class TestDescriptorRegistry {
         public Descriptor merge(Descriptor o) {
             TestDescriptor other = (TestDescriptor) o;
             TestDescriptor merged = new TestDescriptor();
-            merged.id = id;
-            merged.name = other.name != null ? other.name : name;
-            merged.desc = other.desc != null ? other.desc : desc;
+            merged.id = getIfNull(other.id, id);
+            merged.name = getIfNull(other.name, name);
+            merged.desc = getIfNull(other.desc, desc);
             return merged;
         }
 
@@ -89,11 +92,37 @@ public class TestDescriptorRegistry {
     public void testGetSingleDescriptor() {
         DescriptorRegistry registry = new DescriptorRegistry();
         registry.register(TARGET, EP, new TestDescriptor("id1", "name1", "desc1"));
-        assertValues((TestDescriptor) registry.getDescriptor(TARGET, EP, "id1"), "id1", "name1", "desc1");
+        assertValues(registry.getDescriptor(TARGET, EP, "id1"), "id1", "name1", "desc1");
         registry.register(TARGET, EP, new TestDescriptor("id1", "name2", "desc1"));
-        assertValues((TestDescriptor) registry.getDescriptor(TARGET, EP, "id1"), "id1", "name2", "desc1");
+        assertValues(registry.getDescriptor(TARGET, EP, "id1"), "id1", "name2", "desc1");
         registry.register(TARGET, EP, new TestDescriptor("id1", null, "desc2"));
-        assertValues((TestDescriptor) registry.getDescriptor(TARGET, EP, "id1"), "id1", "name2", "desc2");
+        assertValues(registry.getDescriptor(TARGET, EP, "id1"), "id1", "name2", "desc2");
+    }
+
+    // NXP-33535
+    @Test
+    public void testGetDescriptorWithCopy() {
+        DescriptorRegistry registry = new DescriptorRegistry();
+        registry.register(TARGET, EP, new TestDescriptor("id1", "name1", "desc1"));
+        registry.register(TARGET, EP, new TestDescriptor("id2", "name2", null) {
+            @Override
+            public String getCopyId() {
+                return "id1";
+            }
+        });
+        assertValues(registry.getDescriptor(TARGET, EP, "id2"), "id2", "name2", "desc1");
+        // register a descriptor for id1 that would impact id2 (without having to re-register id2)
+        registry.register(TARGET, EP, new TestDescriptor("id1", "name1", "desc1-2"));
+        assertValues(registry.getDescriptor(TARGET, EP, "id2"), "id2", "name2", "desc1-2");
+        // finally register a descriptor for id2 and id1 and check that id2 has the highest priority
+        registry.register(TARGET, EP, new TestDescriptor("id1", "name1", "desc1-3"));
+        registry.register(TARGET, EP, new TestDescriptor("id2", "name2", "desc2-1") {
+            @Override
+            public String getCopyId() {
+                return "id1";
+            }
+        });
+        assertValues(registry.getDescriptor(TARGET, EP, "id2"), "id2", "name2", "desc2-1");
     }
 
     @Test
@@ -112,6 +141,43 @@ public class TestDescriptorRegistry {
         assertNull(registry.getDescriptor(TARGET, EP, "id0"));
         registry.register(TARGET, EP, new TestDescriptor("id0", "final", null));
         assertValues(registry.getDescriptor(TARGET, EP, "id0"), "id0", "final", null);
+    }
+
+    @Test
+    public void testMergeMap() {
+        var current = new LinkedHashMap<String, TestDescriptor>();
+        current.put("id1", new TestDescriptor("id1", "name1", "desc1"));
+        current.put("id2", new TestDescriptor("id2", "name2", "desc2"));
+        var other = new LinkedHashMap<String, TestDescriptor>();
+        other.put("id1", new TestDescriptor("id1", null, "desc1-2"));
+        other.put("id3", new TestDescriptor("id3", "name3", "desc3"));
+
+        Map<String, TestDescriptor> merged = Descriptor.merge(other, current);
+
+        assertEquals(3, merged.size());
+        assertValues(merged.get("id1"), "id1", "name1", "desc1-2");
+        assertValues(merged.get("id2"), "id2", "name2", "desc2");
+        assertValues(merged.get("id3"), "id3", "name3", "desc3");
+    }
+
+    @Test
+    public void testMergeMapWithRemove() {
+        var current = new LinkedHashMap<String, TestDescriptor>();
+        current.put("id1", new TestDescriptor("id1", "name1", "desc1"));
+        current.put("id2", new TestDescriptor("id2", "name2", "desc2"));
+        var other = new LinkedHashMap<String, TestDescriptor>();
+        other.put("id1", new TestDescriptor("id1", null, null) {
+            @Override
+            public boolean doesRemove() {
+                return true;
+            }
+        });
+
+        Map<String, TestDescriptor> merged = Descriptor.merge(other, current);
+
+        assertEquals(1, merged.size());
+        assertNull(merged.get("id1"));
+        assertValues(merged.get("id2"), "id2", "name2", "desc2");
     }
 
     protected void assertValues(TestDescriptor d, String id, String name, String desc) {

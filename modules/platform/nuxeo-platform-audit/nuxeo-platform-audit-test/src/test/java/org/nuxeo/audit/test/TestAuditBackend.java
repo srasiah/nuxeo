@@ -18,9 +18,13 @@
  */
 package org.nuxeo.audit.test;
 
+import static org.apache.commons.collections4.ListUtils.union;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_CATEGORY;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_DOC_PATH;
@@ -28,9 +32,12 @@ import static org.nuxeo.audit.api.LogEntryConstants.LOG_DOC_UUID;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_EVENT_DATE;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_EVENT_ID;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_EXTENDED;
+import static org.nuxeo.audit.api.LogEntryConstants.LOG_ID;
 import static org.nuxeo.audit.service.AuditBackend.Capability.STARTS_WITH_PARTIAL_MATCH;
 import static org.nuxeo.ecm.core.query.sql.model.Predicates.eq;
+import static org.nuxeo.ecm.core.query.sql.model.Predicates.in;
 
+import java.time.Duration;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -43,6 +50,9 @@ import org.nuxeo.audit.IgnoreIfAuditBackendDoesNotHaveExtendedInfoSearchCapabili
 import org.nuxeo.audit.api.AuditQueryBuilder;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.ecm.core.api.ConcurrentUpdateException;
+import org.nuxeo.ecm.core.api.NuxeoException;
+import org.nuxeo.ecm.core.api.ScrollResult;
 import org.nuxeo.ecm.core.query.sql.model.Predicates;
 import org.nuxeo.ecm.core.query.sql.model.QueryBuilder;
 import org.nuxeo.runtime.test.runner.ConditionalIgnore;
@@ -71,6 +81,57 @@ public class TestAuditBackend {
 
     @Inject
     protected TransactionalFeature transactionalFeature;
+
+    @Test
+    @SuppressWarnings("removal")
+    @ConditionalIgnore(condition = IgnoreIfNotAuditSequence.class)
+    public void testInsertLogs() {
+        // first test illegal argument cases
+        // no id
+        assertThrows(IllegalArgumentException.class, () -> backend.insertLogs(
+                List.of(LogEntry.builder("eventIdForTests", new Date()).logDate(new Date()).build())));
+        // no log date
+        assertThrows(IllegalArgumentException.class,
+                () -> backend.insertLogs(List.of(LogEntry.builder("eventIdForTests", new Date()).id(1_000L).build())));
+
+        // second test normal insertion
+        backend.insertLogs(
+                List.of(LogEntry.builder("eventIdForTests", new Date()).id(1_000L).logDate(new Date()).build()));
+        assertNotNull(backend.getLogEntryByID(1_000L));
+
+        // third test same entry can not be inserted twice
+        assertThrows(ConcurrentUpdateException.class, () -> backend.insertLogs(
+                List.of(LogEntry.builder("eventIdForTests", new Date()).id(1_000L).logDate(new Date()).build())));
+    }
+
+    @Test
+    @SuppressWarnings("removal")
+    @ConditionalIgnore(condition = IgnoreIfNotAuditSequence.class)
+    public void testInsertLogsWithSomeExistingLogEntries() {
+        var queryBuilder = new AuditQueryBuilder().predicate(Predicates.eq(LOG_EVENT_ID, "eventIdForTests"));
+        // insert two logs entries
+        var originalEntries = List.of( //
+                LogEntry.builder("eventIdForTests", new Date()).id(1_000L).logDate(new Date()).build(), //
+                LogEntry.builder("eventIdForTests", new Date()).id(1_001L).logDate(new Date()).build() //
+        );
+        backend.insertLogs(originalEntries);
+        transactionalFeature.nextTransaction();
+        assertEquals(2, backend.queryLogs(queryBuilder).size());
+
+        // create two more entries and try to insert all of them
+        var newEntries = List.of( //
+                LogEntry.builder("eventIdForTests", new Date()).id(1_002L).logDate(new Date()).build(), //
+                LogEntry.builder("eventIdForTests", new Date()).id(1_003L).logDate(new Date()).build() //
+        );
+        var e = assertThrows(ConcurrentUpdateException.class,
+                () -> backend.insertLogs(union(originalEntries, newEntries)));
+        assertEquals("Concurrent update", e.getOriginalMessage());
+        // assert duplicate entries number
+        assertEquals(2, e.getInfos().size());
+        // assert new entries have been inserted
+        transactionalFeature.nextTransaction();
+        assertEquals(4, backend.queryLogs(queryBuilder).size());
+    }
 
     @Test
     public void shouldSupportMultiCriteriaQueries() {
@@ -269,15 +330,14 @@ public class TestAuditBackend {
     // NXP-30511
     @Test
     public void testSupportNullExtendedInfos() {
-        var logEntry = LogEntry.builder("documentModified", new Date())
-                               .category("cat")
-                               .docUUID("testSupportNullExtendedInfos")
-                               .repositoryId("test")
-                               .extended("nullValue", null)
-                               .build();
-        backend.addLogEntries(List.of(logEntry));
-
-        transactionalFeature.nextTransaction();
+        auditFeature.generateLogEntries(1,
+                i -> LogEntry.builder("documentModified", new Date())
+                             .category("cat")
+                             .docUUID("testSupportNullExtendedInfos")
+                             .repositoryId("test")
+                             .extended("idx", i)
+                             .extended("nullValue", null)
+                             .build());
 
         var logEntries = backend.queryLogs(
                 new AuditQueryBuilder().predicate(eq(LOG_DOC_UUID, "testSupportNullExtendedInfos"))
@@ -287,5 +347,40 @@ public class TestAuditBackend {
         var extended = queriedLogEntry.getExtended();
         assertTrue("ExtendedInfo should exist", extended.containsKey("nullValue"));
         assertNull("ExtendedInfo value should be null", extended.get("nullValue"));
+    }
+
+    @Test
+    public void testScrollIds() {
+        auditFeature.generateLogEntries(10,
+                i -> LogEntry.builder(ID_FOR_AUDIT_STORAGE_TESTS, new Date()).comment("log n°" + i).build());
+
+        ScrollResult<String> scrollResult;
+        List<LogEntry> entries;
+
+        // retrieve all logs - 2 batches
+        scrollResult = backend.scrollLogIds(new AuditQueryBuilder(), 5, Duration.ofMinutes(1));
+        assertTrue(scrollResult.hasResults());
+        assertFalse(isBlank(scrollResult.getScrollId()));
+        entries = backend.queryLogs(
+                new AuditQueryBuilder().predicate(in(LOG_ID, scrollResult.getResults(Long::valueOf))));
+        assertEquals(List.of("log n°0", "log n°1", "log n°2", "log n°3", "log n°4"),
+                entries.stream().map(LogEntry::getComment).toList());
+
+        scrollResult = backend.scrollLogIds(scrollResult.getScrollId());
+        assertTrue(scrollResult.hasResults());
+        assertFalse(isBlank(scrollResult.getScrollId()));
+        entries = backend.queryLogs(
+                new AuditQueryBuilder().predicate(in(LOG_ID, scrollResult.getResults(Long::valueOf))));
+        assertEquals(List.of("log n°5", "log n°6", "log n°7", "log n°8", "log n°9"),
+                entries.stream().map(LogEntry::getComment).toList());
+
+        // backup scrollId because last call could lead to a null or 'empty' scrollId
+        var fScrollId = scrollResult.getScrollId();
+
+        scrollResult = backend.scrollLogIds(scrollResult.getScrollId());
+        assertFalse(scrollResult.hasResults());
+        assertFalse(isBlank(scrollResult.getScrollId()));
+
+        assertThrows(NuxeoException.class, () -> backend.scrollLogIds(fScrollId));
     }
 }

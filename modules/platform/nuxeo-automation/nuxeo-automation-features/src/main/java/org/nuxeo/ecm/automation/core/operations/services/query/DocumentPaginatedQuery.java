@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@
  */
 package org.nuxeo.ecm.automation.core.operations.services.query;
 
-import java.util.Collections;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
+
+import java.io.Serializable;
 import java.util.Map;
 
 import org.nuxeo.ecm.automation.OperationException;
@@ -38,6 +40,7 @@ import org.nuxeo.ecm.core.query.sql.NXQL;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.services.config.ConfigurationService;
 
@@ -112,7 +115,7 @@ public class DocumentPaginatedQuery {
         }
         Map<String, String> properties = null;
         if (maxResults != null) {
-            properties = Collections.singletonMap("maxResults", maxResults.toString());
+            properties = Map.of("maxResults", maxResults.toString());
         }
         PageProviderDefinition def = PageProviderHelper.getQueryPageProviderDefinition(query, properties,
                 escapePatternParameters, quotePatternParameters);
@@ -129,9 +132,17 @@ public class DocumentPaginatedQuery {
             strParameters = null;
         }
 
-        PageProvider<DocumentModel> pp = (PageProvider<DocumentModel>) PageProviderHelper.getPageProvider(session, def,
-                namedParameters, sortBy, sortOrder, targetPageSize, targetPage,
-                strParameters != null ? strParameters.toArray(new String[0]) : null);
+        var spec = PageProviderSpec.builder(def)
+                                   .searchDocument(PageProviderHelper.getSearchDocumentModel(session, def.getName(),
+                                           namedParameters))
+                                   .sortInfosByFieldsAndOrders(sortBy, sortOrder)
+                                   .pageSize(targetPageSize)
+                                   .currentPage(targetPage)
+                                   .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                   .parameters(strParameters)
+                                   .build();
+        PageProvider<DocumentModel> pp = (PageProvider<DocumentModel>) Framework.getService(PageProviderService.class)
+                                                                                .getPageProvider(spec);
 
         PaginableDocumentModelListImpl res = new PaginableDocumentModelListImpl(pp);
         if (res.hasError()) {

@@ -1,0 +1,57 @@
+@startuml
+title Audit Router Introspection
+
+hide members
+
+skinparam defaultFontName Courier
+skinparam handwritten false
+skinparam queue {
+  BackgroundColor LightYellow
+}
+skinparam node {
+  BackgroundColor White
+}
+skinparam component {
+  BackgroundColor Azure
+  BorderColor black
+  ArrowColor #CC6655
+}
+component event_listener [
+Event Listener
+----
+events:
+- documentModified
+]
+queue stream_audit_audit as "audit/audit" {
+  component computation_audit_writer [
+  audit/writer
+  ]
+}
+event_listener==>stream_audit_audit
+stream_audit_audit=[hidden]=>stream_audit_audit.computation_audit_writer
+package audit_router as "Audit Router" {
+  component route_route_everything_to_default [
+  route-everything-to-default
+  ]
+  component route_route_everything_to_other [
+  route-everything-to-other
+  ]
+}
+package audit_backend as "Audit Backends" {
+  database backend_default as "default" {
+    class implementation as "org.nuxeo.audit.mem.MemAuditBackend" {
+    }
+  }
+  backend_default=[hidden]=>backend_default.implementation
+  database backend_other as "other" {
+    class implementation as "org.nuxeo.audit.mem.MemAuditBackend" {
+    }
+  }
+  backend_other=[hidden]=>backend_other.implementation
+}
+stream_audit_audit.computation_audit_writer==>audit_router
+audit_router==>audit_router.route_route_everything_to_default
+audit_router.route_route_everything_to_default==>audit_backend.backend_default
+audit_router==>audit_router.route_route_everything_to_other
+audit_router.route_route_everything_to_other==>audit_backend.backend_other
+@enduml

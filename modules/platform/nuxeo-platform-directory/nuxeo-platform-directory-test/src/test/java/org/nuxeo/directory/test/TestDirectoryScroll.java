@@ -35,8 +35,8 @@ import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.api.scroll.Scroll;
 import org.nuxeo.ecm.core.api.scroll.ScrollRequest;
 import org.nuxeo.ecm.core.api.scroll.ScrollService;
+import org.nuxeo.ecm.core.query.scroll.QueryBuilderScrollRequest;
 import org.nuxeo.ecm.core.scroll.GenericScrollRequest;
-import org.nuxeo.ecm.directory.api.DirectoryService;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -51,16 +51,27 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 public class TestDirectoryScroll {
 
     @Inject
-    protected DirectoryService directoryService;
-
-    @Inject
     protected ScrollService scrollService;
 
     @Test
     public void testScroll() {
+        var request = QueryBuilderScrollRequest.builder("directory", "SELECT * FROM continent").size(2).build();
+        scrollAndAssert(request);
+    }
+
+    /**
+     * @deprecated since 2025.18
+     */
+    @Test
+    @Deprecated(since = "2025.18", forRemoval = true)
+    public void testGenericScroll() {
+        var request = GenericScrollRequest.builder("directory", "SELECT * FROM continent").size(2).build();
+        scrollAndAssert(request);
+    }
+
+    protected void scrollAndAssert(ScrollRequest request) {
         List<String> expectedIds = List.of("africa", "antarctica", "asia", "europe", "north-america", "oceania",
                 "south-america");
-        ScrollRequest request = GenericScrollRequest.builder("directory", "SELECT * FROM continent").size(2).build();
         assertTrue(scrollService.exists(request));
         try (Scroll scroll = scrollService.scroll(request)) {
             List<String> actualIds = new ArrayList<>();

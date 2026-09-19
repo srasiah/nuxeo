@@ -27,6 +27,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
+import static org.nuxeo.ecm.core.api.impl.blob.AbstractBlob.TEXT_PLAIN;
 import static org.nuxeo.ecm.core.blob.AbstractBlobStore.BYTE_RANGE_SEP;
 import static org.nuxeo.ecm.core.blob.BlobProviderDescriptor.DIRECTDOWNLOAD_EXPIRE_PROPERTY;
 
@@ -49,6 +50,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.NuxeoException;
+import org.nuxeo.ecm.core.api.impl.blob.AbstractBlob;
 import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
 import org.nuxeo.ecm.core.blob.BlobStore.OptionalOrUnknown;
 import org.nuxeo.ecm.core.blob.LocalBlobStore.LocalBlobGarbageCollector;
@@ -347,10 +349,20 @@ public abstract class TestAbstractBlobStore {
     }
 
     @Test
+    public void testByteRangeStream() throws IOException {
+        String key = bs.writeBlob(blobContext(ID1, "Hello World!"));
+        BlobInfo blobInfo = new BlobInfo();
+        blobInfo.key = key;
+        ManagedBlob blob = (ManagedBlob) bp.readBlob(blobInfo);
+        var byteRange = new ByteRange(6, 10);
+        assertEquals("World", IOUtils.toString(byteRange.forStream(blob.getStream()), UTF_8));
+    }
+
+    @Test
     public void testDirectDownload() throws IOException {
         assumeTrue(bp.allowDirectDownload());
 
-        int testExpiration = Integer.valueOf(bp.getProperties().get(DIRECTDOWNLOAD_EXPIRE_PROPERTY));
+        int testExpiration = Integer.parseInt(bp.getProperties().get(DIRECTDOWNLOAD_EXPIRE_PROPERTY));
         assertEquals(60, testExpiration);
         URL urlOneMinute = storeBlobAndGetDirectDownloadURL("test");
         // direct download link of provider "test" expires in 60 seconds
@@ -363,7 +375,7 @@ public abstract class TestAbstractBlobStore {
 
         BlobProvider otherProvider = blobManager.getBlobProvider("other");
         assumeTrue("Define a 'other' provider with directdownload.expire=1 (seconds)", otherProvider != null);
-        int otherExpiration = Integer.valueOf(otherProvider.getProperties().get(DIRECTDOWNLOAD_EXPIRE_PROPERTY));
+        int otherExpiration = Integer.parseInt(otherProvider.getProperties().get(DIRECTDOWNLOAD_EXPIRE_PROPERTY));
         assertEquals(1, otherExpiration);
         URL urlOneSecond = storeBlobAndGetDirectDownloadURL("other");
         // direct download link of "other" provider expires in 1 second
@@ -650,6 +662,23 @@ public abstract class TestAbstractBlobStore {
         if (cacheOther != null) {
             assertTrue(Files.exists(cacheOther));
         }
+    }
+
+    @Test
+    public void testWriteWithFilename() throws IOException {
+        // store blob with filename containing special character
+        var id = "specialChar";
+        assertNoBlob(id);
+        var blobContext = new BlobContext(new StringBlob("FOO", TEXT_PLAIN, AbstractBlob.UTF_8, "café.txt"), id, XPATH);
+        var key = bp.writeBlob(blobContext);
+        assertBlob(key, "FOO");
+
+        // store blob with filename without special character
+        id = "noSpecialChar";
+        assertNoBlob(id);
+        blobContext = new BlobContext(new StringBlob("BAR", TEXT_PLAIN, AbstractBlob.UTF_8, "tea.txt"), id, XPATH);
+        key = bp.writeBlob(blobContext);
+        assertBlob(key, "BAR");
     }
 
 }

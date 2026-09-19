@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2012-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2012-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,12 @@
 package org.nuxeo.drive.service.impl;
 
 import static org.nuxeo.audit.service.AuditComponent.DISABLE_AUDIT_LOGGER;
-import static org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 import static org.nuxeo.runtime.model.Descriptor.UNIQUE_DESCRIPTOR_ID;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -72,6 +71,7 @@ import org.nuxeo.ecm.core.query.sql.NXQL;
 import org.nuxeo.ecm.platform.ec.notification.NotificationConstants;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.query.nxql.NXQLQueryBuilder;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.ComponentContext;
@@ -351,7 +351,7 @@ public class NuxeoDriveManagerImpl extends DefaultComponent implements NuxeoDriv
                     // Get document changes
                     Set<IdRef> lastRefs = lastSyncRootRefs.get(repositoryName);
                     if (lastRefs == null) {
-                        lastRefs = Collections.emptySet();
+                        lastRefs = Set.of();
                     }
                     SynchronizationRoots activeRoots = roots.get(repositoryName);
                     if (activeRoots == null) {
@@ -359,7 +359,7 @@ public class NuxeoDriveManagerImpl extends DefaultComponent implements NuxeoDriv
                     }
                     Set<String> repoCollectionSyncRootMemberIds = collectionSyncRootMemberIds.get(repositoryName);
                     if (repoCollectionSyncRootMemberIds == null) {
-                        repoCollectionSyncRootMemberIds = Collections.emptySet();
+                        repoCollectionSyncRootMemberIds = Set.of();
                     }
                     log.debug(
                             "Start: getting FileSystemItem changes for repository {} / user {} between {} and {} with activeRoots = {}",
@@ -468,16 +468,21 @@ public class NuxeoDriveManagerImpl extends DefaultComponent implements NuxeoDriv
         for (String repositoryName : repositoryManager.getRepositoryNames()) {
             Set<String> collectionMemberIds = new HashSet<>();
             CoreSession session = CoreInstance.getCoreSession(repositoryName, principal);
-            Map<String, Serializable> props = new HashMap<>();
-            props.put(CORE_SESSION_PROPERTY, (Serializable) session);
             PageProvider<DocumentModel> collectionPageProvider = (PageProvider<DocumentModel>) pageProviderService.getPageProvider(
-                    CollectionConstants.ALL_COLLECTIONS_PAGE_PROVIDER, null, null, 0L, props);
+                    PageProviderSpec.builder(CollectionConstants.ALL_COLLECTIONS_PAGE_PROVIDER)
+                                    .currentPage(0L)
+                                    .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                    .build());
             List<DocumentModel> collections = collectionPageProvider.getCurrentPage();
             for (DocumentModel collection : collections) {
                 if (isSynchronizationRoot(principal, collection)) {
                     PageProvider<DocumentModel> collectionMemberPageProvider = (PageProvider<DocumentModel>) pageProviderService.getPageProvider(
-                            CollectionConstants.COLLECTION_CONTENT_PAGE_PROVIDER, null, COLLECTION_CONTENT_PAGE_SIZE,
-                            0L, props, collection.getId());
+                            PageProviderSpec.builder(CollectionConstants.COLLECTION_CONTENT_PAGE_PROVIDER)
+                                            .pageSize(COLLECTION_CONTENT_PAGE_SIZE)
+                                            .currentPage(0L)
+                                            .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                            .parameters(collection.getId())
+                                            .build());
                     List<DocumentModel> collectionMembers = collectionMemberPageProvider.getCurrentPage();
                     for (DocumentModel collectionMember : collectionMembers) {
                         collectionMemberIds.add(collectionMember.getId());

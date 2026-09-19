@@ -33,11 +33,11 @@ import static org.nuxeo.ecm.core.schema.FacetNames.SYSTEM_DOCUMENT;
 import java.io.Serializable;
 import java.security.Principal;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +56,7 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.el.ExpressionFactoryImpl;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.nuxeo.audit.api.AuditRouterIntrospection;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.audit.api.LogEntryBuilder;
 import org.nuxeo.audit.api.Route;
@@ -127,14 +128,14 @@ public class AuditComponent extends DefaultComponent implements AuditRouter, Aud
     /** @since 2025.16 */
     protected static final String ROUTES_EXT_POINT = "routes";
 
-    protected final Map<String, AuditBackendFactory<?>> auditBackendFactories = new HashMap<>();
+    protected final ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(new ExpressionFactoryImpl());
 
-    protected final Map<String, List<ExtendedInfoMapper>> eventExtendedInfoMappers = new HashMap<>();
+    protected Map<String, AuditBackendFactory<?>> auditBackendFactories;
+
+    protected Map<String, List<ExtendedInfoMapper>> eventExtendedInfoMappers;
 
     /** @since 2025.16 */
-    protected final List<Route> routes = new ArrayList<>();
-
-    protected final ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(new ExpressionFactoryImpl());
+    protected List<Route> routes;
 
     protected Boolean handleVirtualEvents;
 
@@ -200,7 +201,7 @@ public class AuditComponent extends DefaultComponent implements AuditRouter, Aud
                                           .stream()
                                           .collect(groupingBy(ExtendedInfoDescriptor::getEvent, toList()));
         // register auditable event names and their specific extendedInfo mappers
-        eventExtendedInfoMappers.putAll(
+        eventExtendedInfoMappers = //
                 this.<AuditRouteDescriptor> getDescriptors(ROUTES_EXT_POINT)
                     .stream()
                     .mapMulti(eachIf(AuditRouteDescriptor::getEvents, AuditRouteDescriptor.EventDescriptor::isEnabled))
@@ -219,9 +220,10 @@ public class AuditComponent extends DefaultComponent implements AuditRouter, Aud
                                                      .filter(ExtendedInfoDescriptor::isEnabled)
                                                      .map(descriptor -> new ExtendedInfoMapper(descriptor.getKey(),
                                                              descriptor.getExpression()))
-                                                     .toList())));
+                                                     .toList(),
+                            (a, b) -> b, LinkedHashMap::new));
         // register audit routes
-        routes.addAll(this.<AuditRouteDescriptor> getDescriptors(ROUTES_EXT_POINT).stream().map(descriptor -> {
+        routes = this.<AuditRouteDescriptor> getDescriptors(ROUTES_EXT_POINT).stream().map(descriptor -> {
             // compute the route based on contribution: predicates AND event names
             // predicates are ORed between them and default to true if none
             var contributedPredicate = descriptor.streamPredicates()
@@ -235,10 +237,11 @@ public class AuditComponent extends DefaultComponent implements AuditRouter, Aud
                                                .collect(collectingAndThen(toSet(),
                                                        eventNames -> (Predicate<LogEntry>) logEntry -> eventNames.isEmpty()
                                                                || eventNames.contains(logEntry.getEventId())));
-            return Route.of(descriptor.getBackendName(), contributedPredicate.and(eventNamePredicate));
-        }).toList());
+            return Route.of(descriptor.getName(), descriptor.getBackendName(),
+                    contributedPredicate.and(eventNamePredicate));
+        }).toList();
         // register auditBackendFactories
-        auditBackendFactories.putAll( //
+        auditBackendFactories = //
                 this.<AuditBackendFactoryDescriptor> getDescriptors(BACKEND_FACTORY_EXT_POINT)
                     .stream()
                     .peek(descriptor -> {
@@ -252,14 +255,14 @@ public class AuditComponent extends DefaultComponent implements AuditRouter, Aud
                         }
                     })
                     .collect(toMap(AuditBackendFactoryDescriptor::getName,
-                            descriptor -> Framework.getService(descriptor.getFactory()))));
+                            descriptor -> Framework.getService(descriptor.getFactory())));
     }
 
     @Override
     public void stop(ComponentContext context) throws InterruptedException {
-        eventExtendedInfoMappers.clear();
-        auditBackendFactories.clear();
-        routes.clear();
+        eventExtendedInfoMappers = null;
+        auditBackendFactories = null;
+        routes = null;
     }
 
     // ----------------
@@ -327,6 +330,21 @@ public class AuditComponent extends DefaultComponent implements AuditRouter, Aud
                                  .collect(Collectors.joining(", ", "[", "]")));
             getAuditBackend(backendName).insertLogs(entries);
         }
+    }
+
+    @Override
+    public AuditRouterIntrospection getIntrospection() {
+        var routes = this.routes.stream()
+                                .map(route -> new AuditRouterIntrospection.RouteIntrospection(route.getName(),
+                                        route.getBackendName()))
+                                .toList();
+        var backends = auditBackendFactories.entrySet()
+                                            .stream()
+                                            .map(entry -> new AuditRouterIntrospection.BackendIntrospection(
+                                                    entry.getKey(),
+                                                    entry.getValue().getAuditBackend(entry.getKey()).getClass()))
+                                            .toList();
+        return new AuditRouterIntrospection(eventExtendedInfoMappers.keySet(), routes, backends);
     }
 
     // -----------------

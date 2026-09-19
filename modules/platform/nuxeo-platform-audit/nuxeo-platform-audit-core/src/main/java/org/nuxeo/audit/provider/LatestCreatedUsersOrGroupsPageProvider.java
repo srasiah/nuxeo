@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2016-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@
  */
 package org.nuxeo.audit.provider;
 
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
@@ -32,6 +33,7 @@ import org.nuxeo.ecm.directory.api.DirectoryService;
 import org.nuxeo.ecm.platform.query.api.AbstractPageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.usermanager.UserManager;
 import org.nuxeo.ecm.platform.usermanager.UserManagerImpl;
 import org.nuxeo.runtime.api.Framework;
@@ -47,8 +49,6 @@ public class LatestCreatedUsersOrGroupsPageProvider extends AbstractPageProvider
 
     public static final String LATEST_AUDITED_CREATED_USERS_OR_GROUPS_PROVIDER = "LATEST_AUDITED_CREATED_USERS_OR_GROUPS_PROVIDER";
 
-    protected static final String CORE_SESSION_PROPERTY = "coreSession";
-
     protected static final String POWER_USERS_GROUP = "powerusers";
 
     protected List<DocumentModel> currentPage;
@@ -62,10 +62,15 @@ public class LatestCreatedUsersOrGroupsPageProvider extends AbstractPageProvider
         PageProviderService pps = Framework.getService(PageProviderService.class);
         CoreSession coreSession = (CoreSession) getProperties().get(CORE_SESSION_PROPERTY);
         if (coreSession == null || !canSearchUsersAndGroups(coreSession.getPrincipal())) {
-            return Collections.emptyList();
+            return List.of();
         }
-        PageProvider<?> pp = pps.getPageProvider(LATEST_AUDITED_CREATED_USERS_OR_GROUPS_PROVIDER, null, getPageSize(),
-                getCurrentPageIndex(), getProperties(), coreSession.getRootDocument().getId());
+        PageProvider<?> pp = pps.getPageProvider(
+                PageProviderSpec.builder(LATEST_AUDITED_CREATED_USERS_OR_GROUPS_PROVIDER)
+                                .pageSize(getPageSize())
+                                .currentPage(getCurrentPageIndex())
+                                .properties(getProperties())
+                                .parameters(coreSession.getRootDocument().getId())
+                                .build());
         @SuppressWarnings("unchecked")
         List<LogEntry> entries = (List<LogEntry>) pp.getCurrentPage();
         if (entries != null) {
@@ -105,8 +110,8 @@ public class LatestCreatedUsersOrGroupsPageProvider extends AbstractPageProvider
     public long getResultsCountLimit() {
         PageProviderService pps = Framework.getService(PageProviderService.class);
         @SuppressWarnings("unchecked")
-        PageProvider<?> pp = pps.getPageProvider(LATEST_AUDITED_CREATED_USERS_OR_GROUPS_PROVIDER, null, null, null,
-                null, null);
+        PageProvider<?> pp = pps.getPageProvider(
+                PageProviderSpec.builder(LATEST_AUDITED_CREATED_USERS_OR_GROUPS_PROVIDER).build());
         return pp.getResultsCountLimit();
     }
 

@@ -33,6 +33,11 @@ import java.util.function.Predicate;
 public interface Route extends Predicate<LogEntry> {
 
     /**
+     * @return the route name
+     */
+    String getName();
+
+    /**
      * Returns the name of the backend to which matching {@link LogEntry} events should be routed.
      *
      * @return the backend name
@@ -46,19 +51,24 @@ public interface Route extends Predicate<LogEntry> {
      * @return a {@code Route} that matches all events
      */
     static Route allEventsTo(String backendName) {
-        return of(backendName, logEntry -> true);
+        return of("route-everything-to-" + backendName, backendName, logEntry -> true);
     }
 
     /**
      * Creates a {@code Route} that matches events based on the provided {@code predicate}, and routes them to the given
      * backend.
-     * 
+     *
      * @param backendName the name of the backend
      * @param predicate the predicate to apply to {@link LogEntry} events for matching
      * @return a {@code Route} that matches events based on the provided predicate
      */
-    static Route of(String backendName, Predicate<LogEntry> predicate) {
+    static Route of(String name, String backendName, Predicate<LogEntry> predicate) {
         return new Route() {
+
+            @Override
+            public String getName() {
+                return name;
+            }
 
             @Override
             public String getBackendName() {

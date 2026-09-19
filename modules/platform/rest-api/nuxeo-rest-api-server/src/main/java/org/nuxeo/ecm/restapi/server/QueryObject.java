@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,13 @@
 package org.nuxeo.ecm.restapi.server;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CURRENT_REPOSITORY_PARAMETER_VALUE;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CURRENT_USER_PARAMETER_VALUE;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -46,8 +48,8 @@ import org.nuxeo.ecm.core.api.SortInfo;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.query.api.QuickFilter;
-import org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider;
 import org.nuxeo.ecm.restapi.server.adapters.SearchAdapter;
 import org.nuxeo.ecm.webengine.model.WebObject;
 import org.nuxeo.ecm.webengine.model.impl.AbstractResource;
@@ -78,9 +80,19 @@ public class QueryObject extends AbstractResource<ResourceTypeImpl> {
 
     public static final String ORDERED_PARAMS = "queryParams";
 
-    public static final String CURRENT_USERID_PATTERN = "$currentUser";
+    /**
+     * @deprecated since 2025.20, use
+     *             {@link org.nuxeo.ecm.platform.query.api.PageProviderSpec#CURRENT_USER_PARAMETER_VALUE} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
+    public static final String CURRENT_USERID_PATTERN = PageProviderSpec.CURRENT_USER_PARAMETER_VALUE;
 
-    public static final String CURRENT_REPO_PATTERN = "$currentRepository";
+    /**
+     * @deprecated since 2025.20, use
+     *             {@link org.nuxeo.ecm.platform.query.api.PageProviderSpec#CURRENT_REPOSITORY_PARAMETER_VALUE} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
+    public static final String CURRENT_REPO_PATTERN = PageProviderSpec.CURRENT_REPOSITORY_PARAMETER_VALUE;
 
     /**
      * @since 8.4
@@ -143,9 +155,9 @@ public class QueryObject extends AbstractResource<ResourceTypeImpl> {
             if (!queryParametersMap.containsValue(namedParameterKey)) {
                 String value = queryParams.getFirst(namedParameterKey);
                 if (value != null) {
-                    if (value.equals(CURRENT_USERID_PATTERN)) {
+                    if (value.equals(CURRENT_USER_PARAMETER_VALUE)) {
                         value = ctx.getCoreSession().getPrincipal().getName();
-                    } else if (value.equals(CURRENT_REPO_PATTERN)) {
+                    } else if (value.equals(CURRENT_REPOSITORY_PARAMETER_VALUE)) {
                         value = ctx.getCoreSession().getRepositoryName();
                     }
                 }
@@ -169,19 +181,7 @@ public class QueryObject extends AbstractResource<ResourceTypeImpl> {
         Object[] parameters = null;
         if (orderedParams != null && !orderedParams.isEmpty()) {
             parameters = orderedParams.toArray(new String[0]);
-            // expand specific parameters
-            for (int idx = 0; idx < parameters.length; idx++) {
-                String value = (String) parameters[idx];
-                if (value.equals(CURRENT_USERID_PATTERN)) {
-                    parameters[idx] = ctx.getCoreSession().getPrincipal().getName();
-                } else if (value.equals(CURRENT_REPO_PATTERN)) {
-                    parameters[idx] = ctx.getCoreSession().getRepositoryName();
-                }
-            }
         }
-
-        Map<String, Serializable> props = new HashMap<>();
-        props.put(CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY, (Serializable) ctx.getCoreSession());
 
         DocumentModel searchDocumentModel = PageProviderHelper.getSearchDocumentModel(ctx.getCoreSession(),
                 pageProviderService, providerName, namedParameters);
@@ -215,9 +215,15 @@ public class QueryObject extends AbstractResource<ResourceTypeImpl> {
                 providerName = SearchAdapter.pageProviderName;
             }
 
-            res = new PaginableDocumentModelListImpl(
-                    (PageProvider<DocumentModel>) pageProviderService.getPageProvider(providerName, ppdefinition,
-                            searchDocumentModel, sortInfoList, targetPageSize, targetPage, props, parameters),
+            res = new PaginableDocumentModelListImpl((PageProvider<DocumentModel>) pageProviderService.getPageProvider(
+                    PageProviderSpec.builder(providerName, ppdefinition)
+                                    .searchDocument(searchDocumentModel)
+                                    .sortInfos(sortInfoList)
+                                    .pageSize(targetPageSize)
+                                    .currentPage(targetPage)
+                                    .property(CORE_SESSION_PROPERTY, (Serializable) ctx.getCoreSession())
+                                    .parameters(parameters)
+                                    .build()),
                     null);
         } else {
             PageProviderDefinition pageProviderDefinition = pageProviderService.getPageProviderDefinition(providerName);
@@ -235,9 +241,16 @@ public class QueryObject extends AbstractResource<ResourceTypeImpl> {
                     }
                 }
             }
-            res = new PaginableDocumentModelListImpl(
-                    (PageProvider<DocumentModel>) pageProviderService.getPageProvider(providerName, searchDocumentModel,
-                            sortInfoList, targetPageSize, targetPage, props, quickFilterList, parameters),
+            res = new PaginableDocumentModelListImpl((PageProvider<DocumentModel>) pageProviderService.getPageProvider(
+                    PageProviderSpec.builder(providerName)
+                                    .searchDocument(searchDocumentModel)
+                                    .sortInfos(sortInfoList)
+                                    .pageSize(targetPageSize)
+                                    .currentPage(targetPage)
+                                    .property(CORE_SESSION_PROPERTY, (Serializable) ctx.getCoreSession())
+                                    .quickFilters(quickFilterList)
+                                    .parameters(parameters)
+                                    .build()),
                     null);
         }
         if (res.hasError()) {

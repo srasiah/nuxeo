@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2016-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import jakarta.inject.Inject;
 
@@ -42,7 +41,7 @@ import org.nuxeo.ecm.collections.core.adapter.Collection;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
-import org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 
 /**
  * Class testing the MoveCollectionMemberOpeartion operation.
@@ -66,15 +65,14 @@ public class MoveCollectionMemberTest extends CollectionOperationsTestCase {
     protected List<DocumentModel> getCollectionMembersByQuery() {
         // Check order from query
 
-        Map<String, Serializable> props = new HashMap<>();
-        props.put(CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY, (Serializable) session);
         @SuppressWarnings("unchecked")
         PageProvider<DocumentModel> pageProvider = (PageProvider<DocumentModel>) pps.getPageProvider(
-                CollectionConstants.ORDERED_COLLECTION_CONTENT_PAGE_PROVIDER, null, null, null, props,
-                new Object[] { collection.getId() });
+                PageProviderSpec.builder(CollectionConstants.ORDERED_COLLECTION_CONTENT_PAGE_PROVIDER)
+                                .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                .parameters(collection.getId())
+                                .build());
 
-        List<DocumentModel> members = pageProvider.getCurrentPage();
-        return members;
+        return pageProvider.getCurrentPage();
     }
 
     protected void initialCheck(Collection collectionAdapter) {
@@ -114,8 +112,9 @@ public class MoveCollectionMemberTest extends CollectionOperationsTestCase {
                 // Expected, let's keep testing
 
                 chain = new OperationChain("test-chain");
-                chain.add(MoveCollectionMemberOperation.ID).set("member1", listDocs.get(0)).set("member2",
-                        listDocs.get(NB_FILES - 1));
+                chain.add(MoveCollectionMemberOperation.ID)
+                     .set("member1", listDocs.get(0))
+                     .set("member2", listDocs.get(NB_FILES - 1));
 
                 // Wrong input
                 ctx.setInput(null);
@@ -142,8 +141,9 @@ public class MoveCollectionMemberTest extends CollectionOperationsTestCase {
         initialCheck(collectionAdapter);
 
         chain = new OperationChain("test-chain");
-        chain.add(MoveCollectionMemberOperation.ID).set("member1", listDocs.get(0)).set("member2",
-                listDocs.get(NB_FILES - 1));
+        chain.add(MoveCollectionMemberOperation.ID)
+             .set("member1", listDocs.get(0))
+             .set("member2", listDocs.get(NB_FILES - 1));
 
         try (OperationContext ctx = new OperationContext(session)) {
             ctx.setInput(collection);
@@ -214,8 +214,9 @@ public class MoveCollectionMemberTest extends CollectionOperationsTestCase {
 
         chain = new OperationChain("test-chain");
         int index = NB_FILES / 2;
-        chain.add(MoveCollectionMemberOperation.ID).set("member1", listDocs.get(index)).set("member2",
-                listDocs.get(index + 1));
+        chain.add(MoveCollectionMemberOperation.ID)
+             .set("member1", listDocs.get(index))
+             .set("member2", listDocs.get(index + 1));
 
         try (OperationContext ctx = new OperationContext(session)) {
             ctx.setInput(collection);
@@ -255,8 +256,9 @@ public class MoveCollectionMemberTest extends CollectionOperationsTestCase {
 
         chain = new OperationChain("test-chain");
         int index = (NB_FILES / 2) + 1;
-        chain.add(MoveCollectionMemberOperation.ID).set("member1", listDocs.get(index)).set("member2",
-                listDocs.get(index - 1));
+        chain.add(MoveCollectionMemberOperation.ID)
+             .set("member1", listDocs.get(index))
+             .set("member2", listDocs.get(index - 1));
 
         try (OperationContext ctx = new OperationContext(session)) {
             ctx.setInput(collection);
@@ -323,8 +325,9 @@ public class MoveCollectionMemberTest extends CollectionOperationsTestCase {
 
         chain = new OperationChain("test-chain");
         int index = (NB_FILES / 2) + 1;
-        chain.add(MoveCollectionMemberOperation.ID).set("member1", listDocs.get(index)).set("member2",
-                listDocs.get(index)); // twice same index
+        chain.add(MoveCollectionMemberOperation.ID)
+             .set("member1", listDocs.get(index))
+             .set("member2", listDocs.get(index)); // twice same index
 
         try (OperationContext ctx = new OperationContext(session)) {
             ctx.setInput(collection);

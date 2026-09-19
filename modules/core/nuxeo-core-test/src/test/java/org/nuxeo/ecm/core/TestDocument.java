@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 import static org.nuxeo.ecm.core.api.VersioningOption.MAJOR;
 import static org.nuxeo.ecm.core.schema.test.CommonDocumentConstants.COMMON_DEFAULT_LONG_PROP;
 import static org.nuxeo.ecm.core.schema.test.CommonDocumentConstants.COMMON_DOC_TYPE;
-import static org.nuxeo.ecm.core.schema.test.CommonDocumentConstants.COMMON_LONG_PROP;
 import static org.nuxeo.ecm.core.schema.test.CommonDocumentConstants.COMMON_SCALAR_SCHEMA;
 import static org.nuxeo.ecm.core.schema.test.CommonDocumentConstants.COMMON_STRING_PROP;
 
@@ -64,8 +63,6 @@ import org.nuxeo.ecm.core.schema.SchemaManagerImpl;
 import org.nuxeo.ecm.core.schema.types.CompositeType;
 import org.nuxeo.ecm.core.schema.types.Schema;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -80,7 +77,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
  */
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.core.test.tests:OSGI-INF/test-repo-core-types-contrib.xml")
 public class TestDocument {
 

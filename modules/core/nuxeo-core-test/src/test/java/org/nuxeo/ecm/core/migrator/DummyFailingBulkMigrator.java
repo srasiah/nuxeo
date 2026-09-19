@@ -47,8 +47,7 @@ public class DummyFailingBulkMigrator extends AbstractBulkMigrator {
 
     @Override
     protected String probeSession(CoreSession session) {
-        return dummyState.equals(MIGRATION_AFTER_STATE) ? MIGRATION_AFTER_STATE
-                : MIGRATION_BEFORE_STATE;
+        return dummyState.equals(MIGRATION_AFTER_STATE) ? MIGRATION_AFTER_STATE : MIGRATION_BEFORE_STATE;
     }
 
     @Override
@@ -57,7 +56,8 @@ public class DummyFailingBulkMigrator extends AbstractBulkMigrator {
     }
 
     @Override
-    public void compute(CoreSession session, List<String> ids, Map<String, Serializable> properties) {
+    public void compute(CoreSession session, List<String> ids, Map<String, Serializable> properties,
+            AbstractBulkMigrator.MigrationProgress progress) {
         for (var id : ids) {
             var doc = session.getDocument(new IdRef(id));
             doc.setPropertyValue("dc:title", "Content migrated");

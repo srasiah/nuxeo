@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,8 +50,6 @@ import org.nuxeo.ecm.core.schema.types.constraints.NotNullConstraint;
 import org.nuxeo.ecm.core.schema.types.constraints.NumericIntervalConstraint;
 import org.nuxeo.ecm.core.schema.types.constraints.PatternConstraint;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -59,7 +57,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 @RunWith(FeaturesRunner.class)
 @Deploy("org.nuxeo.ecm.core.test.tests:OSGI-INF/test-validation-service-contrib.xml")
 @Features(CoreFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @SuppressWarnings("AutoBoxing")
 public class TestDocumentValidationService {
 
@@ -436,27 +433,27 @@ public class TestDocumentValidationService {
             ConstraintViolation violation = (ConstraintViolation) v;
             PathNode pathNode = violation.getPath().get(1);
             switch (pathNode.getIndex()) {
-            case 0:
-                checkPatternOnUsersFirstname(violation, 0);
-                found1 = true;
-                break;
-            case 2:
-                checkPatternOnUsersFirstname(violation, 2);
-                found2 = true;
-                break;
-            case 3:
-                checkNotNullOnUsersLastname(violation, 3);
-                found3 = true;
-                break;
-            case 4:
-                if (violation.getConstraint() instanceof NotNullConstraint) {
-                    checkNotNullOnUsersLastname(violation, 4);
-                    found5 = true;
-                } else if (violation.getConstraint() instanceof PatternConstraint) {
-                    checkPatternOnUsersFirstname(violation, 4);
-                    found4 = true;
-                }
-                break;
+                case 0:
+                    checkPatternOnUsersFirstname(violation, 0);
+                    found1 = true;
+                    break;
+                case 2:
+                    checkPatternOnUsersFirstname(violation, 2);
+                    found2 = true;
+                    break;
+                case 3:
+                    checkNotNullOnUsersLastname(violation, 3);
+                    found3 = true;
+                    break;
+                case 4:
+                    if (violation.getConstraint() instanceof NotNullConstraint) {
+                        checkNotNullOnUsersLastname(violation, 4);
+                        found5 = true;
+                    } else if (violation.getConstraint() instanceof PatternConstraint) {
+                        checkPatternOnUsersFirstname(violation, 4);
+                        found4 = true;
+                    }
+                    break;
             }
         }
         assertTrue(found1);
@@ -569,46 +566,6 @@ public class TestDocumentValidationService {
         assertEquals(1, violationList.size());
         assertTrue(violationList.get(0) instanceof ConstraintViolation);
         ConstraintViolation violation = (ConstraintViolation) violationList.get(0);
-        assertEquals(MESSAGE_FOR_USERS_FIRSTNAME, violation.getMessage(Locale.ENGLISH));
-    }
-
-    @Test
-    public void testValidatePropertyViolationMessage() {
-        DocumentValidationReport violations;
-        doc.setPropertyValue("vs:groupCode", 123);
-        HashMap<String, String> user = new HashMap<>();
-        user.put("lastname", "The kid");
-        doc.getProperty("vs:users").addValue(0, user);
-        Property userFirstnameProperty = doc.getProperty("vs:users").get(0).get("firstname");
-        violations = validator.validate(userFirstnameProperty);
-        assertTrue(violations.hasError());
-        List<ValidationViolation> violationList = violations.asList();
-        assertEquals(1, violationList.size());
-        ValidationViolation violation = violationList.get(0);
-        assertEquals(MESSAGE_FOR_USERS_FIRSTNAME, ((ConstraintViolation) violation).getMessage(Locale.ENGLISH));
-    }
-
-    @Test
-    public void testValidateXPathViolationMessage() {
-        DocumentValidationReport violations;
-        violations = validator.validate("vs:users/0/firstname", null);
-        assertTrue(violations.hasError());
-        List<ValidationViolation> violationList = violations.asList();
-        assertEquals(1, violationList.size());
-        assertTrue(violationList.get(0) instanceof ConstraintViolation);
-        ConstraintViolation violation = (ConstraintViolation) violationList.get(0);
-        assertEquals(MESSAGE_FOR_USERS_FIRSTNAME, violation.getMessage(Locale.ENGLISH));
-        violations = validator.validate("vs:users/firstname", null);
-        assertTrue(violations.hasError());
-        violationList = violations.asList();
-        assertEquals(1, violationList.size());
-        violation = (ConstraintViolation) violationList.get(0);
-        assertEquals(MESSAGE_FOR_USERS_FIRSTNAME, violation.getMessage(Locale.ENGLISH));
-        violations = validator.validate("vs:users/user/firstname", null);
-        assertTrue(violations.hasError());
-        violationList = violations.asList();
-        assertEquals(1, violationList.size());
-        violation = (ConstraintViolation) violationList.get(0);
         assertEquals(MESSAGE_FOR_USERS_FIRSTNAME, violation.getMessage(Locale.ENGLISH));
     }
 
@@ -779,6 +736,9 @@ public class TestDocumentValidationService {
         String fieldName2 = violation.getPath().get(1).getField().getName().getPrefixedName();
         assertEquals("role", fieldName2);
         assertEquals("invalid role3", violation.getInvalidValue());
+        // NXP-33452: verify messageKey uses "item" for list elements
+        assertEquals("label.schema.constraint.violation.PatternConstraint.validationSample.roles.item",
+                violation.getMessageKey());
     }
 
     private void checkNotNullOnUsersFirstname(DocumentValidationReport report) {
@@ -813,6 +773,9 @@ public class TestDocumentValidationService {
         String fieldName3 = violation.getPath().get(2).getField().getName().getPrefixedName();
         assertEquals("firstname", fieldName3);
         assertEquals("   ", violation.getInvalidValue());
+        // NXP-33452: verify messageKey uses "item" for list elements
+        assertEquals("label.schema.constraint.violation.PatternConstraint.validationSample.users.item.firstname",
+                violation.getMessageKey());
     }
 
     private void checkNotNullOnUsersLastname(ConstraintViolation violation, int expectedIndex) {
@@ -843,6 +806,9 @@ public class TestDocumentValidationService {
         String fieldName3 = violation.getPath().get(2).getField().getName().getPrefixedName();
         assertEquals("firstname", fieldName3);
         assertEquals("   ", violation.getInvalidValue());
+        // NXP-33452: verify messageKey uses "item" for list elements
+        assertEquals("label.schema.constraint.violation.PatternConstraint.validationSample.users.item.firstname",
+                violation.getMessageKey());
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2012 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2012-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
  */
 package org.nuxeo.drive.adapter.impl;
 
-import static org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -58,6 +58,7 @@ import org.nuxeo.ecm.platform.filemanager.api.FileImporterContext;
 import org.nuxeo.ecm.platform.filemanager.api.FileManager;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.services.config.ConfigurationService;
 
@@ -139,10 +140,12 @@ public class DocumentBackedFolderItem extends AbstractDocumentBackedFileSystemIt
     public List<FileSystemItem> getChildren() {
         CoreSession session = CoreInstance.getCoreSession(repositoryName, principal);
         PageProviderService pageProviderService = Framework.getService(PageProviderService.class);
-        Map<String, Serializable> props = new HashMap<>();
-        props.put(CORE_SESSION_PROPERTY, (Serializable) session);
         PageProvider<DocumentModel> childrenPageProvider = (PageProvider<DocumentModel>) pageProviderService.getPageProvider(
-                FOLDER_ITEM_CHILDREN_PAGE_PROVIDER, null, null, 0L, props, docId);
+                PageProviderSpec.builder(FOLDER_ITEM_CHILDREN_PAGE_PROVIDER)
+                                .currentPage(0L)
+                                .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                .parameters(docId)
+                                .build());
         long pageSize = childrenPageProvider.getPageSize();
 
         List<FileSystemItem> children = new ArrayList<>();
@@ -226,8 +229,9 @@ public class DocumentBackedFolderItem extends AbstractDocumentBackedFileSystemIt
     }
 
     protected void checkBatchSize(int batchSize) {
-        int maxDescendantsBatchSize = Framework.getService(ConfigurationService.class).getInteger(
-                MAX_DESCENDANTS_BATCH_SIZE_PROPERTY, MAX_DESCENDANTS_BATCH_SIZE_DEFAULT);
+        int maxDescendantsBatchSize = Framework.getService(ConfigurationService.class)
+                                               .getInteger(MAX_DESCENDANTS_BATCH_SIZE_PROPERTY,
+                                                       MAX_DESCENDANTS_BATCH_SIZE_DEFAULT);
         if (batchSize > maxDescendantsBatchSize) {
             throw new NuxeoException(String.format(
                     "Batch size %d is greater than the maximum batch size allowed %d. If you need to increase this limit you can set the %s configuration property but this is not recommended for performance reasons.",

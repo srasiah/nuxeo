@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2024-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
  * Contributors:
  *     Antoine Taillefer
  */
+'use strict';
 var frameholder = document.getElementById('frameholder');
 var office_frame = document.createElement('iframe');
 office_frame.name = 'office_frame';

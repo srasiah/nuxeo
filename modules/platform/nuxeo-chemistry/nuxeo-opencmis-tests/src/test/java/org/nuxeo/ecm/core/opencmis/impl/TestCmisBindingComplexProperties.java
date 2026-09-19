@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2011 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,8 +55,6 @@ import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.IdRef;
 import org.nuxeo.ecm.core.opencmis.impl.server.NuxeoTypeHelper;
 import org.nuxeo.ecm.core.schema.utils.DateParser;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -73,7 +71,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 @Deploy("org.nuxeo.ecm.webengine.core")
 @Deploy("org.nuxeo.ecm.automation.core")
 @Deploy("org.nuxeo.ecm.core.opencmis.tests.tests:OSGI-INF/types-contrib.xml")
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @WithFrameworkProperty(name = NuxeoTypeHelper.ENABLE_COMPLEX_PROPERTIES, value = "true")
 public class TestCmisBindingComplexProperties extends TestCmisBindingBase {
 
@@ -150,7 +147,11 @@ public class TestCmisBindingComplexProperties extends TestCmisBindingBase {
         String statement = "SELECT complexTest:listItem FROM ComplexFile";
         ObjectList res = discService.query(repositoryId, statement, Boolean.TRUE, null, null, null, null, null, null);
         assertEquals(1, res.getNumItems().intValue());
-        PropertyData<String> data = (PropertyData<String>) res.getObjects().get(0).getProperties().getProperties().get("complexTest:listItem");
+        PropertyData<String> data = (PropertyData<String>) res.getObjects()
+                                                              .get(0)
+                                                              .getProperties()
+                                                              .getProperties()
+                                                              .get("complexTest:listItem");
         assertNotNull(data);
         // Verify the JSON produced is valid and matches the original objects
         List<String> values = data.getValues();
@@ -166,7 +167,11 @@ public class TestCmisBindingComplexProperties extends TestCmisBindingBase {
         statement = "SELECT * FROM ComplexFile";
         res = discService.query(repositoryId, statement, Boolean.TRUE, null, null, null, null, null, null);
         assertEquals(1, res.getNumItems().intValue());
-        data = (PropertyData<String>) res.getObjects().get(0).getProperties().getProperties().get("complexTest:listItem");
+        data = (PropertyData<String>) res.getObjects()
+                                         .get(0)
+                                         .getProperties()
+                                         .getProperties()
+                                         .get("complexTest:listItem");
         assertNull(data);
     }
 
@@ -261,7 +266,11 @@ public class TestCmisBindingComplexProperties extends TestCmisBindingBase {
         ObjectList res = discService.query(repositoryId, statement, Boolean.TRUE, null, null, null, null, null, null);
         assertEquals(1, res.getNumItems().intValue());
         // Verify the JSON produced is valid and matches the original objects
-        PropertyData<String> data = (PropertyData<String>) res.getObjects().get(0).getProperties().getProperties().get("complexTest:complexItem");
+        PropertyData<String> data = (PropertyData<String>) res.getObjects()
+                                                              .get(0)
+                                                              .getProperties()
+                                                              .getProperties()
+                                                              .get("complexTest:complexItem");
         String jsonStr = data.getFirstValue();
         ObjectMapper mapper = new ObjectMapper();
         JsonNode jsonNode = mapper.readTree(jsonStr);
@@ -271,7 +280,11 @@ public class TestCmisBindingComplexProperties extends TestCmisBindingBase {
         statement = "SELECT * FROM ComplexFile";
         res = discService.query(repositoryId, statement, Boolean.TRUE, null, null, null, null, null, null);
         assertEquals(1, res.getNumItems().intValue());
-        data = (PropertyData<String>) res.getObjects().get(0).getProperties().getProperties().get("complexTest:complexItem");
+        data = (PropertyData<String>) res.getObjects()
+                                         .get(0)
+                                         .getProperties()
+                                         .getProperties()
+                                         .get("complexTest:complexItem");
         assertNull(data);
     }
 

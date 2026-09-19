@@ -34,6 +34,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.common.utils.RFC2231;
 import org.nuxeo.ecm.blob.CloudBlobProvider;
 import org.nuxeo.ecm.core.api.Blob;
@@ -132,6 +133,16 @@ public class S3BlobProvider extends CloudBlobProvider<S3BlobStoreConfiguration> 
     @Override
     public void close() {
         config.close();
+    }
+
+    @Override
+    protected String getDigestAlgorithm() {
+        return config.digestConfiguration.digestAlgorithm;
+    }
+
+    @Override
+    protected ByteSize getDigestMaxSize() {
+        return config.digestConfiguration.digestMaxSize;
     }
 
     /** Checks if the bucket exists (used in health check probes). */
@@ -271,7 +282,7 @@ public class S3BlobProvider extends CloudBlobProvider<S3BlobStoreConfiguration> 
         if (servletRequest != null) {
             return DownloadHelper.getRFC2231ContentDisposition(servletRequest, blob.getFilename());
         } else {
-            return RFC2231.encodeContentDisposition(blob.getFilename(), false, null);
+            return RFC2231.encodeContentDisposition(blob.getFilename(), false);
         }
     }
 

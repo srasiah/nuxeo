@@ -20,6 +20,7 @@ package org.nuxeo.ecm.restapi.server.search;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static jakarta.servlet.http.HttpServletResponse.SC_NOT_FOUND;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -52,6 +53,7 @@ import org.nuxeo.ecm.core.api.model.PropertyNotFoundException;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.query.api.QuickFilter;
 import org.nuxeo.ecm.platform.search.core.InvalidSearchParameterException;
 import org.nuxeo.ecm.platform.search.core.SavedSearch;
@@ -96,7 +98,7 @@ public class SearchObject extends QueryExecutor {
      * @since 10.3
      */
     @Path("bulk")
-    public BulkActionObject doBulkActionByLang(@Context UriInfo uriInfo) {
+    public Object doBulkActionByLang(@Context UriInfo uriInfo) {
         MultivaluedMap<String, String> queryParams = uriInfo.getQueryParameters();
         String query = getQueryString(null, queryParams);
         String scrollName = queryParams.getFirst(SCROLL_PARAM);
@@ -121,7 +123,7 @@ public class SearchObject extends QueryExecutor {
     }
 
     @Path("pp/{pageProviderName}/bulk")
-    public BulkActionObject doBulkActionByPageProvider(@PathParam("pageProviderName") String pageProviderName,
+    public Object doBulkActionByPageProvider(@PathParam("pageProviderName") String pageProviderName,
             @Context UriInfo uriInfo) {
         MultivaluedMap<String, String> queryParams = uriInfo.getQueryParameters();
         PageProvider<?> pageProvider = getPageProvider(pageProviderName, queryParams);
@@ -172,7 +174,7 @@ public class SearchObject extends QueryExecutor {
     }
 
     @Path("saved/{id}/bulk")
-    public BulkActionObject doBulkActionBySavedSearch(@PathParam("id") String id, @Context UriInfo uriInfo) {
+    public Object doBulkActionBySavedSearch(@PathParam("id") String id, @Context UriInfo uriInfo) {
         SavedSearch search = savedSearchService.getSavedSearch(ctx.getCoreSession(), id);
         if (search == null) {
             throw new NuxeoException("Saved search not found", SC_NOT_FOUND);
@@ -282,22 +284,20 @@ public class SearchObject extends QueryExecutor {
             Long currentPageOffset, Long maxResults, String orderedParams, Map<String, String> namedParameters,
             List<SortInfo> sortInfo) {
         Map<String, String> namedParametersProps = getNamedParameters(namedParameters);
-        Object[] parameters = replaceParameterPattern(new Object[] { orderedParams });
         Map<String, Serializable> props = getProperties();
 
         DocumentModel searchDocumentModel = PageProviderHelper.getSearchDocumentModel(ctx.getCoreSession(), null,
                 namedParametersProps);
 
         return queryByLang(query, pageSize, currentPageIndex, currentPageOffset, maxResults, sortInfo, props,
-                searchDocumentModel, parameters);
+                searchDocumentModel, orderedParams);
     }
 
     protected DocumentModelList querySavedSearchByPageProvider(String pageProviderName, Long pageSize,
             Long currentPageIndex, Long currentPageOffset, String orderedParams, Map<String, String> namedParameters,
             List<SortInfo> sortInfo, List<QuickFilter> quickFilters, DocumentModel searchDocumentModel) {
         Map<String, String> namedParametersProps = getNamedParameters(namedParameters);
-        Object[] parameters = orderedParams != null ? replaceParameterPattern(new Object[] { orderedParams })
-                : new Object[0];
+        Object[] parameters = orderedParams != null ? new Object[] { orderedParams } : new Object[0];
         Map<String, Serializable> props = getProperties();
 
         DocumentModel documentModel;
@@ -334,8 +334,17 @@ public class SearchObject extends QueryExecutor {
         PageProviderDefinition def = providerName == null ? PageProviderHelper.getQueryPageProviderDefinition(query)
                 : PageProviderHelper.getPageProviderDefinition(providerName);
 
-        return PageProviderHelper.getPageProvider(ctx.getCoreSession(), def, namedParameters, sortBy, sortOrder,
-                pageSize, currentPageIndex, null, quickfilters, queryParameters);
+        return pageProviderService.getPageProvider(
+                PageProviderSpec.builder(def)
+                                .searchDocument(PageProviderHelper.getSearchDocumentModel(ctx.getCoreSession(),
+                                        def.getName(), namedParameters))
+                                .sortInfosByFieldsAndOrders(sortBy, sortOrder)
+                                .pageSize(pageSize)
+                                .currentPage(currentPageIndex)
+                                .quickFiltersByNames(quickfilters)
+                                .property(CORE_SESSION_PROPERTY, (Serializable) ctx.getCoreSession())
+                                .parameters(queryParameters)
+                                .build());
     }
 
     /**

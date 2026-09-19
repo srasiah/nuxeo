@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,8 +42,6 @@ import org.nuxeo.ecm.core.event.Event;
 import org.nuxeo.ecm.core.event.EventListener;
 import org.nuxeo.ecm.core.event.impl.DocumentEventContext;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -53,7 +51,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 @RunWith(FeaturesRunner.class)
 @Deploy("org.nuxeo.ecm.core.test.tests:OSGI-INF/test-validation-activation-contrib.xml")
 @Features(CoreFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 public class TestDocumentValidationActivation {
 
     private static final int VALID = 12345;
@@ -71,8 +68,8 @@ public class TestDocumentValidationActivation {
         DocumentModel doc;
         doc = session.createDocumentModel("/", "doc1", "ValidatedUserGroup");
         doc.setPropertyValue(SIMPLE_FIELD, VALID);
-        doc.setPropertyValue(STRING_LIST_PROPS_FIELD, new String[] {"aStr"});  //set mandatory list
-        doc.setPropertyValue(STRING_LIST_ARRAY_FIELD, new String[] {"anotherStr"});  //set mandatory list
+        doc.setPropertyValue(STRING_LIST_PROPS_FIELD, new String[] { "aStr" }); // set mandatory list
+        doc.setPropertyValue(STRING_LIST_ARRAY_FIELD, new String[] { "anotherStr" }); // set mandatory list
         Map<String, String> complex = new HashMap<>();
         complex.put("a_string", "not_null");
         doc.setPropertyValue(COMPLEX_MANDATORY, (Serializable) complex);
@@ -128,8 +125,8 @@ public class TestDocumentValidationActivation {
         DocumentModel doc;
         doc = session.createDocumentModel("/", "doc1", "ValidatedUserGroup");
         doc.setPropertyValue(SIMPLE_FIELD, INVALID);
-        doc.setPropertyValue(STRING_LIST_PROPS_FIELD, new String[] {"aStr"});  //set mandatory list
-        doc.setPropertyValue(STRING_LIST_ARRAY_FIELD, new String[] {"anotherStr"});  //set mandatory list
+        doc.setPropertyValue(STRING_LIST_PROPS_FIELD, new String[] { "aStr" }); // set mandatory list
+        doc.setPropertyValue(STRING_LIST_ARRAY_FIELD, new String[] { "anotherStr" }); // set mandatory list
         Map<String, String> complex = new HashMap<>();
         complex.put("a_string", "not_null");
         doc.setPropertyValue(COMPLEX_MANDATORY, (Serializable) complex);
@@ -205,8 +202,8 @@ public class TestDocumentValidationActivation {
         DocumentModel doc;
         doc = session.createDocumentModel("/", "doc1", "ValidatedUserGroup");
         doc.setPropertyValue(SIMPLE_FIELD, INVALID);
-        doc.setPropertyValue(STRING_LIST_PROPS_FIELD, new String[] {"aStr"});  //set mandatory list
-        doc.setPropertyValue(STRING_LIST_ARRAY_FIELD, new String[] {"anotherStr"});  //set mandatory list
+        doc.setPropertyValue(STRING_LIST_PROPS_FIELD, new String[] { "aStr" }); // set mandatory list
+        doc.setPropertyValue(STRING_LIST_ARRAY_FIELD, new String[] { "anotherStr" }); // set mandatory list
         Map<String, String> complex = new HashMap<>();
         complex.put("a_string", "not_null");
         doc.setPropertyValue(COMPLEX_MANDATORY, (Serializable) complex);

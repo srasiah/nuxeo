@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@ package org.nuxeo.audit.opensearch1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
 
 import java.time.Instant;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import jakarta.inject.Inject;
@@ -37,7 +37,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.audit.api.LogEntry;
-import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.audit.api.Route;
+import org.nuxeo.audit.service.AuditRouter;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.SortInfo;
@@ -46,6 +47,7 @@ import org.nuxeo.ecm.core.api.versioning.VersioningService;
 import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -71,7 +73,7 @@ public class TestOpenSearchHistoryProvider {
     protected TransactionalFeature transactionalFeature;
 
     @Inject
-    protected AuditBackend auditBackend;
+    protected AuditRouter auditRouter;
 
     protected DocumentModel folder;
 
@@ -175,11 +177,9 @@ public class TestOpenSearchHistoryProvider {
                                         .repositoryId("test")
                                         .extended("reason", "test")
                                         .build();
-        auditBackend.addLogEntries(List.of(createdEntry));
+        auditRouter.routeToBackends(List.of(createdEntry), List.of(Route.allEventsTo(DEFAULT_AUDIT_BACKEND)));
 
         transactionalFeature.nextTransaction();
-        List<LogEntry> logs = auditBackend.getLogEntriesFor(doc.getId(), doc.getRepositoryName());
-        logs.forEach(entry -> log.trace("LogEntry: {}", entry));
     }
 
     @Test
@@ -279,8 +279,13 @@ public class TestOpenSearchHistoryProvider {
     protected PageProvider<LogEntry> getPageProvider(String name, int pageSize, int currentPage, Object... parameters) {
         List<SortInfo> sorters = List.of(new SortInfo("id", true));
         @SuppressWarnings("unchecked")
-        PageProvider<LogEntry> pageProvider = (PageProvider<LogEntry>) pageProviderService.getPageProvider(name,
-                sorters, Long.valueOf(pageSize), Long.valueOf(currentPage), Map.of(), parameters);
+        PageProvider<LogEntry> pageProvider = (PageProvider<LogEntry>) pageProviderService.getPageProvider(
+                PageProviderSpec.builder(name)
+                                .sortInfos(sorters)
+                                .pageSize(Long.valueOf(pageSize))
+                                .currentPage(Long.valueOf(currentPage))
+                                .parameters(parameters)
+                                .build());
         return pageProvider;
     }
 }

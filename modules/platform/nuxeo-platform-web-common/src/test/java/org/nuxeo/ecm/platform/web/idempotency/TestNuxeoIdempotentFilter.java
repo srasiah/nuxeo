@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,11 +53,10 @@ import org.nuxeo.ecm.platform.web.common.MockHttpServletRequest;
 import org.nuxeo.ecm.platform.web.common.MockHttpServletResponse;
 import org.nuxeo.ecm.platform.web.common.idempotency.NuxeoIdempotentFilter;
 import org.nuxeo.runtime.kv.KeyValueService;
-import org.nuxeo.runtime.kv.KeyValueStoreProvider;
+import org.nuxeo.runtime.kv.RuntimeKeyValueStoreFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
-import org.nuxeo.runtime.test.runner.RuntimeFeature;
 
 /**
  * Checks idempotent requests management.
@@ -65,8 +64,7 @@ import org.nuxeo.runtime.test.runner.RuntimeFeature;
  * @since 11.5
  */
 @RunWith(FeaturesRunner.class)
-@Features(RuntimeFeature.class)
-@Deploy("org.nuxeo.runtime.kv")
+@Features(RuntimeKeyValueStoreFeature.class)
 @Deploy("org.nuxeo.ecm.platform.web.common:OSGI-INF/idempotency-configuration.xml")
 public class TestNuxeoIdempotentFilter {
 
@@ -112,24 +110,16 @@ public class TestNuxeoIdempotentFilter {
     @Inject
     protected KeyValueService kvs;
 
-    protected KeyValueStoreProvider store;
-
     @Before
     public void setUp() throws IOException {
         filter = new NuxeoIdempotentFilter();
         chain = mock(FilterChain.class);
-        // handle store
-        store = (KeyValueStoreProvider) kvs.getKeyValueStore(NuxeoIdempotentFilter.DEFAULT_STORE);
-        store.clear();
     }
 
     @After
     public void tearDown() {
         if (filter != null) {
             filter.destroy();
-        }
-        if (store != null) {
-            store.clear();
         }
     }
 
@@ -143,6 +133,7 @@ public class TestNuxeoIdempotentFilter {
     }
 
     protected void checkStore(String status, String content) {
+        var store = kvs.getKeyValueStore(NuxeoIdempotentFilter.DEFAULT_STORE);
         assertEquals(content, store.getString(KEY));
         String ikey = KEY + NuxeoIdempotentFilter.INFO_SUFFIX;
         if (status == null) {

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2025-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,13 +49,14 @@ import org.nuxeo.ecm.platform.ui.web.auth.service.PluggableAuthenticationService
 import org.nuxeo.ecm.platform.usermanager.UserManager;
 import org.nuxeo.ecm.platform.web.common.MockHttpServletRequest;
 import org.nuxeo.ecm.platform.web.common.MockHttpServletResponse;
+import org.nuxeo.ecm.platform.web.common.WebCommonFeature;
 import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.runtime.kv.RuntimeKeyValueStoreFeature;
 import org.nuxeo.runtime.mockito.MockitoFeature;
 import org.nuxeo.runtime.mockito.RuntimeService;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
-import org.nuxeo.runtime.test.runner.RuntimeFeature;
 
 import com.duosecurity.Client;
 import com.duosecurity.exception.DuoException;
@@ -66,10 +67,8 @@ import com.duosecurity.model.Token;
  * @since 2025.5
  */
 @RunWith(FeaturesRunner.class)
-@Features({ RuntimeFeature.class, MockitoFeature.class })
-@Deploy("org.nuxeo.runtime.kv")
+@Features({ RuntimeKeyValueStoreFeature.class, MockitoFeature.class, WebCommonFeature.class })
 @Deploy("org.nuxeo.ecm.platform.login")
-@Deploy("org.nuxeo.ecm.platform.web.common")
 @Deploy("org.nuxeo.duoweb.authentication")
 @Deploy("org.nuxeo.duoweb.authentication.test:OSGI-INF/duo-authentication-test-config.xml")
 public class TestDuoFactorsAuthentication {
@@ -87,7 +86,7 @@ public class TestDuoFactorsAuthentication {
     protected Client duoClient;
 
     @Before
-    public void setup() throws DuoException {
+    public void setup() {
         NuxeoPrincipal casUserPrincipal = new UserPrincipal(DUO_USER, null, false, false);
         when(userManager.getPrincipal(DUO_USER)).thenReturn(casUserPrincipal);
         when(userManager.checkUsernamePassword(eq(DUO_USER), anyString())).thenReturn(true);

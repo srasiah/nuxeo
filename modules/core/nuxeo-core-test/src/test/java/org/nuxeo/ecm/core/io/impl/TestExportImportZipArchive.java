@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2021 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
  *
  * Contributors:
  *     Nuxeo - initial API and implementation
- *
  */
-
 package org.nuxeo.ecm.core.io.impl;
 
 import static org.junit.Assert.assertEquals;
@@ -51,8 +49,6 @@ import org.nuxeo.ecm.core.io.impl.plugins.DocumentTreeReader;
 import org.nuxeo.ecm.core.io.impl.plugins.NuxeoArchiveReader;
 import org.nuxeo.ecm.core.io.impl.plugins.NuxeoArchiveWriter;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -61,7 +57,6 @@ import org.nuxeo.runtime.test.runner.TransactionalFeature;
 
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 public class TestExportImportZipArchive {
 
     protected static final String XML_DATA = "\n    <nxdt:templateParams xmlns:nxdt=\"http://www.nuxeo.org/DocumentTemplate\">\n<nxdt:field name=\"htmlContent\" type=\"content\" source=\"htmlPreview\"></nxdt:field>\n   </nxdt:templateParams>\n    ";

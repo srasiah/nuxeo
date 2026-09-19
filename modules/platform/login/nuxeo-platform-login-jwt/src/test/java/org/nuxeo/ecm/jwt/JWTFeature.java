@@ -19,6 +19,7 @@
 package org.nuxeo.ecm.jwt;
 
 import org.nuxeo.ecm.platform.test.PlatformFeature;
+import org.nuxeo.ecm.platform.web.common.WebCommonFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.RunnerFeature;
@@ -27,9 +28,8 @@ import org.nuxeo.runtime.test.runner.RunnerFeature;
  * @since 11.1
  */
 @Deploy("org.nuxeo.ecm.jwt")
-@Deploy("org.nuxeo.ecm.platform.web.common")
 @Deploy("org.nuxeo.ecm.jwt.tests:OSGI-INF/test-jwt-config.xml")
-@Features(PlatformFeature.class)
+@Features({ PlatformFeature.class, WebCommonFeature.class })
 public class JWTFeature implements RunnerFeature {
 
 }

@@ -30,6 +30,7 @@ import static org.opensearch.common.xcontent.XContentFactory.jsonBuilder;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -40,6 +41,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -51,6 +53,7 @@ import org.nuxeo.audit.api.LogEntryList;
 import org.nuxeo.audit.service.AbstractAuditBackend;
 import org.nuxeo.audit.service.AuditBackend;
 import org.nuxeo.common.utils.TextTemplate;
+import org.nuxeo.ecm.core.api.ConcurrentUpdateException;
 import org.nuxeo.ecm.core.api.CursorResult;
 import org.nuxeo.ecm.core.api.CursorService;
 import org.nuxeo.ecm.core.api.DocumentModel;
@@ -99,6 +102,7 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchModule;
 import org.opensearch.search.aggregations.AggregationBuilders;
@@ -111,7 +115,8 @@ import org.opensearch.search.sort.SortOrder;
  *
  * @author tiry
  */
-public class OpenSearchAuditBackend extends AbstractAuditBackend {
+public class OpenSearchAuditBackend extends AbstractAuditBackend
+        implements AuditBackend.CursorServiceScroll<Iterator<SearchHit>, SearchHit> {
 
     private static final Logger log = LogManager.getLogger(OpenSearchAuditBackend.class);
 
@@ -126,6 +131,8 @@ public class OpenSearchAuditBackend extends AbstractAuditBackend {
 
     protected final CursorService<Iterator<SearchHit>, SearchHit, String> cursorService;
 
+    protected final CursorService<Iterator<SearchHit>, SearchHit, String> storageCursorService;
+
     // @since 2021.21
     protected String latestLogIdAfterDate;
 
@@ -133,7 +140,8 @@ public class OpenSearchAuditBackend extends AbstractAuditBackend {
         this.client = client;
         this.indexName = indexName;
         initUIDSequencer(client, indexName);
-        this.cursorService = new CursorService<>(SearchHit::getSourceAsString);
+        this.cursorService = new CursorService<>(SearchHit::getId);
+        this.storageCursorService = new CursorService<>(SearchHit::getSourceAsString);
     }
 
     @Override
@@ -187,6 +195,26 @@ public class OpenSearchAuditBackend extends AbstractAuditBackend {
         }
 
         return logEntries;
+    }
+
+    /** @since 2025.18 */
+    @Override
+    public CursorResult<Iterator<SearchHit>, SearchHit> scrollLogIdsAsCursor(
+            org.nuxeo.ecm.core.query.sql.model.QueryBuilder builder, int batchSize, Duration keepAlive) {
+        // prepare parameters
+        MultiExpression predicate = builder.predicate();
+        OrderByList orders = builder.orders();
+
+        // create source
+        SearchSourceBuilder source = createSearchRequestSource(predicate, orders);
+        source.fetchSource(false);
+        source.size(batchSize);
+        // create request
+        SearchRequest request = createSearchRequest();
+        request.source(source).scroll(TimeValue.timeValueSeconds(keepAlive.toSeconds()));
+        SearchResponse response = runRequest(request);
+        // register cursor
+        return new ESCursorResult(response, batchSize, (int) keepAlive.toSeconds());
     }
 
     protected void clearScrollContext(SearchResponse response) {
@@ -391,18 +419,31 @@ public class OpenSearchAuditBackend extends AbstractAuditBackend {
                     var writer = Framework.getService(MarshallerRegistry.class)
                                           .getWriter(renderingContext, LogEntry.class, APPLICATION_JSON_TYPE);
                     writer.write(entry, LogEntry.class, LogEntry.class, APPLICATION_JSON_TYPE, out);
-                    bulkRequest.add(new IndexRequest(indexName).id(String.valueOf(entry.getId())).source(builder));
+                    bulkRequest.add(
+                            new IndexRequest(indexName).id(String.valueOf(entry.getId())).source(builder).create(true));
                 }
             }
 
             BulkResponse bulkResponse = client.bulk(bulkRequest);
             if (bulkResponse.hasFailures()) {
-                for (BulkItemResponse response : bulkResponse.getItems()) {
-                    if (response.isFailed()) {
-                        log.error("Unable to index audit entry {} : {}", response.getItemId(),
-                                response.getFailureMessage());
-                    }
+                List<BulkItemResponse.Failure> failures = Stream.of(bulkResponse.getItems())
+                                                                .filter(BulkItemResponse::isFailed)
+                                                                .map(BulkItemResponse::getFailure)
+                                                                .toList();
+                List<String> duplicates = failures.stream()
+                                                  .filter(failure -> failure.getStatus() == RestStatus.CONFLICT)
+                                                  .map(BulkItemResponse.Failure::getMessage)
+                                                  .toList();
+                // Avoid hiding any others bulk errors
+                if (duplicates.size() == failures.size()) {
+                    log.trace("OpenSearch:    -> DUPLICATE KEY: {}", duplicates);
+                    var concurrentUpdateException = new ConcurrentUpdateException("Concurrent update");
+                    duplicates.forEach(concurrentUpdateException::addInfo);
+                    throw concurrentUpdateException;
                 }
+                var nuxeoException = new NuxeoException("Error while inserting audit log entries");
+                failures.forEach(failure -> nuxeoException.addSuppressed(failure.getCause()));
+                throw nuxeoException;
             }
         } catch (IOException e) {
             throw new NuxeoException("Error while indexing Audit entries", e);
@@ -633,13 +674,14 @@ public class OpenSearchAuditBackend extends AbstractAuditBackend {
         request.source(source).scroll(TimeValue.timeValueSeconds(keepAliveSeconds));
         SearchResponse response = runRequest(request);
         // register cursor
-        String scrollId = cursorService.registerCursorResult(new ESCursorResult(response, batchSize, keepAliveSeconds));
+        String scrollId = storageCursorService.registerCursorResult(
+                new ESCursorResult(response, batchSize, keepAliveSeconds));
         return scroll(scrollId);
     }
 
     @Override
     public ScrollResult<String> scroll(String scrollId) {
-        return cursorService.scroll(scrollId);
+        return storageCursorService.scroll(scrollId);
     }
 
     public class ESCursorResult extends CursorResult<Iterator<SearchHit>, SearchHit> {
@@ -683,12 +725,14 @@ public class OpenSearchAuditBackend extends AbstractAuditBackend {
 
         @Override
         public void close() {
-            ClearScrollRequest request = new ClearScrollRequest();
-            request.addScrollId(scrollId);
-            client.clearScroll(request);
-            end = true;
-            // Call super close to clear cursor
-            super.close();
+            if (cursor != null) {
+                ClearScrollRequest request = new ClearScrollRequest();
+                request.addScrollId(scrollId);
+                client.clearScroll(request);
+                end = true;
+                // Call super close to clear cursor
+                super.close();
+            }
         }
 
     }
@@ -758,5 +802,10 @@ public class OpenSearchAuditBackend extends AbstractAuditBackend {
             case EXTENDED_INFO_SEARCH -> true;
             case STARTS_WITH_PARTIAL_MATCH -> false;
         };
+    }
+
+    @Override
+    public CursorService<Iterator<SearchHit>, SearchHit, String> getCursorService() {
+        return cursorService;
     }
 }

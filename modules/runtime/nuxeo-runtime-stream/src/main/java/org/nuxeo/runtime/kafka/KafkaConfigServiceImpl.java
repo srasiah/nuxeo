@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.nuxeo.lib.stream.log.kafka.KafkaUtils;
-import org.nuxeo.runtime.model.ComponentContext;
 import org.nuxeo.runtime.model.ComponentStartOrders;
 import org.nuxeo.runtime.model.DefaultComponent;
 import org.nuxeo.runtime.model.Descriptor;
@@ -49,17 +48,6 @@ public class KafkaConfigServiceImpl extends DefaultComponent implements KafkaCon
     public int getApplicationStartedOrder() {
         // since there is no dependencies, let's start before main nuxeo core services
         return ComponentStartOrders.KAFKA;
-    }
-
-    @Override
-    public void start(ComponentContext context) {
-        super.start(context);
-        for (String name : listConfigNames()) {
-            KafkaConfigDescriptor config = getDescriptor(name);
-            if (config.copy != null) {
-                config.init(getDescriptor(config.copy));
-            }
-        }
     }
 
     @Override

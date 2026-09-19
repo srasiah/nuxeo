@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2008 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2008-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,12 @@
  *
  * Contributors:
  *     Nuxeo - initial API and implementation
- *
- * $Id: DefaultCreationContainerListProvider.java 30594 2008-02-26 17:21:10Z ogrisel $
  */
-
 package org.nuxeo.ecm.platform.filemanager.service.extension;
 
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
+
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
@@ -32,7 +29,7 @@ import org.nuxeo.ecm.core.api.impl.DocumentModelListImpl;
 import org.nuxeo.ecm.core.api.security.SecurityConstants;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
-import org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.api.Framework;
 
 /**
@@ -67,13 +64,12 @@ public class DefaultCreationContainerListProvider extends AbstractCreationContai
     @Override
     @SuppressWarnings("unchecked")
     public DocumentModelList getCreationContainerList(CoreSession documentManager, String docType) {
-        Map<String, Serializable> props = new HashMap<>();
-        props.put(CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY, (Serializable) documentManager);
-
         PageProviderService pageProviderService = Framework.getService(PageProviderService.class);
 
         PageProvider<DocumentModel> allContainers = (PageProvider<DocumentModel>) pageProviderService.getPageProvider(
-                CONTAINER_LIST_PROVIDER_QM, null, null, null, props);
+                PageProviderSpec.builder(CONTAINER_LIST_PROVIDER_QM)
+                                .property(CORE_SESSION_PROPERTY, (Serializable) documentManager)
+                                .build());
         DocumentModelList filteredContainers = new DocumentModelListImpl();
         for (DocumentModel container : allContainers.getCurrentPage()) {
             if (documentManager.hasPermission(container.getRef(), SecurityConstants.ADD_CHILDREN)) {

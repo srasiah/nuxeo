@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,16 @@
  */
 package org.nuxeo.ecm.liveconnect.core;
 
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -54,7 +53,7 @@ import org.nuxeo.ecm.platform.oauth2.providers.OAuth2ServiceProviderRegistry;
 import org.nuxeo.ecm.platform.oauth2.tokens.NuxeoOAuth2Token;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
-import org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
@@ -154,11 +153,11 @@ public abstract class AbstractLiveConnectBlobProvider<O extends OAuth2ServicePro
             long offset = 0;
             List<DocumentModel> nextDocumentsToBeUpdated;
             PageProviderService ppService = Framework.getService(PageProviderService.class);
-            Map<String, Serializable> props = new HashMap<>();
-            props.put(CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY, (Serializable) session);
             @SuppressWarnings("unchecked")
             PageProvider<DocumentModel> pp = (PageProvider<DocumentModel>) ppService.getPageProvider(
-                    getPageProviderNameForUpdate(), null, null, null, props);
+                    PageProviderSpec.builder(getPageProviderNameForUpdate())
+                                    .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                    .build());
             final long maxResult = pp.getPageSize();
             do {
                 pp.setCurrentPageOffset(offset);
@@ -168,9 +167,7 @@ public abstract class AbstractLiveConnectBlobProvider<O extends OAuth2ServicePro
                 if (nextDocumentsToBeUpdated.isEmpty()) {
                     break;
                 }
-                List<String> docIds = nextDocumentsToBeUpdated.stream()
-                                                              .map(DocumentModel::getId)
-                                                              .collect(Collectors.toList());
+                List<String> docIds = nextDocumentsToBeUpdated.stream().map(DocumentModel::getId).toList();
                 BlobProviderDocumentsUpdateWork work = new BlobProviderDocumentsUpdateWork(
                         buildWorkId(repositoryName, offset), blobProviderId);
                 work.setDocuments(repositoryName, docIds);

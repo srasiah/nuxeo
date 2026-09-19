@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2011-2012 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2011-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
  *     Wojciech Sulejman
  *     Florent Guillaume
  */
-
 package org.nuxeo.ecm.platform.signature.core.user;
 
 import static org.junit.Assert.assertNotNull;
@@ -30,8 +29,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.api.DocumentModel;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.platform.signature.api.user.CUserService;
 import org.nuxeo.ecm.platform.signature.core.SignatureCoreFeature;
 import org.nuxeo.ecm.platform.usermanager.UserManager;
@@ -41,7 +38,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
 @RunWith(FeaturesRunner.class)
 @Features(SignatureCoreFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.platform.query.api")
 @Deploy("org.nuxeo.ecm.platform.usermanager")
 public class CUserServiceTest {

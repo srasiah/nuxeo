@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.nuxeo</groupId>
     <artifactId>nuxeo-ecm</artifactId>
-    <version>2025.16-SNAPSHOT</version>
+    <version>2025.21-SNAPSHOT</version>
   </parent>
 
   <groupId>org.nuxeo.packages</groupId>
@@ -55,6 +55,7 @@
     <module>nuxeo-tree-snapshot-package</module>
     <module>nuxeo-uidgen-opensearch1-package</module>
     <module>nuxeo-uidgen-sql-package</module>
+    <module>nuxeo-webdav-package</module>
     <module>nuxeo-wopi-package</module>
   </modules>
 

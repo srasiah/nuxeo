@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013-2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@
  */
 package org.nuxeo.ecm.restapi.server.adapters;
 
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
+
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.GET;
@@ -37,7 +37,7 @@ import org.nuxeo.ecm.core.api.SortInfo;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
-import org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.webengine.model.impl.DefaultAdapter;
 import org.nuxeo.runtime.api.Framework;
 
@@ -118,8 +118,6 @@ public abstract class PaginableAdapter<T> extends DefaultAdapter {
         }
 
         PageProviderService pps = Framework.getService(PageProviderService.class);
-        Map<String, Serializable> props = new HashMap<>();
-        props.put(CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY, (Serializable) ctx.getCoreSession());
         List<SortInfo> sortInfos = null;
         if (!StringUtils.isBlank(sortBy)) {
             String[] sorts = sortBy.split(",");
@@ -135,8 +133,15 @@ public abstract class PaginableAdapter<T> extends DefaultAdapter {
                 sortInfos.add(new SortInfo(sort, sortAscending));
             }
         }
-        PageProvider<T> pp = (PageProvider<T>) pps.getPageProvider(NAME_PREFIX + ppDefinition.getName(), ppDefinition,
-                getSearchDocument(), sortInfos, pageSize, currentPageIndex, props, getParams());
+        PageProvider<T> pp = (PageProvider<T>) pps.getPageProvider(
+                PageProviderSpec.builder(NAME_PREFIX + ppDefinition.getName(), ppDefinition)
+                                .searchDocument(getSearchDocument())
+                                .sortInfos(sortInfos)
+                                .pageSize(pageSize)
+                                .currentPage(currentPageIndex)
+                                .property(CORE_SESSION_PROPERTY, (Serializable) ctx.getCoreSession())
+                                .parameters(getParams())
+                                .build());
 
         return getPaginableEntries(pp);
     }

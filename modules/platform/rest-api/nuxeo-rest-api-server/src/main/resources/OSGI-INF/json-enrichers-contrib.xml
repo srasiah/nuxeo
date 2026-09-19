@@ -1,10 +1,16 @@
 <?xml version="1.0"?>
 
 <component name="org.nuxeo.ecm.restapi.server.jsonEnrichers">
+
+  <require>org.nuxeo.ecm.core.io.MarshallerRegistry.marshallers</require>
   <extension target="org.nuxeo.ecm.core.io.MarshallerRegistry" point="marshallers">
     <register class="org.nuxeo.ecm.restapi.server.enrichers.AuditJsonEnricher"
-      enable="true" />
+              enable="true" />
     <register class="org.nuxeo.ecm.restapi.server.enrichers.HasContentJsonEnricher"
-      enable="true" />
+              enable="true" />
+    <register class="org.nuxeo.ecm.core.io.marshallers.json.enrichers.HasFolderishChildJsonEnricher"
+              enable="false" />
+    <register class="org.nuxeo.ecm.restapi.server.enrichers.HasFolderishChildJsonEnricher"
+              enable="true" />
   </extension>
 </component>

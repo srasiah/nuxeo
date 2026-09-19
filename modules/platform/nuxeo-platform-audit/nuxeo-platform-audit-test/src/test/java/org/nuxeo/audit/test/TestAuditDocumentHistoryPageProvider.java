@@ -21,9 +21,9 @@ package org.nuxeo.audit.test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_ID;
+import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 
 import jakarta.inject.Inject;
@@ -32,7 +32,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.audit.api.LogEntry;
-import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.audit.api.Route;
+import org.nuxeo.audit.service.AuditRouter;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.SortInfo;
@@ -42,6 +43,7 @@ import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -58,7 +60,7 @@ import org.nuxeo.runtime.test.runner.TransactionalFeature;
 public class TestAuditDocumentHistoryPageProvider {
 
     @Inject
-    protected AuditBackend backend;
+    protected AuditRouter router;
 
     @Inject
     protected CoreSession session;
@@ -140,7 +142,7 @@ public class TestAuditDocumentHistoryPageProvider {
                                         .docPath(doc.getPathAsString())
                                         .repositoryId("test")
                                         .build();
-        backend.addLogEntries(List.of(createdEntry));
+        router.routeToBackends(List.of(createdEntry), List.of(Route.allEventsTo(DEFAULT_AUDIT_BACKEND)));
 
         transactionalFeature.nextTransaction();
     }
@@ -161,7 +163,12 @@ public class TestAuditDocumentHistoryPageProvider {
 
         List<SortInfo> sorts = List.of(new SortInfo(LOG_ID, false));
 
-        pp = pps.getPageProvider("DOCUMENT_HISTORY_PROVIDER", sorts, 20L, 0L, new HashMap<>(), doc);
+        pp = pps.getPageProvider(PageProviderSpec.builder("DOCUMENT_HISTORY_PROVIDER")
+                                                 .sortInfos(sorts)
+                                                 .pageSize(20L)
+                                                 .currentPage(0L)
+                                                 .parameters(doc)
+                                                 .build());
         pp.setSearchDocumentModel(searchDoc);
 
         // Get Live doc history
@@ -209,7 +216,12 @@ public class TestAuditDocumentHistoryPageProvider {
         searchDoc.setPropertyValue("basicauditsearch:endDate", null);
 
         // Get Proxy history
-        pp = pps.getPageProvider("DOCUMENT_HISTORY_PROVIDER", sorts, 20L, 0L, new HashMap<>(), proxy);
+        pp = pps.getPageProvider(PageProviderSpec.builder("DOCUMENT_HISTORY_PROVIDER")
+                                                 .sortInfos(sorts)
+                                                 .pageSize(20L)
+                                                 .currentPage(0L)
+                                                 .parameters(proxy)
+                                                 .build());
         pp.setSearchDocumentModel(searchDoc);
         entries = (List<LogEntry>) pp.getCurrentPage();
 
@@ -221,7 +233,12 @@ public class TestAuditDocumentHistoryPageProvider {
         assertEquals(startId + proxyEntriesCount + 1, entries.getFirst().getId());
 
         // Get version 1 history
-        pp = pps.getPageProvider("DOCUMENT_HISTORY_PROVIDER", sorts, 20L, 0L, new HashMap<>(), versions.getFirst());
+        pp = pps.getPageProvider(PageProviderSpec.builder("DOCUMENT_HISTORY_PROVIDER")
+                                                 .sortInfos(sorts)
+                                                 .pageSize(20L)
+                                                 .currentPage(0L)
+                                                 .parameters(versions.getFirst())
+                                                 .build());
         pp.setSearchDocumentModel(searchDoc);
         entries = (List<LogEntry>) pp.getCurrentPage();
 
@@ -231,7 +248,12 @@ public class TestAuditDocumentHistoryPageProvider {
         assertEquals(startId + version1EntriesCount - 1, entries.getFirst().getId());
 
         // get version 2 history
-        pp = pps.getPageProvider("DOCUMENT_HISTORY_PROVIDER", sorts, 20L, 0L, new HashMap<>(), versions.get(1));
+        pp = pps.getPageProvider(PageProviderSpec.builder("DOCUMENT_HISTORY_PROVIDER")
+                                                 .sortInfos(sorts)
+                                                 .pageSize(20L)
+                                                 .currentPage(0L)
+                                                 .parameters(versions.get(1))
+                                                 .build());
         pp.setSearchDocumentModel(searchDoc);
         entries = (List<LogEntry>) pp.getCurrentPage();
 
@@ -257,7 +279,12 @@ public class TestAuditDocumentHistoryPageProvider {
 
         List<SortInfo> sorts = List.of(new SortInfo(LOG_ID, false));
 
-        pp = pps.getPageProvider("DOCUMENT_HISTORY_PROVIDER_OLD", sorts, 20L, 0L, new HashMap<>(), doc.getId());
+        pp = pps.getPageProvider(PageProviderSpec.builder("DOCUMENT_HISTORY_PROVIDER_OLD")
+                                                 .sortInfos(sorts)
+                                                 .pageSize(20L)
+                                                 .currentPage(0L)
+                                                 .parameters(doc.getId())
+                                                 .build());
         pp.setSearchDocumentModel(searchDoc);
 
         // Get Live doc history

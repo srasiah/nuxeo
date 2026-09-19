@@ -21,6 +21,7 @@ package org.nuxeo.ecm.blob.azure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.time.Duration;
@@ -48,7 +49,15 @@ public class TestAzureStorageRetention
     protected Duration getRetentionDelay() {
         // Azure does not take into account ms in retention dates
         // Let's make sure we bump the seconds unit in time stamps
-        return Duration.ofSeconds(1).plusMillis(100);
+        return Duration.ofSeconds(2);
+    }
+
+    @Override
+    protected void assertNoRetention() {
+        var ip = getCloudKey().blobClient().getProperties().getImmutabilityPolicy();
+        assertNotNull(ip);
+        assertNull(ip.getExpiryTime());
+        assertNull(ip.getPolicyMode());
     }
 
     @Override

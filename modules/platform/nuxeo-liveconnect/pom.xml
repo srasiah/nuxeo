@@ -3,7 +3,7 @@
   <parent>
     <groupId>org.nuxeo.ecm.platform</groupId>
     <artifactId>nuxeo-platform-parent</artifactId>
-    <version>2025.16-SNAPSHOT</version>
+    <version>2025.21-SNAPSHOT</version>
   </parent>
 
   <groupId>org.nuxeo.ecm.liveconnect</groupId>
@@ -107,6 +107,11 @@
       <groupId>org.nuxeo.ecm.platform</groupId>
       <artifactId>nuxeo-platform-default-config</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.nuxeo.ecm.platform</groupId>
+      <artifactId>nuxeo-platform-web-common</artifactId>
+      <type>test-jar</type>
     </dependency>
   </dependencies>
 

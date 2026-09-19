@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2012 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2012-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
  *     Florent Guillaume
  */
 package org.nuxeo.ecm.core.work.api;
+
+import static org.apache.commons.lang3.ObjectUtils.getIfNull;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -101,12 +103,12 @@ public class WorkQueueDescriptor implements Descriptor {
     public Descriptor merge(Descriptor o) {
         WorkQueueDescriptor other = (WorkQueueDescriptor) o;
         WorkQueueDescriptor merged = new WorkQueueDescriptor();
-        merged.id = id;
-        merged.name = other.name != null ? other.name : name;
-        merged.queuing = other.queuing != null ? other.queuing : queuing;
-        merged.capacity = other.capacity != null ? other.capacity : capacity;
-        merged.processing = other.processing != null ? other.processing : processing;
-        merged.maxThreads = other.maxThreads != null ? other.maxThreads : maxThreads;
+        merged.id = getIfNull(other.id, id);
+        merged.name = getIfNull(other.name, name);
+        merged.queuing = getIfNull(other.queuing, queuing);
+        merged.capacity = getIfNull(other.capacity, capacity);
+        merged.processing = getIfNull(other.processing, processing);
+        merged.maxThreads = getIfNull(other.maxThreads, maxThreads);
         merged.categories = new HashSet<>(categories);
         merged.categories.addAll(other.categories);
         return merged;

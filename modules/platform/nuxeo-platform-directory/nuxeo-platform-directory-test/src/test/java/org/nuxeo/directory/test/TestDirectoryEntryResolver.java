@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017-2023 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  *
  * Contributors:
  *     Funsho David
- *
  */
 package org.nuxeo.directory.test;
 
@@ -49,8 +48,6 @@ import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.SystemPrincipal;
 import org.nuxeo.ecm.core.api.validation.DocumentValidationService;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.directory.DirectoryEntryResolver;
 import org.nuxeo.ecm.directory.Reference;
 import org.nuxeo.ecm.directory.Session;
@@ -63,7 +60,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
 @RunWith(FeaturesRunner.class)
 @Features({ DirectoryFeature.class, CoreFeature.class })
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.directory.tests:test-directory-resolver-contrib.xml")
 public class TestDirectoryEntryResolver {
 

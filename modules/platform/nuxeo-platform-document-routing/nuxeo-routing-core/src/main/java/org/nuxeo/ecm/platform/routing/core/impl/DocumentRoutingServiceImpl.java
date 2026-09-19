@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2009-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2009-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ package org.nuxeo.ecm.platform.routing.core.impl;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static org.nuxeo.ecm.core.api.security.SecurityConstants.SYSTEM_USERNAME;
-import static org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 import static org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider.MAX_RESULTS_PROPERTY;
 import static org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider.PAGE_SIZE_RESULTS_KEY;
 import static org.nuxeo.ecm.platform.routing.api.DocumentRoutingConstants.ALL_WORKFLOWS_QUERY;
@@ -37,12 +37,10 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -84,6 +82,7 @@ import org.nuxeo.ecm.platform.filemanager.api.FileImporterContext;
 import org.nuxeo.ecm.platform.filemanager.api.FileManager;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.routing.api.DocumentRoute;
 import org.nuxeo.ecm.platform.routing.api.DocumentRouteElement;
 import org.nuxeo.ecm.platform.routing.api.DocumentRoutingConstants;
@@ -543,11 +542,17 @@ public class DocumentRoutingServiceImpl extends DefaultComponent implements Docu
         PageProvider<DocumentModel> pageProvider;
         if (StringUtils.isEmpty(searchString)) {
             pageProvider = (PageProvider<DocumentModel>) pageProviderService.getPageProvider(
-                    DOC_ROUTING_SEARCH_ALL_ROUTE_MODELS_PROVIDER_NAME, null, null, 0L, props);
+                    PageProviderSpec.builder(DOC_ROUTING_SEARCH_ALL_ROUTE_MODELS_PROVIDER_NAME)
+                                    .currentPage(0L)
+                                    .properties(props)
+                                    .build());
         } else {
             pageProvider = (PageProvider<DocumentModel>) pageProviderService.getPageProvider(
-                    DOC_ROUTING_SEARCH_ROUTE_MODELS_WITH_TITLE_PROVIDER_NAME, null, null, 0L, props,
-                    searchString + '%');
+                    PageProviderSpec.builder(DOC_ROUTING_SEARCH_ROUTE_MODELS_WITH_TITLE_PROVIDER_NAME)
+                                    .currentPage(0L)
+                                    .properties(props)
+                                    .parameters(searchString + '%')
+                                    .build());
         }
         List<DocumentModel> allRouteModels = new ArrayList<>(pageProvider.getCurrentPage());
         while (pageProvider.isNextPageAvailable()) {
@@ -923,7 +928,7 @@ public class DocumentRoutingServiceImpl extends DefaultComponent implements Docu
             GraphNode node = nodeAccessRunner.getNode();
             return node.getWorkflowContextualInfo(session, true);
         }
-        return Collections.emptyMap();
+        return Map.of();
     }
 
     @Override
@@ -1196,6 +1201,6 @@ public class DocumentRoutingServiceImpl extends DefaultComponent implements Docu
         return routeModels.stream()
                           .filter(route -> canCreateInstance(session, documentIds, route.getName()))
                           .map(document -> document.getAdapter(DocumentRoute.class))
-                          .collect(Collectors.toList());
+                          .toList();
     }
 }

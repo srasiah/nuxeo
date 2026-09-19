@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2011 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,8 +46,6 @@ import org.nuxeo.ecm.core.api.impl.DocumentRefListImpl;
 import org.nuxeo.ecm.core.api.security.SecurityConstants;
 import org.nuxeo.ecm.core.event.EventService;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -61,7 +59,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 @Deploy("org.nuxeo.ecm.automation.core")
 // For version label info
 @Deploy("org.nuxeo.ecm.automation.core:test-operations.xml")
-@RepositoryConfig(cleanup = Granularity.METHOD)
 public class IterableOperationsTest {
 
     protected DocumentModel src;
@@ -196,8 +193,9 @@ public class IterableOperationsTest {
         ctx.setInput(docs);
 
         OperationChain chain = new OperationChain("testChain");
-        chain.add(SetDocumentProperty.ID).set("xpath", "dc:description").set("value",
-                Scripting.newExpression("Document.getParent()['dc:title']"));
+        chain.add(SetDocumentProperty.ID)
+             .set("xpath", "dc:description")
+             .set("value", Scripting.newExpression("Document.getParent()['dc:title']"));
 
         DocumentModelList out = (DocumentModelList) service.run(ctx, chain);
 

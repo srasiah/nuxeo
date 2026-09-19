@@ -33,8 +33,10 @@ import com.fasterxml.jackson.core.JsonGenerator;
 
 /**
  * @since 8.10
+ * @deprecated since 2025.17, replaced by org.nuxeo.ecm.restapi.server.enrichers.HasFolderishChildJsonEnricher
  */
 @Setup(mode = SINGLETON, priority = REFERENCE)
+@Deprecated(since = "2025.17", forRemoval = true)
 public class HasFolderishChildJsonEnricher extends AbstractJsonEnricher<DocumentModel> {
 
     public static final String NAME = "hasFolderishChild";
@@ -51,8 +53,8 @@ public class HasFolderishChildJsonEnricher extends AbstractJsonEnricher<Document
         }
         try (SessionWrapper wrapper = ctx.getSession(document)) {
             String fetchFolderishChildQuery = "SELECT * FROM Document WHERE ecm:mixinType = 'Folderish'"
-                    + " AND ecm:mixinType != 'HiddenInNavigation' AND ecm:isTrashed = 0"
-                    + " AND ecm:parentId = " + NXQL.escapeString(document.getId());
+                    + " AND ecm:mixinType != 'HiddenInNavigation' AND ecm:isTrashed = 0" + " AND ecm:parentId = "
+                    + NXQL.escapeString(document.getId());
             // Limit result set to 1 as we just want to know if there's at least one Folderish child
             boolean hasChildren = !wrapper.getSession().queryProjection(fetchFolderishChildQuery, 1, 0).isEmpty();
             jg.writeBooleanField(NAME, hasChildren);

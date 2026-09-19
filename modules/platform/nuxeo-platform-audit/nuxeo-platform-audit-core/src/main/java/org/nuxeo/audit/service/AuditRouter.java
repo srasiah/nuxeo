@@ -20,6 +20,7 @@ package org.nuxeo.audit.service;
 
 import java.util.List;
 
+import org.nuxeo.audit.api.AuditRouterIntrospection;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.audit.api.Route;
 import org.nuxeo.ecm.core.event.Event;
@@ -53,4 +54,11 @@ public interface AuditRouter {
      * @param routes the routes to evaluate on log entries
      */
     void routeToBackends(List<LogEntry> logEntries, List<Route> routes);
+
+    /**
+     * Returns the audit router introspection to get information about the registered routes and backends.
+     * 
+     * @return the audit router introspection
+     */
+    AuditRouterIntrospection getIntrospection();
 }

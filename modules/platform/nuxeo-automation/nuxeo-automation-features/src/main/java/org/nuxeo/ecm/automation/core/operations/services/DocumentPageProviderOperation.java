@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
  *     Marwane Kalam-Alami
  */
 package org.nuxeo.ecm.automation.core.operations.services;
+
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -43,6 +45,7 @@ import org.nuxeo.ecm.platform.actions.ActionContext;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.api.Framework;
 
 /**
@@ -150,9 +153,20 @@ public class DocumentPageProviderOperation {
         if (actionContext != null) {
             parameters = PageProviderHelper.resolveELParameters(def, parameters);
         }
-        PageProvider<DocumentModel> pp = (PageProvider<DocumentModel>) PageProviderHelper.getPageProvider(session, def,
-                namedParameters, sortBy, sortOrder, targetPageSize, targetPage, currentOffset, highlights, quickFilters,
-                parameters);
+        var spec = PageProviderSpec.builder(def)
+                                   .searchDocument(PageProviderHelper.getSearchDocumentModel(session, def.getName(),
+                                           namedParameters))
+                                   .sortInfosByFieldsAndOrders(sortBy, sortOrder)
+                                   .pageSize(targetPageSize)
+                                   .currentPage(targetPage)
+                                   .currentPageOffset(currentOffset)
+                                   .highlights(highlights)
+                                   .quickFiltersByNames(quickFilters)
+                                   .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                   .parameters(parameters)
+                                   .build();
+        PageProvider<DocumentModel> pp = (PageProvider<DocumentModel>) Framework.getService(PageProviderService.class)
+                                                                                .getPageProvider(spec);
 
         HttpServletRequest request = (HttpServletRequest) context.get("request");
         if (request != null) {

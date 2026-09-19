@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import org.nuxeo.ecm.core.work.api.WorkManager;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.kv.KeyValueService;
 import org.nuxeo.runtime.kv.KeyValueStoreProvider;
+import org.nuxeo.runtime.kv.RuntimeKeyValueStoreFeature;
 import org.nuxeo.runtime.stream.RuntimeStreamFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -48,10 +49,15 @@ import org.nuxeo.runtime.test.runner.TransactionalFeature;
  *
  * @since 10.2
  */
-@Deploy("org.nuxeo.runtime.kv")
 @Deploy("org.nuxeo.ecm.core.bulk")
 @Deploy("org.nuxeo.ecm.core.bulk.test")
-@Features({ CoreEventFeature.class, CoreIOFeature.class, TransactionalFeature.class, RuntimeStreamFeature.class })
+@Features({ //
+        CoreEventFeature.class, //
+        CoreIOFeature.class, //
+        TransactionalFeature.class, //
+        RuntimeKeyValueStoreFeature.class, //
+        RuntimeStreamFeature.class, //
+})
 public class CoreBulkFeature implements RunnerFeature {
 
     protected List<BulkActionTriggeredByEventWaiter> bulkActionTriggeredByEventWaiters = new ArrayList<>();

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,8 +34,6 @@ import org.nuxeo.ecm.automation.core.util.Properties;
 import org.nuxeo.ecm.automation.io.AutomationIOFeature;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.test.runner.BlacklistComponent;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -50,7 +48,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RunWith(FeaturesRunner.class)
 @Features({ AutomationCoreFeature.class, AutomationIOFeature.class })
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.automation.io:testdoc-core-contrib.xml")
 @BlacklistComponent("org.nuxeo.ecm.automation.server.marshallers") // needs AutomationServer
 public class DocumentModelIOTest {

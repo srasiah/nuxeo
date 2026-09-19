@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2025-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,13 @@ package org.nuxeo.ecm.platform.query.core;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.nuxeo.ecm.platform.query.nxql.CoreQueryAndFetchPageProvider.CORE_SESSION_PROPERTY;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 
 import jakarta.inject.Inject;
@@ -45,6 +44,7 @@ import org.nuxeo.ecm.core.test.CoreSearchFeature;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.test.runner.ConditionalIgnore;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -93,10 +93,12 @@ public class TestSearchServicePageProviderAggregates extends TestPageProviderAgg
         String[] sources = { "Source1", "Source2" };
         model.setProperty("advanced_search", "source_agg", sources);
 
-        var props = new HashMap<String, Serializable>();
-        props.put(CORE_SESSION_PROPERTY, (Serializable) session);
-
-        PageProvider<?> pp = pps.getPageProvider("aggregates_1", ppdef, model, null, null, 0L, props);
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder(ppdef)
+                                                                 .searchDocument(model)
+                                                                 .currentPage(0L)
+                                                                 .property(CORE_SESSION_PROPERTY,
+                                                                         (Serializable) session)
+                                                                 .build());
 
         assertEquals(8, pp.getAggregates().size());
         assertEquals(2, pp.getResultsCount());
@@ -142,10 +144,12 @@ public class TestSearchServicePageProviderAggregates extends TestPageProviderAgg
         model.setProperty("advanced_search", "source_agg", sources);
         model.setProperty("advanced_search", "trashed_agg", trashedStates);
 
-        var props = new HashMap<String, Serializable>();
-        props.put(CORE_SESSION_PROPERTY, (Serializable) session);
-
-        PageProvider<?> pp = pps.getPageProvider("aggregates_1", ppdef, model, null, null, 0L, props);
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder(ppdef)
+                                                                 .searchDocument(model)
+                                                                 .currentPage(0L)
+                                                                 .property(CORE_SESSION_PROPERTY,
+                                                                         (Serializable) session)
+                                                                 .build());
 
         assertEquals(8, pp.getAggregates().size());
         String trashed = pp.getAggregates().get("trashed").toString();
@@ -164,10 +168,12 @@ public class TestSearchServicePageProviderAggregates extends TestPageProviderAgg
         String[] sizes = { "big", "medium" };
         model.setProperty("advanced_search", "size_agg", sizes);
 
-        var props = new HashMap<String, Serializable>();
-        props.put(CORE_SESSION_PROPERTY, (Serializable) session);
-
-        PageProvider<?> pp = pps.getPageProvider("aggregates_1", ppdef, model, null, null, 0L, props);
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder(ppdef)
+                                                                 .searchDocument(model)
+                                                                 .currentPage(0L)
+                                                                 .property(CORE_SESSION_PROPERTY,
+                                                                         (Serializable) session)
+                                                                 .build());
 
         assertEquals(8, pp.getAggregates().size());
         assertEquals(8, pp.getResultsCount());
@@ -196,10 +202,12 @@ public class TestSearchServicePageProviderAggregates extends TestPageProviderAgg
         String[] created = { "long_time_ago", "some_time_ago" };
         model.setProperty("advanced_search", "created_agg", created);
 
-        var props = new HashMap<String, Serializable>();
-        props.put(CORE_SESSION_PROPERTY, (Serializable) session);
-
-        PageProvider<?> pp = pps.getPageProvider("aggregates_1", ppdef, model, null, null, 0L, props);
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder(ppdef)
+                                                                 .searchDocument(model)
+                                                                 .currentPage(0L)
+                                                                 .property(CORE_SESSION_PROPERTY,
+                                                                         (Serializable) session)
+                                                                 .build());
 
         assertEquals(8, pp.getAggregates().size());
         assertEquals(7, pp.getResultsCount());
@@ -228,10 +236,12 @@ public class TestSearchServicePageProviderAggregates extends TestPageProviderAgg
         String[] sizes = { "1024", "4096" };
         model.setProperty("advanced_search", "size_histo_agg", sizes);
 
-        var props = new HashMap<String, Serializable>();
-        props.put(CORE_SESSION_PROPERTY, (Serializable) session);
-
-        PageProvider<?> pp = pps.getPageProvider("aggregates_1", ppdef, model, null, null, 0L, props);
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder(ppdef)
+                                                                 .searchDocument(model)
+                                                                 .currentPage(0L)
+                                                                 .property(CORE_SESSION_PROPERTY,
+                                                                         (Serializable) session)
+                                                                 .build());
 
         assertEquals(8, pp.getAggregates().size());
         assertEquals(2, pp.getResultsCount());
@@ -254,10 +264,13 @@ public class TestSearchServicePageProviderAggregates extends TestPageProviderAgg
         String[] created = { fmt.print(new DateTime(yesterdayNoon.minusWeeks(3).getMillis())),
                 fmt.print(new DateTime(yesterdayNoon.minusWeeks(6).getMillis())) };
         model.setProperty("advanced_search", "created_histo_agg", created);
-        var props = new HashMap<String, Serializable>();
-        props.put(CORE_SESSION_PROPERTY, (Serializable) session);
 
-        PageProvider<?> pp = pps.getPageProvider("aggregates_1", ppdef, model, null, null, 0L, props);
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder(ppdef)
+                                                                 .searchDocument(model)
+                                                                 .currentPage(0L)
+                                                                 .property(CORE_SESSION_PROPERTY,
+                                                                         (Serializable) session)
+                                                                 .build());
 
         assertEquals(8, pp.getAggregates().size());
         assertEquals(2, pp.getResultsCount());

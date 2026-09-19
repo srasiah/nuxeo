@@ -40,6 +40,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletionException;
 
 import org.apache.commons.io.output.NullOutputStream;
@@ -295,7 +296,7 @@ public class S3BlobStore extends AbstractBlobStore {
             Blob blob = blobContext.blob;
             String filename = blob.getFilename();
             if (filename != null) {
-                String contentDisposition = RFC2231.encodeContentDisposition(filename, false, null);
+                String contentDisposition = RFC2231.encodeContentDisposition(filename, false);
                 builder.contentDisposition(contentDisposition);
             }
             String contentType = DownloadHelper.getContentTypeHeader(blob);
@@ -318,7 +319,7 @@ public class S3BlobStore extends AbstractBlobStore {
     }
 
     @Override
-    public OptionalOrUnknown<InputStream> getStream(String key) throws IOException {
+    public OptionalOrUnknown<InputStream> getStream(String key) {
         return OptionalOrUnknown.unknown();
     }
 
@@ -533,11 +534,15 @@ public class S3BlobStore extends AbstractBlobStore {
         if (key == null) {
             // fast digest compute or trigger async digest computation
             String digest;
-            if (keyStrategy instanceof KeyStrategyDigest keyStrategyDigest
-                    && keyStrategyDigest.digestAlgorithm.equals("MD5") //
+            if (keyStrategy instanceof KeyStrategyDigest ksd && "MD5".equals(ksd.digestAlgorithm)
                     && (digest = sourceBlobStore.getMD5DigestFromETag(srcs3Key.bucketKey())) != null) {
                 // we have a usable MD5 digest
                 key = digest;
+            } else if (keyStrategy instanceof KeyStrategyDigest ksd && ksd.hasThreshold()
+                    && sourceBlobStore.lengthOfBlob(sourceKey) > ksd.maxSize.bytes()) {
+                // above digest threshold: assign a UUIDv7 key directly, skip async digest to avoid
+                // downloading the blob from S3 just to hash it
+                key = ksd.generateUUIDv7Key();
             } else {
                 // async: use a random key for now; and do async computation of real digest
                 key = randomString();
@@ -696,7 +701,7 @@ public class S3BlobStore extends AbstractBlobStore {
                     ObjectLockLegalHoldStatus status = hold ? ON : OFF;
                     logTrace("->", "setObjectLegalHold");
                     logTrace("hnote right: " + s3Key);
-                    logTrace("rnote right: " + status.toString());
+                    logTrace("rnote right: " + status);
                     amazonS3.putObjectLegalHold(pb -> pb.bucket(bucketName)
                                                         .key(s3Key.bucketKey())
                                                         .versionId(s3Key.versionId())
@@ -706,16 +711,21 @@ public class S3BlobStore extends AbstractBlobStore {
                     if (!s3Key.isVersioned()) {
                         throw new IOException("Cannot set retention on non-versioned blob");
                     }
-                    Calendar retainUntil = blobUpdateContext.updateRetainUntil.retainUntil;
-                    Instant retainUntilInstant = retainUntil == null ? null : retainUntil.toInstant();
-                    logTrace("->", "setObjectRetention");
-                    logTrace("hnote right: " + s3Key);
-                    logTrace("rnote right: " + (retainUntil == null ? "null" : retainUntil.toInstant().toString()));
-                    amazonS3.putObjectRetention(
-                            pb -> pb.bucket(bucketName)
-                                    .key(s3Key.bucketKey())
-                                    .versionId(s3Key.versionId())
-                                    .retention(b -> b.mode(config.retentionMode).retainUntilDate(retainUntilInstant)));
+                    Optional.ofNullable(blobUpdateContext.updateRetainUntil.retainUntil)
+                            .map(Calendar::toInstant)
+                            .filter(retainUntil -> retainUntil.isAfter(Instant.now()))
+                            .ifPresentOrElse(retainUntil -> {
+                                logTrace("->", "setObjectRetention");
+                                logTrace("hnote right: " + s3Key);
+                                logTrace("rnote right: " + retainUntil);
+                                amazonS3.putObjectRetention(pb -> pb.bucket(bucketName)
+                                                                    .key(s3Key.bucketKey())
+                                                                    .versionId(s3Key.versionId())
+                                                                    .retention(b -> b.mode(config.retentionMode)
+                                                                                     .retainUntilDate(retainUntil)));
+
+                            }, () -> log.debug("Skipping retention at S3 level for key: {}, retainUntil: {}",
+                                    s3Key::toString, () -> blobUpdateContext.updateRetainUntil.retainUntil));
                 }
             }
             if (blobUpdateContext.coldStorageClass != null) {
@@ -724,14 +734,13 @@ public class S3BlobStore extends AbstractBlobStore {
                 logTrace("->", "updateStorageClass");
                 logTrace("hnote right: " + s3Key);
                 logTrace("rnote right: " + storageClass);
-                Copy copy = config.transferManager.copy(cb -> cb.copyObjectRequest(b -> {
-                    b.sourceBucket(bucketName)
-                     .sourceKey(s3Key.bucketKey())
-                     .destinationBucket(bucketName)
-                     .destinationKey(s3Key.bucketKey())
-                     .storageClass(storageClass)
-                     .sourceVersionId(s3Key.versionId());
-                }));
+                Copy copy = config.transferManager.copy(
+                        cb -> cb.copyObjectRequest(b -> b.sourceBucket(bucketName)
+                                                         .sourceKey(s3Key.bucketKey())
+                                                         .destinationBucket(bucketName)
+                                                         .destinationKey(s3Key.bucketKey())
+                                                         .storageClass(storageClass)
+                                                         .sourceVersionId(s3Key.versionId())));
                 copy.completionFuture().join();
                 // No need to waitForCopyResult when changing storage class
             }
@@ -814,8 +823,8 @@ public class S3BlobStore extends AbstractBlobStore {
                 if (key == null) {
                     return;
                 }
-                if (useDeDuplication && !((KeyStrategyDigest) keyStrategy).isValidDigest(key)) {
-                    // ignore files that cannot be digests, for safety
+                if (useDeDuplication && !keyStrategy.isValidKey(key)) {
+                    // ignore files that cannot be valid keys, for safety
                     return;
                 }
                 long length = content.size();

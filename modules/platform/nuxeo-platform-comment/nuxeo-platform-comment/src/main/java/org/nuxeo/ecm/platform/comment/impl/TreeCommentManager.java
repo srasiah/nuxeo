@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2019-2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2019-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,9 @@
  * Contributors:
  *     Salem Aouana
  */
-
 package org.nuxeo.ecm.platform.comment.impl;
 
 import static java.lang.Boolean.TRUE;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
@@ -49,13 +45,12 @@ import static org.nuxeo.ecm.platform.comment.api.CommentConstants.COMMENT_TEXT_P
 import static org.nuxeo.ecm.platform.comment.api.ExternalEntityConstants.EXTERNAL_ENTITY_FACET;
 import static org.nuxeo.ecm.platform.dublincore.listener.DublinCoreListener.DISABLE_DUBLINCORE_LISTENER;
 import static org.nuxeo.ecm.platform.ec.notification.NotificationConstants.DISABLE_NOTIFICATION_SERVICE;
-import static org.nuxeo.ecm.platform.query.nxql.CoreQueryAndFetchPageProvider.CORE_SESSION_PROPERTY;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -81,6 +76,7 @@ import org.nuxeo.ecm.platform.ec.notification.NotificationConstants;
 import org.nuxeo.ecm.platform.notification.api.NotificationManager;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.services.config.ConfigurationService;
 
@@ -150,10 +146,12 @@ public class TreeCommentManager extends AbstractCommentManager {
     public List<Comment> getComments(CoreSession session, Collection<String> documentIds) {
         PageProviderService ppService = Framework.getService(PageProviderService.class);
 
-        Map<String, Serializable> props = Map.of(CORE_SESSION_PROPERTY, (Serializable) session);
         @SuppressWarnings("unchecked")
         var pageProvider = (PageProvider<DocumentModel>) ppService.getPageProvider(
-                GET_COMMENTS_FOR_DOCUMENTS_PAGE_PROVIDER_NAME, null, null, null, props, new ArrayList<>(documentIds));
+                PageProviderSpec.builder(GET_COMMENTS_FOR_DOCUMENTS_PAGE_PROVIDER_NAME)
+                                .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                .parameter(new ArrayList<>(documentIds))
+                                .build());
         return pageProvider.getCurrentPage().stream().map(doc -> doc.getAdapter(Comment.class)).collect(toList());
     }
 
@@ -269,7 +267,7 @@ public class TreeCommentManager extends AbstractCommentManager {
             if (!principal.isAdministrator()
                     && !commentDoc.getPropertyValue(COMMENT_AUTHOR_PROPERTY).equals(principal.getName())
                     && !session.hasPermission(principal, topLevelDoc.getRef(), EVERYTHING)) {
-                throw new CommentSecurityException(String.format("The user %s cannot edit comments of document %s",
+                throw new CommentSecurityException("The user %s cannot edit comments of document %s".formatted(
                         principal.getName(), commentDoc.getPropertyValue(COMMENT_PARENT_ID_PROPERTY)));
             }
             if (comment.getModificationDate() == null) {
@@ -346,11 +344,11 @@ public class TreeCommentManager extends AbstractCommentManager {
     protected void checkCreateCommentPermissions(CoreSession session, DocumentRef documentRef) {
         try {
             if (!session.hasPermission(documentRef, SecurityConstants.READ)) {
-                throw new CommentSecurityException(String.format("The user %s can not create comments on document %s",
+                throw new CommentSecurityException("The user %s can not create comments on document %s".formatted(
                         session.getPrincipal().getName(), documentRef));
             }
         } catch (DocumentNotFoundException dnfe) {
-            throw new CommentNotFoundException(String.format("The comment %s does not exist.", documentRef), dnfe);
+            throw new CommentNotFoundException("The comment %s does not exist.".formatted(documentRef), dnfe);
         }
     }
 
@@ -362,20 +360,28 @@ public class TreeCommentManager extends AbstractCommentManager {
     @SuppressWarnings("unchecked")
     protected DocumentModel getExternalCommentModel(CoreSession session, String documentId, String entityId) {
         PageProviderService ppService = Framework.getService(PageProviderService.class);
-        Map<String, Serializable> props = singletonMap(CORE_SESSION_PROPERTY, (Serializable) session);
         PageProvider<DocumentModel> pageProvider;
         // backward compatibility
         if (isBlank(documentId)) {
-            pageProvider = (PageProvider<DocumentModel>) ppService.getPageProvider(GET_COMMENT_PAGE_PROVIDER_NAME,
-                    Collections.emptyList(), 1L, 0L, props, entityId);
+            pageProvider = (PageProvider<DocumentModel>) ppService.getPageProvider(
+                    PageProviderSpec.builder(GET_COMMENT_PAGE_PROVIDER_NAME)
+                                    .pageSize(1L)
+                                    .currentPage(0L)
+                                    .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                    .parameters(entityId)
+                                    .build());
         } else {
             pageProvider = (PageProvider<DocumentModel>) ppService.getPageProvider(
-                    GET_EXTERNAL_COMMENT_PAGE_PROVIDER_NAME, Collections.emptyList(), 1L, 0L, props, documentId,
-                    entityId);
+                    PageProviderSpec.builder(GET_EXTERNAL_COMMENT_PAGE_PROVIDER_NAME)
+                                    .pageSize(1L)
+                                    .currentPage(0L)
+                                    .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                    .parameters(documentId, entityId)
+                                    .build());
         }
         List<DocumentModel> documents = pageProvider.getCurrentPage();
         if (documents.isEmpty()) {
-            throw new CommentNotFoundException(String.format("The external comment %s does not exist.", entityId));
+            throw new CommentNotFoundException("The external comment %s does not exist.".formatted(entityId));
         }
         return documents.getFirst();
     }
@@ -445,14 +451,18 @@ public class TreeCommentManager extends AbstractCommentManager {
 
             PageProviderService ppService = Framework.getService(PageProviderService.class);
 
-            Map<String, Serializable> props = Collections.singletonMap(CORE_SESSION_PROPERTY, (Serializable) session);
-            List<SortInfo> sortInfos = singletonList(new SortInfo(COMMENT_CREATION_DATE_PROPERTY, sortAscending));
+            List<SortInfo> sortInfos = List.of(new SortInfo(COMMENT_CREATION_DATE_PROPERTY, sortAscending));
             var pageProvider = (PageProvider<DocumentModel>) ppService.getPageProvider(
-                    GET_COMMENTS_FOR_DOCUMENT_PAGE_PROVIDER_NAME, sortInfos, pageSize, currentPageIndex, props,
-                    documentId);
+                    PageProviderSpec.builder(GET_COMMENTS_FOR_DOCUMENT_PAGE_PROVIDER_NAME)
+                                    .sortInfos(sortInfos)
+                                    .pageSize(pageSize)
+                                    .currentPage(currentPageIndex)
+                                    .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                    .parameters(documentId)
+                                    .build());
             return new PartialList<>(pageProvider.getCurrentPage(), pageProvider.getResultsCount());
         } catch (DocumentNotFoundException dnfe) {
-            return new PartialList<>(emptyList(), 0);
+            return new PartialList<>(List.of(), 0);
         } catch (DocumentSecurityException dse) {
             throw new CommentSecurityException(
                     String.format("The user %s does not have access to the comments of document %s",

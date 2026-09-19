@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2007-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2007-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,6 @@ import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.blobholder.BlobHolder;
 import org.nuxeo.ecm.core.api.thumbnail.ThumbnailAdapter;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.platform.picture.api.PictureView;
 import org.nuxeo.ecm.platform.picture.api.adapters.MultiviewPicture;
 import org.nuxeo.ecm.platform.picture.core.ImagingCoreFeature;
@@ -46,7 +44,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
  */
 @RunWith(FeaturesRunner.class)
 @Features(ImagingCoreFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 public class TestPictureThumbnail {
 
     @Inject

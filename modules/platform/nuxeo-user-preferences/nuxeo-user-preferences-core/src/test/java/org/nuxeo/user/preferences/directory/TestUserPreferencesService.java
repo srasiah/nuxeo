@@ -25,11 +25,13 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.nuxeo.ecm.core.api.security.SecurityConstants.EVERYTHING;
 import static org.nuxeo.user.preferences.api.UserPreferencesUtil.newUserDocPreferences;
-import static org.nuxeo.user.preferences.directory.UserPreferencesServiceImpl.withDirectorySession;
+import static org.nuxeo.user.preferences.directory.UserPreferencesServiceImpl.withSystemDirectorySession;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.security.auth.login.LoginException;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -50,6 +52,7 @@ import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.core.test.MultiRepositoryFeature;
 import org.nuxeo.ecm.platform.usermanager.UserManager;
 import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.runtime.api.login.NuxeoLoginContext;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.TransactionalFeature;
@@ -105,7 +108,7 @@ public class TestUserPreferencesService {
 
     @SuppressWarnings("deprecation")
     protected int numberOfUserPreferences() {
-        return withDirectorySession(dirSession -> {
+        return withSystemDirectorySession(dirSession -> {
             return dirSession.query(new QueryBuilder()).size();
         });
     }
@@ -384,20 +387,24 @@ public class TestUserPreferencesService {
     }
 
     @Test
-    public void shouldGarbageCollectPreferencesAfterDocRemoved() {
+    public void shouldGarbageCollectPreferencesAfterDocRemoved() throws LoginException {
         var root = session.getRootDocument();
         addEverythingPermission(root, JOHN_USER);
         addEverythingPermission(root, JACK_USER);
         txFeature.nextTransaction();
 
         // As John user, I create preferences on doc
-        CoreSession johnSession = coreFeature.getCoreSession(JOHN_USER);
-        ups.create(johnSession, doc.getRef(), Map.of("key1", "value1"));
-        txFeature.nextTransaction();
+        try (NuxeoLoginContext ignored = Framework.loginUser(JOHN_USER)) {
+            CoreSession johnSession = coreFeature.getCoreSession(JOHN_USER);
+            ups.create(johnSession, doc.getRef(), Map.of("key1", "value1"));
+            txFeature.nextTransaction();
+        }
 
         // As Jack user, I create preferences on doc
-        CoreSession jackSession = coreFeature.getCoreSession(JACK_USER);
-        ups.create(jackSession, doc.getRef(), Map.of("key2", "value2"));
+        try (NuxeoLoginContext ignored = Framework.loginUser(JACK_USER)) {
+            CoreSession jackSession = coreFeature.getCoreSession(JACK_USER);
+            ups.create(jackSession, doc.getRef(), Map.of("key2", "value2"));
+        }
 
         // As Admin, I create preferences on root
         ups.create(session, session.getRootDocument().getRef(), Map.of("key3", "value3"));
@@ -406,15 +413,18 @@ public class TestUserPreferencesService {
         assertEquals(3, numberOfUserPreferences());
 
         // When John removes the doc
-        johnSession.removeDocument(doc.getRef());
-        txFeature.nextTransaction();
+        try (NuxeoLoginContext ignored = Framework.loginUser(JOHN_USER)) {
+            CoreSession johnSession = coreFeature.getCoreSession(JOHN_USER);
+            johnSession.removeDocument(doc.getRef());
+            txFeature.nextTransaction();
+        }
         // Only 1 preference left for Admin on root doc
         assertEquals(1, numberOfUserPreferences());
         assertEquals(1, ups.get(session, session.getRootDocument().getRef()).size());
     }
 
     @Test
-    public void shouldCleanupPreferencesAfterUserDeleted() {
+    public void shouldCleanupPreferencesAfterUserDeleted() throws LoginException {
         // Create John User and add permission on default repository
         var userManager = Framework.getService(UserManager.class);
         DocumentModel userModel = userManager.getBareUserModel();
@@ -428,13 +438,15 @@ public class TestUserPreferencesService {
         ups.create(otherSession, "system", "2");
         assertEquals(2, numberOfUserPreferences());
         // As JOHN, I create a bunch of preferences in default repository
-        CoreSession johnSession = coreFeature.getCoreSession(JOHN_USER);
-        ups.create(johnSession, "foo", "truc");
-        ups.create(johnSession, doc.getRef(), Map.of("key1", "value1"));
-        // and in other repository
-        johnSession = CoreInstance.getCoreSession("other", JOHN_USER);
-        ups.create(johnSession, "otherFoo", "otherTruc");
-        assertEquals(5, numberOfUserPreferences());
+        try (NuxeoLoginContext ignored = Framework.loginUser(JOHN_USER)) {
+            CoreSession johnSession = coreFeature.getCoreSession(JOHN_USER);
+            ups.create(johnSession, "foo", "truc");
+            ups.create(johnSession, doc.getRef(), Map.of("key1", "value1"));
+            // and in other repository
+            johnSession = CoreInstance.getCoreSession("other", JOHN_USER);
+            ups.create(johnSession, "otherFoo", "otherTruc");
+            assertEquals(5, numberOfUserPreferences());
+        }
 
         // Delete John User and assert only his preferences are deleted
         userManager.deleteUser(JOHN_USER);
@@ -482,24 +494,28 @@ public class TestUserPreferencesService {
     }
 
     @Test
-    public void shouldIsolateUserPreferences() {
+    public void shouldIsolateUserPreferences() throws LoginException {
         var root = session.getRootDocument();
         addEverythingPermission(root, JOHN_USER);
         addEverythingPermission(root, JACK_USER);
         txFeature.nextTransaction();
 
         // As John, I create a bunch of preferences
-        CoreSession johnSession = coreFeature.getCoreSession(JOHN_USER);
-        ups.create(johnSession, "foo", "truc");
-        ups.create(johnSession, doc.getRef(), Map.of("key1", "value1"));
-        txFeature.nextTransaction();
-        assertTrue(ups.get(johnSession, "foo").isPresent());
-        assertFalse(ups.get(johnSession, doc.getRef()).isEmpty());
+        try (NuxeoLoginContext ignored = Framework.loginUser(JOHN_USER)) {
+            CoreSession johnSession = coreFeature.getCoreSession(JOHN_USER);
+            ups.create(johnSession, "foo", "truc");
+            ups.create(johnSession, doc.getRef(), Map.of("key1", "value1"));
+            txFeature.nextTransaction();
+            assertTrue(ups.get(johnSession, "foo").isPresent());
+            assertFalse(ups.get(johnSession, doc.getRef()).isEmpty());
+        }
 
         // As Jack, I cannot see John's preferences
-        CoreSession jackSession = coreFeature.getCoreSession(JACK_USER);
-        assertTrue(ups.get(jackSession, "foo").isEmpty());
-        assertTrue(ups.get(jackSession, doc.getRef()).isEmpty());
+        try (NuxeoLoginContext ignored = Framework.loginUser(JACK_USER)) {
+            CoreSession jackSession = coreFeature.getCoreSession(JACK_USER);
+            assertTrue(ups.get(jackSession, "foo").isEmpty());
+            assertTrue(ups.get(jackSession, doc.getRef()).isEmpty());
+        }
     }
 
     @Test

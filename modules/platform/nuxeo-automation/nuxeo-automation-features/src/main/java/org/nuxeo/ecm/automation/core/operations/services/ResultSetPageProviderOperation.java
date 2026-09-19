@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2018 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
  *     Thierry Delprat
  */
 package org.nuxeo.ecm.automation.core.operations.services;
+
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -37,6 +39,8 @@ import org.nuxeo.ecm.core.query.sql.NXQL;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
+import org.nuxeo.runtime.api.Framework;
 
 /**
  * Operation to execute a query or a named provider with support for Pagination
@@ -89,8 +93,7 @@ public class ResultSetPageProviderOperation {
     /**
      * @since 6.0
      */
-    @Param(name = PageProviderService.NAMED_PARAMETERS, required = false,
-            description = "Named parameters to pass to the page provider to fill in query variables.")
+    @Param(name = PageProviderService.NAMED_PARAMETERS, required = false, description = "Named parameters to pass to the page provider to fill in query variables.")
     protected Properties namedParameters;
 
     /**
@@ -102,8 +105,8 @@ public class ResultSetPageProviderOperation {
     /**
      * @since 6.0
      */
-    @Param(name = "sortOrder", required = false, description = "Sort order, ASC or DESC",
-            widget = Constants.W_OPTION, values = { ASC, DESC })
+    @Param(name = "sortOrder", required = false, description = "Sort order, ASC or DESC", widget = Constants.W_OPTION, values = {
+            ASC, DESC })
     protected StringList sortOrder;
 
     @SuppressWarnings("unchecked")
@@ -114,9 +117,17 @@ public class ResultSetPageProviderOperation {
         Long targetPage = page != null ? page.longValue() : null;
         Long targetPageSize = pageSize != null ? pageSize.longValue() : null;
 
-        PageProvider<Map<String, Serializable>> pp = (PageProvider<Map<String, Serializable>>) PageProviderHelper.getPageProvider(
-                session, def, namedParameters, sortBy, sortOrder, targetPageSize, targetPage,
-                strParameters != null ? strParameters.toArray(new String[0]) : null);
+        var spec = PageProviderSpec.builder(def)
+                                   .searchDocument(PageProviderHelper.getSearchDocumentModel(session, def.getName(),
+                                           namedParameters))
+                                   .sortInfosByFieldsAndOrders(sortBy, sortOrder)
+                                   .pageSize(targetPageSize)
+                                   .currentPage(targetPage)
+                                   .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                   .parameters(strParameters)
+                                   .build();
+        PageProvider<Map<String, Serializable>> pp = (PageProvider<Map<String, Serializable>>) Framework.getService(
+                PageProviderService.class).getPageProvider(spec);
 
         PaginableRecordSetImpl res = new PaginableRecordSetImpl(pp);
         if (res.hasError()) {

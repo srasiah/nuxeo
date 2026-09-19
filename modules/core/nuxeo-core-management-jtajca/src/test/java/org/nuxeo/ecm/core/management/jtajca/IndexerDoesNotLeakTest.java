@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013-2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,6 @@ import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.storage.sql.IgnoreIfNotVCSRepository;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.core.work.api.WorkManager;
 import org.nuxeo.runtime.test.runner.ConditionalIgnore;
 import org.nuxeo.runtime.test.runner.Features;
@@ -42,7 +40,6 @@ import org.nuxeo.runtime.transaction.TransactionHelper;
 
 @RunWith(FeaturesRunner.class)
 @Features({ JtajcaManagementFeature.class, CoreFeature.class })
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @ConditionalIgnore(condition = IgnoreIfNotVCSRepository.class)
 public class IndexerDoesNotLeakTest {
 

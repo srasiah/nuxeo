@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,8 +85,6 @@ import org.nuxeo.ecm.core.blob.BlobManagerComponent;
 import org.nuxeo.ecm.core.blob.BlobProviderDescriptor;
 import org.nuxeo.ecm.core.opencmis.impl.server.NuxeoPropertyData;
 import org.nuxeo.ecm.core.opencmis.tests.Helper;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -101,7 +99,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 @RunWith(FeaturesRunner.class)
 @Features(CmisFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.core.opencmis.tests.tests:OSGI-INF/download-listener-contrib.xml")
 public class CmisSuiteSession2 {
 

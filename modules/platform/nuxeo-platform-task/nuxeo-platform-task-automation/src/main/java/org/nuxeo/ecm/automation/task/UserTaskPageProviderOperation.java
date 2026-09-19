@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2010 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2010-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
  * Contributors:
  *     Nuxeo - initial API and implementation
  */
-
 package org.nuxeo.ecm.automation.task;
+
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -37,8 +37,8 @@ import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.task.dashboard.DashBoardItem;
-import org.nuxeo.ecm.platform.task.providers.UserTaskPageProvider;
 import org.nuxeo.ecm.platform.url.api.DocumentViewCodecManager;
 import org.nuxeo.runtime.api.Framework;
 
@@ -73,8 +73,6 @@ public class UserTaskPageProviderOperation extends AbstractTaskOperation {
     @SuppressWarnings("unchecked")
     @OperationMethod
     public Blob run() throws IOException {
-        Map<String, Serializable> props = new HashMap<>();
-        props.put(UserTaskPageProvider.CORE_SESSION_PROPERTY, (Serializable) session);
         PageProviderService pps = Framework.getService(PageProviderService.class);
 
         Long targetPage = null;
@@ -86,7 +84,11 @@ public class UserTaskPageProviderOperation extends AbstractTaskOperation {
             targetPageSize = Long.valueOf(pageSize.longValue());
         }
         PageProvider<DashBoardItem> pageProvider = (PageProvider<DashBoardItem>) pps.getPageProvider(
-                USER_TASKS_PAGE_PROVIDER, null, targetPageSize, targetPage, props);
+                PageProviderSpec.builder(USER_TASKS_PAGE_PROVIDER)
+                                .pageSize(targetPageSize)
+                                .currentPage(targetPage)
+                                .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                .build());
 
         Locale locale = language != null && !language.isEmpty() ? new Locale(language) : Locale.ENGLISH;
 

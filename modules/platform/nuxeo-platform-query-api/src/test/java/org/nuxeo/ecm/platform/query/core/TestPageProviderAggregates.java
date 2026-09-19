@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2014-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,28 +21,25 @@ package org.nuxeo.ecm.platform.query.core;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.Serializable;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 
 import jakarta.inject.Inject;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.nuxeo.ecm.core.api.AbstractSession;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.platform.query.api.AggregateDefinition;
 import org.nuxeo.ecm.platform.query.api.Bucket;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
-import org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -52,7 +49,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
  */
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.core.query.test:OSGI-INF/test-aggregate-schemas-contrib.xml")
 @Deploy("org.nuxeo.ecm.platform.query.api")
 @Deploy("org.nuxeo.ecm.platform.query.api.test:test-pageprovider-contrib.xml")
@@ -118,13 +114,16 @@ public class TestPageProviderAggregates {
     @Test
     public void testAggregateSelection() {
         PageProviderDefinition ppd = pps.getPageProviderDefinition("TEST_AGGREGATES");
-        HashMap<String, Serializable> props = new HashMap<>();
-        props.put(CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY, (AbstractSession) session);
         DocumentModel searchDoc = session.createDocumentModel("/", "doc", "AdvancedSearch");
         String[] query = { "for search", "you know" };
         searchDoc.setPropertyValue("search:source_agg", query);
-        PageProvider<?> pp = pps.getPageProvider("TEST_AGGREGATES", ppd, searchDoc, null, Long.valueOf(1),
-                Long.valueOf(0), null);
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder(ppd)
+                                                                 .searchDocument(searchDoc)
+                                                                 .pageSize(1L)
+                                                                 .currentPage(0L)
+                                                                 .property(CORE_SESSION_PROPERTY,
+                                                                         (Serializable) session)
+                                                                 .build());
         assertNotNull(pp);
 
         List<AggregateDefinition> aggDefs = pp.getAggregateDefinitions();

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2006-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2006-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ package org.nuxeo.ecm.platform.types;
 import static org.apache.commons.lang3.ArrayUtils.addAll;
 import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
 import static org.apache.commons.lang3.ArrayUtils.nullToEmpty;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
+import static org.apache.commons.lang3.ObjectUtils.getIfNull;
 import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
 
 import java.util.ArrayList;
@@ -287,7 +287,7 @@ public class Type implements Descriptor {
     public Type merge(Descriptor o) {
         var other = (Type) o;
         var merged = new Type();
-        merged.id = id; // we merge based on id, so no need for merging it
+        merged.id = getIfNull(other.id, id);
         merged.icon = defaultIfBlank(other.icon, icon);
         merged.iconExpanded = defaultIfBlank(other.iconExpanded, iconExpanded);
         merged.bigIcon = defaultIfBlank(other.bigIcon, bigIcon);
@@ -304,13 +304,13 @@ public class Type implements Descriptor {
         merged.createView = defaultIfBlank(other.createView, createView);
         merged.editView = defaultIfBlank(other.editView, editView);
         // merge views
-        merged.views = new HashMap<>(defaultIfNull(views, Map.of()));
-        merged.views.putAll(defaultIfNull(other.views, Map.of()));
+        merged.views = new HashMap<>(getIfNull(views, Map.of()));
+        merged.views.putAll(getIfNull(other.views, Map.of()));
 
         merged.actions = isNotEmpty(other.actions) ? other.actions : nullToEmpty(actions);
         // merge contentViews
-        merged.contentViews = new HashMap<>(defaultIfNull(contentViews, Map.of()));
-        for (var entry : defaultIfNull(other.contentViews, Map.<String, DocumentContentViews> of()).entrySet()) {
+        merged.contentViews = new HashMap<>(getIfNull(contentViews, Map.of()));
+        for (var entry : getIfNull(other.contentViews, Map.<String, DocumentContentViews> of()).entrySet()) {
             if (merged.contentViews.containsKey(entry.getKey()) && entry.getValue().getAppend()) {
                 merged.contentViews.merge(entry.getKey(), entry.getValue(), (inLayouts, otherInLayouts) -> {
                     var mergedContentViews = new DocumentContentViews();

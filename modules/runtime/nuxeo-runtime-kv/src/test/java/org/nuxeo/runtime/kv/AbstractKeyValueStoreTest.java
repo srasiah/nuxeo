@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2017-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,10 +46,8 @@ import jakarta.inject.Inject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
-import org.nuxeo.runtime.test.runner.RuntimeFeature;
 import org.nuxeo.runtime.test.runner.TransactionalFeature;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
@@ -57,8 +55,7 @@ import org.nuxeo.runtime.transaction.TransactionHelper;
  * @since 9.1
  */
 @RunWith(FeaturesRunner.class)
-@Features({ RuntimeFeature.class, TransactionalFeature.class })
-@Deploy("org.nuxeo.runtime.kv")
+@Features({ RuntimeKeyValueStoreFeature.class, TransactionalFeature.class })
 public abstract class AbstractKeyValueStoreTest {
 
     protected static final String BAR = "bar";
@@ -85,7 +82,6 @@ public abstract class AbstractKeyValueStoreTest {
     @Before
     public void setUp() {
         store = (KeyValueStoreProvider) keyValueService.getKeyValueStore("default");
-        store.clear();
     }
 
     protected boolean hasSlowTTLExpiration() {
@@ -347,7 +343,7 @@ public abstract class AbstractKeyValueStoreTest {
         assertArrayEquals(BAR_B, storeBMap.get(key1));
         assertArrayEquals(GEE_B, storeBMap.get(key2));
         assertArrayEquals(MOO_B, storeBMap.get(key3));
-        assertEquals(3, storeBMap.entrySet().size());
+        assertEquals(3, storeBMap.size());
     }
 
     @SuppressWarnings("boxing")
@@ -509,7 +505,7 @@ public abstract class AbstractKeyValueStoreTest {
     }
 
     @Test
-    public void testAddAndGet() throws Exception {
+    public void testAddAndGet() {
         String key = "foo";
 
         assertNull(store.get(key));
@@ -545,7 +541,7 @@ public abstract class AbstractKeyValueStoreTest {
     }
 
     @Test
-    public void testKeyStream() throws Exception {
+    public void testKeyStream() {
         // keyStream() already tested by all other test methods indirectly
 
         store.put("foo", "test");

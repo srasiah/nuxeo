@@ -18,7 +18,6 @@
  */
 package org.nuxeo.ecm.core.blob;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -75,22 +74,12 @@ public class ByteRange {
     public InputStream forStream(InputStream stream) throws IOException {
         try {
             // avoid using IOUtils.skipFully, which uses read() under the hood
-            long remain = getStart();
-            while (remain > 0) {
-                long n = stream.skip(remain);
-                if (n < 0) {
-                    throw new EOFException();
-                }
-                if (n == 0) {
-                    throw new IOException("Failed to skip in stream");
-                }
-                remain -= n;
-            }
+            stream.skipNBytes(getStart());
         } catch (IOException e) {
             stream.close();
             throw e;
         }
-        return new BoundedInputStream(stream, getLength());
+        return BoundedInputStream.builder().setInputStream(stream).setMaxCount(getLength()).get();
     }
 
     @Override
@@ -101,7 +90,7 @@ public class ByteRange {
     /**
      * Gets the byte range usable as HTTP Range header.
      * <p>
-     * See https://www.rfc-editor.org/rfc/rfc9110.html#name-byte-ranges
+     * See <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-byte-ranges">RFC specifications</a>
      *
      * @since 2025.0
      */

@@ -20,9 +20,7 @@ package org.nuxeo.audit.provider;
 
 import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -33,13 +31,11 @@ import org.nuxeo.audit.service.AuditBackend;
 import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.query.sql.SQLQueryParser;
-import org.nuxeo.ecm.core.query.sql.model.MultiExpression;
-import org.nuxeo.ecm.core.query.sql.model.Operator;
 import org.nuxeo.ecm.core.query.sql.model.OrderByExprs;
-import org.nuxeo.ecm.core.query.sql.model.Predicate;
 import org.nuxeo.ecm.core.query.sql.model.QueryBuilder;
 import org.nuxeo.ecm.platform.query.api.AbstractPageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.query.api.WhereClauseDefinition;
 import org.nuxeo.ecm.platform.query.nxql.NXQLQueryBuilder;
 import org.nuxeo.runtime.api.Framework;
@@ -54,8 +50,12 @@ public class AuditPageProvider extends AbstractPageProvider<LogEntry> implements
     /** @since 2025.16 */
     public static final String BACKEND_NAME_PROPERTY = "backend";
 
-    /** @since 2025.16 */
-    public static final String CORE_SESSION_PROPERTY = "coreSession";
+    /**
+     * @since 2025.16
+     * @deprecated since 2025.20, use {@link PageProviderSpec#CORE_SESSION_PROPERTY} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
+    public static final String CORE_SESSION_PROPERTY = PageProviderSpec.CORE_SESSION_PROPERTY;
 
     protected String nxqlQuery;
 
@@ -95,14 +95,6 @@ public class AuditPageProvider extends AbstractPageProvider<LogEntry> implements
     }
 
     protected QueryBuilder buildQuery() {
-        return new AuditQueryBuilder().filter(buildFilter())
-                                      .orders(getSortInfos().stream().map(OrderByExprs::from).toList())
-                                      .offset(offset)
-                                      .limit(getMinMaxPageSize())
-                                      .countTotal(true);
-    }
-
-    protected MultiExpression buildFilter() {
         if (nxqlQuery == null) {
             var ppDefinition = getDefinition().builder()
                                               .whereClause(this::remapWhereClause)
@@ -113,12 +105,11 @@ public class AuditPageProvider extends AbstractPageProvider<LogEntry> implements
             // compute the audit query leveraging the NXQL syntax
             nxqlQuery = NXQLQueryBuilder.getQuery(ppDefinition, getParameters(), getSearchDocumentModel());
         }
-        // we're only interested in the where clause as select/groupBy/having are not handled
         var sqlQuery = SQLQueryParser.parse(nxqlQuery);
-        return Optional.ofNullable(sqlQuery.getWhereClause())
-                       .map(clause -> clause.predicate)
-                       .map(this::flattenPredicateToMultiExpression)
-                       .orElseGet(() -> new MultiExpression(Operator.AND, List.of()));
+        return new AuditQueryBuilder(sqlQuery).orders(getSortInfos().stream().map(OrderByExprs::from).toList())
+                                              .offset(offset)
+                                              .limit(getMinMaxPageSize())
+                                              .countTotal(true);
     }
 
     protected WhereClauseDefinition remapWhereClause(WhereClauseDefinition whereClause) {
@@ -135,43 +126,6 @@ public class AuditPageProvider extends AbstractPageProvider<LogEntry> implements
 
     protected String remapFixedPart(String fixedPart) {
         return fixedPart;
-    }
-
-    protected MultiExpression flattenPredicateToMultiExpression(Predicate predicate) {
-        if (predicate instanceof MultiExpression filter) {
-            return filter;
-        } else if (predicate.operator == Operator.OR || predicate.operator == Operator.AND) {
-            return flattenPredicateToMultiExpression(predicate.operator, predicate);
-        } else {
-            return flattenPredicateToMultiExpression(Operator.AND, predicate);
-        }
-    }
-
-    protected MultiExpression flattenPredicateToMultiExpression(Operator operator, Predicate predicate) {
-        assert operator == Operator.AND || operator == Operator.OR;
-        var predicates = new ArrayList<Predicate>();
-        if (predicate.operator == operator) {
-            flattenPredicate(predicates, operator, (Predicate) predicate.lvalue);
-            flattenPredicate(predicates, operator, (Predicate) predicate.rvalue);
-        } else {
-            // simple predicate such as =
-            predicates.add(predicate);
-        }
-        return new MultiExpression(operator, predicates);
-    }
-
-    protected void flattenPredicate(List<Predicate> predicates, Operator operator, Predicate predicate) {
-        assert operator == Operator.AND || operator == Operator.OR;
-        if (predicate.operator == operator) {
-            flattenPredicate(predicates, operator, (Predicate) predicate.lvalue);
-            flattenPredicate(predicates, operator, (Predicate) predicate.rvalue);
-        } else if (predicate.operator == Operator.OR || predicate.operator == Operator.AND) {
-            // here we have operator = AND + predicate.operator = OR or the opposite
-            predicates.add(flattenPredicateToMultiExpression(predicate.operator, predicate));
-        } else {
-            // simple predicate such as =
-            predicates.add(predicate);
-        }
     }
 
     @Override

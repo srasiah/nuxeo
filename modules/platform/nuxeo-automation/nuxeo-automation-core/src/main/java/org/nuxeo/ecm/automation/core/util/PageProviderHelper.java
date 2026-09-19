@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2018-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2018-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,10 @@ package org.nuxeo.ecm.automation.core.util;
 import static org.nuxeo.common.utils.DateUtils.formatISODateTime;
 import static org.nuxeo.common.utils.DateUtils.nowIfNull;
 import static org.nuxeo.ecm.platform.query.api.PageProviderService.NAMED_PARAMETERS;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -35,14 +34,13 @@ import jakarta.el.ELContext;
 import jakarta.el.ValueExpression;
 import jakarta.validation.constraints.NotNull;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.NuxeoException;
-import org.nuxeo.ecm.core.api.SortInfo;
 import org.nuxeo.ecm.core.api.impl.SimpleDocumentModel;
 import org.nuxeo.ecm.core.api.model.PropertyNotFoundException;
 import org.nuxeo.ecm.core.schema.SchemaManager;
@@ -56,6 +54,7 @@ import org.nuxeo.ecm.platform.query.api.Bucket;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.query.api.QuickFilter;
 import org.nuxeo.ecm.platform.query.api.WhereClauseDefinition;
 import org.nuxeo.ecm.platform.query.core.BucketRange;
@@ -65,7 +64,6 @@ import org.nuxeo.ecm.platform.query.core.CoreQueryPageProviderDescriptor;
 import org.nuxeo.ecm.platform.query.core.GenericPageProviderDescriptor;
 import org.nuxeo.ecm.platform.query.core.MockBucket;
 import org.nuxeo.ecm.platform.query.nxql.CoreQueryAndFetchPageProvider;
-import org.nuxeo.ecm.platform.query.nxql.CoreQueryDocumentPageProvider;
 import org.nuxeo.ecm.platform.query.nxql.NXQLQueryBuilder;
 import org.nuxeo.runtime.api.Framework;
 
@@ -95,9 +93,19 @@ public class PageProviderHelper {
 
     public static final String DESC = "DESC";
 
-    public static final String CURRENT_USERID_PATTERN = "$currentUser";
+    /**
+     * @deprecated since 2025.20, use
+     *             {@link org.nuxeo.ecm.platform.query.api.PageProviderSpec#CURRENT_USER_PARAMETER_VALUE} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
+    public static final String CURRENT_USERID_PATTERN = PageProviderSpec.CURRENT_USER_PARAMETER_VALUE;
 
-    public static final String CURRENT_REPO_PATTERN = "$currentRepository";
+    /**
+     * @deprecated since 2025.20, use
+     *             {@link org.nuxeo.ecm.platform.query.api.PageProviderSpec#CURRENT_REPOSITORY_PARAMETER_VALUE} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
+    public static final String CURRENT_REPO_PATTERN = PageProviderSpec.CURRENT_REPOSITORY_PARAMETER_VALUE;
 
     protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -147,11 +155,19 @@ public class PageProviderHelper {
         return pageProviderService.getPageProviderDefinition(providerName);
     }
 
+    /**
+     * @deprecated since 2025.20, use {@link PageProviderService#getPageProvider(PageProviderSpec)} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
     public static PageProvider<?> getPageProvider(CoreSession session, PageProviderDefinition def,
             Map<String, String> namedParameters, Object... queryParams) {
         return getPageProvider(session, def, namedParameters, null, null, null, null, queryParams);
     }
 
+    /**
+     * @deprecated since 2025.20, use {@link PageProviderService#getPageProvider(PageProviderSpec)} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
     public static PageProvider<?> getPageProvider(CoreSession session, PageProviderDefinition def,
             Map<String, String> namedParameters, List<String> sortBy, List<String> sortOrder, Long pageSize,
             Long currentPageIndex, Object... queryParams) {
@@ -159,6 +175,10 @@ public class PageProviderHelper {
                 queryParams);
     }
 
+    /**
+     * @deprecated since 2025.20, use {@link PageProviderService#getPageProvider(PageProviderSpec)} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
     public static PageProvider<?> getPageProvider(CoreSession session, PageProviderDefinition def,
             Map<String, String> namedParameters, List<String> sortBy, List<String> sortOrder, Long pageSize,
             Long currentPageIndex, List<String> highlights, List<String> quickFilters, Object... parameters) {
@@ -166,59 +186,27 @@ public class PageProviderHelper {
                 highlights, quickFilters, parameters);
     }
 
+    /**
+     * @deprecated since 2025.20, use {@link PageProviderService#getPageProvider(PageProviderSpec)} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
     public static PageProvider<?> getPageProvider(CoreSession session, PageProviderDefinition def,
             Map<String, String> namedParameters, List<String> sortBy, List<String> sortOrder, Long pageSize,
             Long currentPageIndex, Long currentOffset, List<String> highlights, List<String> quickFilters,
             Object... parameters) {
-        // Ordered parameters
-        if (ArrayUtils.isNotEmpty(parameters)) {
-            // expand specific parameters
-            for (int idx = 0; idx < parameters.length; idx++) {
-                String value = (String) parameters[idx];
-                if (value.equals(CURRENT_USERID_PATTERN)) {
-                    parameters[idx] = session.getPrincipal().getName();
-                } else if (value.equals(CURRENT_REPO_PATTERN)) {
-                    parameters[idx] = session.getRepositoryName();
-                }
-            }
-        }
-
-        // Sort Info Management
-        List<SortInfo> sortInfos = null;
-        if (sortBy != null) {
-            sortInfos = new ArrayList<>();
-            for (int i = 0; i < sortBy.size(); i++) {
-                String sort = sortBy.get(i);
-                if (StringUtils.isNotBlank(sort)) {
-                    boolean sortAscending = (sortOrder != null && !sortOrder.isEmpty()
-                            && ASC.equalsIgnoreCase(sortOrder.get(i).toLowerCase()));
-                    sortInfos.add(new SortInfo(sort, sortAscending));
-                }
-            }
-        }
-
-        // Quick filters management
-        List<QuickFilter> quickFilterList = null;
-        if (quickFilters != null) {
-            quickFilterList = new ArrayList<>();
-            for (String filter : quickFilters) {
-                for (QuickFilter quickFilter : def.getQuickFilters()) {
-                    if (quickFilter.getName().equals(filter)) {
-                        quickFilterList.add(quickFilter);
-                        break;
-                    }
-                }
-            }
-        }
-
-        Map<String, Serializable> props = new HashMap<>();
-        props.put(CoreQueryDocumentPageProvider.CORE_SESSION_PROPERTY, (Serializable) session);
-        DocumentModel searchDocumentModel = getSearchDocumentModel(session, def.getName(), namedParameters);
-
-        PageProviderService pageProviderService = Framework.getService(PageProviderService.class);
-
-        return pageProviderService.getPageProvider(def.getName(), def, searchDocumentModel, sortInfos, pageSize,
-                currentPageIndex, currentOffset, props, highlights, quickFilterList, parameters);
+        var service = Framework.getService(PageProviderService.class);
+        return service.getPageProvider(
+                PageProviderSpec.builder(def)
+                                .searchDocument(getSearchDocumentModel(session, def.getName(), namedParameters))
+                                .sortInfosByFieldsAndOrders(sortBy, sortOrder)
+                                .pageSize(pageSize)
+                                .currentPage(currentPageIndex)
+                                .currentPageOffset(currentOffset)
+                                .property(CORE_SESSION_PROPERTY, (Serializable) session)
+                                .highlights(highlights)
+                                .quickFiltersByNames(quickFilters)
+                                .parameters(parameters)
+                                .build());
     }
 
     public static DocumentModel getSearchDocumentModel(CoreSession session, String providerName,
@@ -395,7 +383,7 @@ public class PageProviderHelper {
      * @since 2023.18
      */
     protected static String getTermClause(String field, String key) {
-        return field + "='" + StringUtils.replace(key, "'", "\\'") + "'";
+        return field + "='" + Strings.CS.replace(key, "'", "\\'") + "'";
     }
 
     protected static String getRangeClause(String field, BucketRange bucketRange) {
@@ -423,7 +411,7 @@ public class PageProviderHelper {
     }
 
     protected static String appendToPattern(String pattern, String clause) {
-        return StringUtils.containsIgnoreCase(pattern, " WHERE ") ? NXQLQueryBuilder.appendClause(pattern, clause)
+        return Strings.CI.contains(pattern, " WHERE ") ? NXQLQueryBuilder.appendClause(pattern, clause)
                 : pattern + " WHERE " + clause;
     }
 

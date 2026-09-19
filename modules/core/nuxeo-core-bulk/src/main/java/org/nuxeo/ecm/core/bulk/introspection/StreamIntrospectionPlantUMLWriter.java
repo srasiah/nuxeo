@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2025 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2025-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ public class StreamIntrospectionPlantUMLWriter extends AbstractPlantUMLWriter<St
         if (computationMetric == null || computationMetric.failure() == null) {
             pumlPrinter.writeStartComponent(computationIdentifier);
         } else {
-            pumlPrinter.writeStartComponent(computationIdentifier, "failure");
+            pumlPrinter.writeStartComponent(computationIdentifier, null, "failure");
         }
         pumlPrinter.writeFreeText("%s on %s".formatted(computation.name(), metadata.nodeId()));
         pumlPrinter.writeTextSeparator();

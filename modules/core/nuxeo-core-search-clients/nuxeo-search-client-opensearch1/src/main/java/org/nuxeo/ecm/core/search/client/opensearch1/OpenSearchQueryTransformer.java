@@ -22,6 +22,7 @@ package org.nuxeo.ecm.core.search.client.opensearch1;
 import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
 import static org.nuxeo.ecm.core.api.security.SecurityConstants.UNSUPPORTED_ACL;
 import static org.nuxeo.ecm.core.query.sql.NXQL.ECM_ACL;
+import static org.nuxeo.ecm.core.search.SearchServiceImpl.RELATION_INDEXING_ENABLED_PROP;
 import static org.nuxeo.ecm.platform.query.api.AggregateConstants.AGG_AVG;
 import static org.nuxeo.ecm.platform.query.api.AggregateConstants.AGG_CARDINALITY;
 import static org.nuxeo.ecm.platform.query.api.AggregateConstants.AGG_COUNT;
@@ -56,7 +57,6 @@ import org.nuxeo.ecm.core.query.sql.model.DefaultQueryVisitor;
 import org.nuxeo.ecm.core.query.sql.model.EsHint;
 import org.nuxeo.ecm.core.query.sql.model.Expression;
 import org.nuxeo.ecm.core.query.sql.model.FromClause;
-import org.nuxeo.ecm.core.query.sql.model.FromList;
 import org.nuxeo.ecm.core.query.sql.model.Function;
 import org.nuxeo.ecm.core.query.sql.model.Literal;
 import org.nuxeo.ecm.core.query.sql.model.LiteralList;
@@ -115,6 +115,9 @@ public class OpenSearchQueryTransformer implements SearchQueryTransformer<Search
     protected static final String SIMPLE_QUERY_PREFIX = "es: ";
 
     protected static final String TYPE_DOCUMENT = "Document";
+
+    // @since 2025.19
+    protected static final String TYPE_RELATION = "Relation";
 
     protected static final String SCORE_FIELD = "_score";
 
@@ -175,14 +178,22 @@ public class OpenSearchQueryTransformer implements SearchQueryTransformer<Search
 
             @Override
             public void visitFromClause(FromClause node) {
-                FromList elements = node.elements;
+                var elements = node.elements.values();
+                // Document is a pseudo-type matched case-insensitively (consistent with VCS/NXQLQueryMaker)
+                // Relation is a real document type matched case-sensitively like File, Folder, etc.
+                var hasDocument = elements.stream().anyMatch(TYPE_DOCUMENT::equalsIgnoreCase);
+                var hasRelation = elements.contains(TYPE_RELATION);
+                if (hasDocument && (!Framework.isBooleanPropertyTrue(RELATION_INDEXING_ENABLED_PROP) || hasRelation)) {
+                    // if Relations are indexed, "FROM Document, Relation" means all doc types
+                    // otherwise, "FROM Document" also means all doc types
+                    // leave fromList empty so no type filter is applied
+                    return;
+                }
                 SchemaManager schemaManager = Framework.getService(SchemaManager.class);
-
-                for (String type : elements.values()) {
+                for (String type : elements) {
+                    // normalize Document pseudo-type to canonical casing for SchemaManager lookup
                     if (TYPE_DOCUMENT.equalsIgnoreCase(type)) {
-                        // From Document means all doc types
-                        fromList.clear();
-                        return;
+                        type = TYPE_DOCUMENT;
                     }
                     Set<String> types = schemaManager.getDocumentTypeNamesExtending(type);
                     if (types == null) {

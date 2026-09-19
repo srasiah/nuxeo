@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2013-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2013-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import org.nuxeo.runtime.test.runner.RunnerFeature;
 /**
  * @since 2021.30
  */
-@Deploy("org.nuxeo.runtime.kv")
 @Deploy("org.nuxeo.ecm.core.storage")
 @Deploy("org.nuxeo.ecm.core.api")
 @Deploy("org.nuxeo.ecm.core.mongodb.test:OSGI-INF/test-mongodb-transientstore-contrib.xml")

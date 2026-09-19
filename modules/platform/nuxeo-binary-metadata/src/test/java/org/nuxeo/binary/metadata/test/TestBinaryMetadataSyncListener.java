@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2015-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,8 +39,6 @@ import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.VersioningOption;
 import org.nuxeo.ecm.core.blob.BlobInfo;
 import org.nuxeo.ecm.core.blob.SimpleManagedBlob;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.core.work.AbstractWork;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -57,7 +55,6 @@ import org.nuxeo.runtime.test.runner.TransactionalFeature;
 @Deploy("org.nuxeo.binary.metadata:binary-metadata-contrib-test.xml")
 @Deploy("org.nuxeo.binary.metadata:binary-metadata-contrib-pdf-test.xml")
 @Deploy("org.nuxeo.binary.metadata:binary-metadata-contrib-provider.xml")
-@RepositoryConfig(cleanup = Granularity.METHOD)
 public class TestBinaryMetadataSyncListener extends BaseBinaryMetadataTest {
 
     @Inject

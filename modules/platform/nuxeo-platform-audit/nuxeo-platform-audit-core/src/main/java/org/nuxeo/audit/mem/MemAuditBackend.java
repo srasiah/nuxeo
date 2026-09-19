@@ -21,26 +21,34 @@ package org.nuxeo.audit.mem;
 import static org.nuxeo.audit.io.LogEntryJsonWriter.isJsonContent;
 import static org.nuxeo.common.utils.DateUtils.toZonedDateTime;
 
+import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.Temporal;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.nuxeo.audit.api.LogEntry;
 import org.nuxeo.audit.api.LogEntryConstants;
 import org.nuxeo.audit.api.LogEntryList;
 import org.nuxeo.audit.service.AbstractAuditBackend;
+import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.common.collections.CircularLinkedHashMap;
 import org.nuxeo.common.utils.DateUtils;
+import org.nuxeo.ecm.core.api.ConcurrentUpdateException;
+import org.nuxeo.ecm.core.api.CursorResult;
+import org.nuxeo.ecm.core.api.CursorService;
 import org.nuxeo.ecm.core.query.sql.model.Literals;
 import org.nuxeo.ecm.core.query.sql.model.MultiExpression;
 import org.nuxeo.ecm.core.query.sql.model.Operator;
@@ -55,24 +63,40 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * @since 2025.0
  */
-public class MemAuditBackend extends AbstractAuditBackend {
+public class MemAuditBackend extends AbstractAuditBackend
+        implements AuditBackend.CursorServiceScroll<Iterator<LogEntry>, LogEntry> {
 
     protected static final ObjectMapper MAPPER = new ObjectMapper();
 
-    protected final CircularFifoQueue<LogEntry> entries = new CircularFifoQueue<>(10_000);
+    protected final Map<Long, LogEntry> entries = Collections.synchronizedMap(new CircularLinkedHashMap<>(10_000));
+
+    protected final CursorService<Iterator<LogEntry>, LogEntry, String> cursorService = new CursorService<>(
+            entry -> String.valueOf(entry.getId()));
 
     @Override
     public Long getEventsCount(String eventId) {
-        return entries.stream().map(LogEntry::getEventId).filter(Predicate.isEqual(eventId)).count();
+        return entries.values().stream().map(LogEntry::getEventId).filter(Predicate.isEqual(eventId)).count();
     }
 
     @Override
     public void insertLogs(Collection<LogEntry> entries) {
+        var conflicts = new ArrayList<String>();
         for (var entry : entries) {
-            if (entry.getId() == 0L || entry.getLogDate() == null) {
-                throw new IllegalArgumentException("Log entry must have an id and log date to be inserted");
+            synchronized (this.entries) {
+                if (entry.getId() == 0L || entry.getLogDate() == null) {
+                    throw new IllegalArgumentException("Log entry must have an id and log date to be inserted");
+                } else if (this.entries.containsKey(entry.getId())) {
+                    conflicts.add("Log entry with id: %s already exists".formatted(entry.getId()));
+                } else {
+                    this.entries.put(entry.getId(),
+                            entry.builder().extended(mapJsonContent(entry.getExtended())).build());
+                }
             }
-            this.entries.add(entry.builder().extended(mapJsonContent(entry.getExtended())).build());
+        }
+        if (!conflicts.isEmpty()) {
+            var exception = new ConcurrentUpdateException("Concurrent update");
+            conflicts.forEach(exception::addInfo);
+            throw exception;
         }
     }
 
@@ -95,7 +119,7 @@ public class MemAuditBackend extends AbstractAuditBackend {
 
     @Override
     public LogEntry getLogEntryByID(long id) {
-        return entries.stream().filter(entry -> entry.getId() == id).findFirst().orElse(null);
+        return entries.get(id);
     }
 
     @Override
@@ -112,9 +136,27 @@ public class MemAuditBackend extends AbstractAuditBackend {
         // create Comparator order
         Comparator<LogEntry> comparator = createComparator(queryOrders);
 
-        var result = entries.stream().filter(predicate).sorted(comparator).skip(queryOffset).limit(queryLimit).toList();
-        long totalCount = entries.stream().filter(predicate).count();
-        return new LogEntryList(result, totalCount);
+        List<LogEntry> allEntries = safeGetEntries(predicate, comparator);
+        var result = allEntries.stream().skip(queryOffset).limit(queryLimit).toList();
+        return new LogEntryList(result, allEntries.size());
+    }
+
+    /** @since 2025.18 */
+    @Override
+    public CursorResult<Iterator<LogEntry>, LogEntry> scrollLogIdsAsCursor(QueryBuilder builder, int batchSize,
+            Duration keepAlive) {
+        // prepare parameters
+        var queryPredicate = builder.predicate();
+        var queryOrders = builder.orders();
+
+        // create Predicate filter
+        Predicate<LogEntry> predicate = createPredicate(queryPredicate);
+
+        // create Comparator order
+        Comparator<LogEntry> comparator = createComparator(queryOrders);
+
+        var iterator = safeGetEntries(predicate, comparator).iterator();
+        return new CursorResult<>(iterator, batchSize, (int) keepAlive.toSeconds());
     }
 
     @SuppressWarnings("unchecked")
@@ -259,12 +301,23 @@ public class MemAuditBackend extends AbstractAuditBackend {
         return comparator;
     }
 
+    protected List<LogEntry> safeGetEntries(Predicate<LogEntry> predicate, Comparator<LogEntry> comparator) {
+        synchronized (entries) {
+            return entries.values().stream().filter(predicate).sorted(comparator).toList();
+        }
+    }
+
     @Override
     public boolean hasCapability(Capability capability) {
         return switch (capability) {
             case EXTENDED_INFO_SEARCH -> true;
             case STARTS_WITH_PARTIAL_MATCH -> true;
         };
+    }
+
+    @Override
+    public CursorService<Iterator<LogEntry>, LogEntry, String> getCursorService() {
+        return cursorService;
     }
 
     @Override

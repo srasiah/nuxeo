@@ -18,11 +18,13 @@
  */
 package org.nuxeo.ecm.automation.core.operations.services;
 
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CURRENT_REPOSITORY_PARAMETER_VALUE;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CURRENT_USER_PARAMETER_VALUE;
+
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -42,10 +44,10 @@ import org.nuxeo.ecm.automation.core.util.Properties;
 import org.nuxeo.ecm.automation.core.util.StringList;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
-import org.nuxeo.ecm.core.api.SortInfo;
 import org.nuxeo.ecm.core.query.sql.NXQL;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.query.core.GenericPageProviderDescriptor;
 
 /**
@@ -63,9 +65,19 @@ public class AuditPageProviderOperation {
 
     public static final String ID = "Audit.QueryWithPageProvider";
 
-    public static final String CURRENT_USERID_PATTERN = "$currentUser";
+    /**
+     * @deprecated since 2025.20, use
+     *             {@link org.nuxeo.ecm.platform.query.api.PageProviderSpec#CURRENT_USER_PARAMETER_VALUE} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
+    public static final String CURRENT_USERID_PATTERN = PageProviderSpec.CURRENT_USER_PARAMETER_VALUE;
 
-    public static final String CURRENT_REPO_PATTERN = "$currentRepository";
+    /**
+     * @deprecated since 2025.20, use
+     *             {@link org.nuxeo.ecm.platform.query.api.PageProviderSpec#CURRENT_REPOSITORY_PARAMETER_VALUE} instead
+     */
+    @Deprecated(since = "2025.20", forRemoval = true)
+    public static final String CURRENT_REPO_PATTERN = PageProviderSpec.CURRENT_REPOSITORY_PARAMETER_VALUE;
 
     public static final String DESC = "DESC";
 
@@ -109,55 +121,21 @@ public class AuditPageProviderOperation {
      * @since 6.0
      */
     @Param(name = "sortBy", required = false, description = "Sort by " + "properties (separated by comma)")
-    protected String sortBy;
+    protected StringList sortBy;
 
     /**
      * @since 6.0
      */
     @Param(name = "sortOrder", required = false, description = "Sort order, "
             + "ASC or DESC", widget = Constants.W_OPTION, values = { ASC, DESC })
-    protected String sortOrder;
+    protected StringList sortOrder;
 
     @SuppressWarnings("unchecked")
     @OperationMethod
     public Paginable<LogEntry> run() throws IOException {
 
-        List<SortInfo> sortInfos = null;
-        // Sort Info Management
-        if (StringUtils.isNotBlank(sortBy)) {
-            sortInfos = new ArrayList<>();
-            String[] sorts = sortBy.split(",");
-            String[] orders = null;
-            if (StringUtils.isNotBlank(sortOrder)) {
-                orders = sortOrder.split(",");
-            }
-            for (int i = 0; i < sorts.length; i++) {
-                String sort = sorts[i];
-                boolean sortAscending = (orders != null && orders.length > i && "asc".equalsIgnoreCase(orders[i]));
-                sortInfos.add(new SortInfo(sort, sortAscending));
-            }
-        }
-
-        Object[] parameters = null;
-
-        if (strParameters != null && !strParameters.isEmpty()) {
-            parameters = strParameters.toArray(String[]::new);
-            // expand specific parameters
-            for (int idx = 0; idx < parameters.length; idx++) {
-                String value = (String) parameters[idx];
-                if (value.equals(CURRENT_USERID_PATTERN)) {
-                    parameters[idx] = session.getPrincipal().getName();
-                } else if (value.equals(CURRENT_REPO_PATTERN)) {
-                    parameters[idx] = session.getRepositoryName();
-                }
-            }
-        }
-        if (parameters == null) {
-            parameters = new Object[0];
-        }
-
         Map<String, Serializable> props = new HashMap<>();
-        props.put(AuditPageProvider.CORE_SESSION_PROPERTY, (Serializable) session);
+        props.put(CORE_SESSION_PROPERTY, (Serializable) session);
         props.put(AuditPageProvider.BACKEND_NAME_PROPERTY, backendName);
 
         if (query == null && StringUtils.isEmpty(providerName)) {
@@ -169,13 +147,26 @@ public class AuditPageProviderOperation {
         long targetPageSize = Objects.requireNonNullElse(pageSize, 0).longValue();
 
         if (query != null) {
+            // build and configure the AuditPageProvider directly, bypassing the service: parameter substitution and
+            // sortInfos conversion must therefore be performed locally
+            Object[] parameters = strParameters == null || strParameters.isEmpty() ? new Object[0]
+                    : strParameters.toArray(String[]::new);
+            for (int idx = 0; idx < parameters.length; idx++) {
+                String value = (String) parameters[idx];
+                if (value.equals(CURRENT_USER_PARAMETER_VALUE)) {
+                    parameters[idx] = session.getPrincipal().getName();
+                } else if (value.equals(CURRENT_REPOSITORY_PARAMETER_VALUE)) {
+                    parameters[idx] = session.getRepositoryName();
+                }
+            }
+
             AuditPageProvider app = new AuditPageProvider();
             app.setProperties(props);
             GenericPageProviderDescriptor desc = new GenericPageProviderDescriptor();
             desc.setPattern(query);
             app.setParameters(parameters);
             app.setDefinition(desc);
-            app.setSortInfos(sortInfos);
+            app.setSortInfos(PageProviderSpec.toSortInfos(sortBy, sortOrder));
             app.setPageSize(targetPageSize);
             app.setCurrentPage(targetPage);
             return new PaginableLogEntryList(app);
@@ -187,8 +178,15 @@ public class AuditPageProviderOperation {
                 DocumentHelper.setProperties(session, searchDoc, namedQueryParams);
             }
 
-            PageProvider<LogEntry> pp = (PageProvider<LogEntry>) ppService.getPageProvider(providerName, searchDoc,
-                    sortInfos, targetPageSize, targetPage, props, parameters);
+            PageProvider<LogEntry> pp = (PageProvider<LogEntry>) ppService.getPageProvider(
+                    PageProviderSpec.builder(providerName)
+                                    .searchDocument(searchDoc)
+                                    .sortInfosByFieldsAndOrders(sortBy, sortOrder)
+                                    .pageSize(targetPageSize)
+                                    .currentPage(targetPage)
+                                    .properties(props)
+                                    .parameters(strParameters)
+                                    .build());
             return new PaginableLogEntryList(pp);
         }
     }

@@ -39,6 +39,7 @@ import org.nuxeo.runtime.transaction.TransactionHelper;
  */
 @Features(CoreFeature.class)
 @Deploy("org.nuxeo.ecm.core.io:OSGI-INF/doc-type-contrib.xml")
+@Deprecated(since = "2025.17", forRemoval = true)
 public class HasFolderishChildJsonEnricherTest
         extends AbstractJsonWriterTest.Local<DocumentModelJsonWriter, DocumentModel> {
 

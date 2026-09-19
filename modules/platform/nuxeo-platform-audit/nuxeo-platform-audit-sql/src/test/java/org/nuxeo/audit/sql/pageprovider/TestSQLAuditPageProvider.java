@@ -21,14 +21,13 @@ package org.nuxeo.audit.sql.pageprovider;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.nuxeo.audit.provider.LatestCreatedUsersOrGroupsPageProvider.LATEST_CREATED_USERS_OR_GROUPS_PROVIDER;
-import static org.nuxeo.audit.sql.pageprovider.SQLAuditPageProvider.CORE_SESSION_PROPERTY;
+import static org.nuxeo.audit.service.AuditComponent.DEFAULT_AUDIT_BACKEND;
+import static org.nuxeo.ecm.platform.query.api.PageProviderSpec.CORE_SESSION_PROPERTY;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import jakarta.inject.Inject;
 
@@ -36,8 +35,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.audit.api.LogEntry;
+import org.nuxeo.audit.api.Route;
 import org.nuxeo.audit.provider.LatestCreatedUsersOrGroupsPageProvider;
-import org.nuxeo.audit.service.AuditBackend;
+import org.nuxeo.audit.service.AuditRouter;
+import org.nuxeo.audit.service.AuditService;
 import org.nuxeo.audit.sql.SQLAuditFeature;
 import org.nuxeo.ecm.core.api.CoreInstance;
 import org.nuxeo.ecm.core.api.CoreSession;
@@ -46,6 +47,7 @@ import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.ecm.platform.query.api.PageProviderDefinition;
 import org.nuxeo.ecm.platform.query.api.PageProviderService;
+import org.nuxeo.ecm.platform.query.api.PageProviderSpec;
 import org.nuxeo.ecm.platform.query.core.GenericPageProviderDescriptor;
 import org.nuxeo.ecm.platform.test.UserManagerFeature;
 import org.nuxeo.ecm.platform.usermanager.UserManager;
@@ -70,9 +72,6 @@ public class TestSQLAuditPageProvider {
     protected static final Calendar testDate = Calendar.getInstance();
 
     @Inject
-    protected AuditBackend backend;
-
-    @Inject
     protected CoreSession session;
 
     @Inject
@@ -95,9 +94,12 @@ public class TestSQLAuditPageProvider {
                                 .build());
         }
 
-        backend.addLogEntries(entries);
+        Framework.getService(AuditRouter.class)
+                 .routeToBackends(entries, List.of(Route.allEventsTo(DEFAULT_AUDIT_BACKEND)));
 
-        List<?> res = backend.nativeQuery("select count(log.eventId) from LogEntry log", 1, 20);
+        List<?> res = Framework.getService(AuditService.class)
+                               .getAuditBackend(DEFAULT_AUDIT_BACKEND)
+                               .nativeQuery("select count(log.eventId) from LogEntry log", 1, 20);
         int count = ((Long) res.getFirst()).intValue();
         assertEquals(entries.size(), count);
 
@@ -116,7 +118,8 @@ public class TestSQLAuditPageProvider {
         GenericPageProviderDescriptor gppdef = (GenericPageProviderDescriptor) ppdef;
         assertEquals(SQLAuditPageProvider.class.getSimpleName(), gppdef.getPageProviderClass().getSimpleName());
 
-        PageProvider<?> pp = pps.getPageProvider("GetAllEntries", null, 5L, 0L, Map.of());
+        PageProvider<?> pp = pps.getPageProvider(
+                PageProviderSpec.builder("GetAllEntries").pageSize(5L).currentPage(0L).build());
         assertNotNull(pp);
 
         List<LogEntry> entries = (List<LogEntry>) pp.getCurrentPage();
@@ -153,8 +156,11 @@ public class TestSQLAuditPageProvider {
         GenericPageProviderDescriptor gppdef = (GenericPageProviderDescriptor) ppdef;
         assertEquals(SQLAuditPageProvider.class.getSimpleName(), gppdef.getPageProviderClass().getSimpleName());
 
-        PageProvider<?> pp = pps.getPageProvider("GetAllEntriesInCategory", null, Long.valueOf(2), Long.valueOf(0),
-                Map.of(), "category7");
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder("GetAllEntriesInCategory")
+                                                                 .pageSize(Long.valueOf(2))
+                                                                 .currentPage(Long.valueOf(0))
+                                                                 .parameters("category7")
+                                                                 .build());
 
         assertNotNull(pp);
 
@@ -192,8 +198,11 @@ public class TestSQLAuditPageProvider {
         GenericPageProviderDescriptor gppdef = (GenericPageProviderDescriptor) ppdef;
         assertEquals(SQLAuditPageProvider.class.getSimpleName(), gppdef.getPageProviderClass().getSimpleName());
 
-        PageProvider<?> pp = pps.getPageProvider("GetAllEntriesForDocumentInCategory", null, null, Long.valueOf(2),
-                Long.valueOf(0), Map.of(), "uuid");
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder("GetAllEntriesForDocumentInCategory")
+                                                                 .pageSize(Long.valueOf(2))
+                                                                 .currentPage(Long.valueOf(0))
+                                                                 .parameters("uuid")
+                                                                 .build());
 
         DocumentModel searchDoc = session.createDocumentModel("File");
         searchDoc.setPathInfo("/", "dummy");
@@ -238,8 +247,11 @@ public class TestSQLAuditPageProvider {
         GenericPageProviderDescriptor gppdef = (GenericPageProviderDescriptor) ppdef;
         assertEquals(SQLAuditPageProvider.class.getSimpleName(), gppdef.getPageProviderClass().getSimpleName());
 
-        PageProvider<?> pp = pps.getPageProvider("GetAllEntriesForDocumentInCategories", null, Long.valueOf(2),
-                Long.valueOf(0), Map.of(), "uuid");
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder("GetAllEntriesForDocumentInCategories")
+                                                                 .pageSize(Long.valueOf(2))
+                                                                 .currentPage(Long.valueOf(0))
+                                                                 .parameters("uuid")
+                                                                 .build());
 
         DocumentModel searchDoc = session.createDocumentModel("File");
         searchDoc.setPathInfo("/", "dummy");
@@ -281,8 +293,11 @@ public class TestSQLAuditPageProvider {
         GenericPageProviderDescriptor gppdef = (GenericPageProviderDescriptor) ppdef;
         assertEquals(SQLAuditPageProvider.class.getSimpleName(), gppdef.getPageProviderClass().getSimpleName());
 
-        PageProvider<?> pp = pps.getPageProvider("GetAllEntriesBetween2Dates", null, Long.valueOf(6), Long.valueOf(0),
-                Map.of(), "uuid");
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder("GetAllEntriesBetween2Dates")
+                                                                 .pageSize(Long.valueOf(6))
+                                                                 .currentPage(Long.valueOf(0))
+                                                                 .parameters("uuid")
+                                                                 .build());
 
         DocumentModel searchDoc = session.createDocumentModel("File");
         searchDoc.setPathInfo("/", "dummy");
@@ -379,8 +394,11 @@ public class TestSQLAuditPageProvider {
         assertEquals(SQLDocumentHistoryPageProvider.class.getSimpleName(),
                 gppdef.getPageProviderClass().getSimpleName());
 
-        PageProvider<?> pp = pps.getPageProvider("DOCUMENT_HISTORY_PROVIDER", null, Long.valueOf(6), Long.valueOf(0),
-                Map.of(), "uuid");
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder("DOCUMENT_HISTORY_PROVIDER")
+                                                                 .pageSize(Long.valueOf(6))
+                                                                 .currentPage(Long.valueOf(0))
+                                                                 .parameters("uuid")
+                                                                 .build());
 
         DocumentModel searchDoc = session.createDocumentModel("BasicAuditSearch");
         searchDoc.setPathInfo("/", "auditsearch");
@@ -435,8 +453,12 @@ public class TestSQLAuditPageProvider {
                 LatestCreatedUsersOrGroupsPageProvider.LATEST_AUDITED_CREATED_USERS_OR_GROUPS_PROVIDER);
         assertNotNull(ppdef);
 
-        Map<String, Serializable> props = Collections.singletonMap(CORE_SESSION_PROPERTY, (Serializable) session);
-        PageProvider<?> pp = pps.getPageProvider(LATEST_CREATED_USERS_OR_GROUPS_PROVIDER, null, 6L, 0L, props);
+        PageProvider<?> pp = pps.getPageProvider(PageProviderSpec.builder(LATEST_CREATED_USERS_OR_GROUPS_PROVIDER)
+                                                                 .pageSize(6L)
+                                                                 .currentPage(0L)
+                                                                 .property(CORE_SESSION_PROPERTY,
+                                                                         (Serializable) session)
+                                                                 .build());
 
         assertNotNull(pp);
 
@@ -448,8 +470,11 @@ public class TestSQLAuditPageProvider {
         // Check that a non-admin user cannot have results from the page provider
         CoreSession userSession = CoreInstance.getCoreSession(session.getRepositoryName(),
                 userManager.getPrincipal(testUsername));
-        props = Collections.singletonMap(CORE_SESSION_PROPERTY, (Serializable) userSession);
-        pp = pps.getPageProvider(LATEST_CREATED_USERS_OR_GROUPS_PROVIDER, null, 6L, 0L, props);
+        pp = pps.getPageProvider(PageProviderSpec.builder(LATEST_CREATED_USERS_OR_GROUPS_PROVIDER)
+                                                 .pageSize(6L)
+                                                 .currentPage(0L)
+                                                 .property(CORE_SESSION_PROPERTY, (Serializable) userSession)
+                                                 .build());
 
         entries = (List<DocumentModel>) pp.getCurrentPage();
         assertEquals(0, entries.size());

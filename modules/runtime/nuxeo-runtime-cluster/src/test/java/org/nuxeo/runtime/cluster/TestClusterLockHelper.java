@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,24 +19,22 @@
 package org.nuxeo.runtime.cluster;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.regex.Pattern;
 
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.logging.log4j.core.LogEvent;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.runtime.RuntimeServiceException;
 import org.nuxeo.runtime.cluster.ClusterServiceImpl.ClusterLockHelper;
-import org.nuxeo.runtime.kv.KeyValueService;
 import org.nuxeo.runtime.kv.KeyValueStore;
 import org.nuxeo.runtime.test.runner.ConsoleLogLevelThreshold;
 import org.nuxeo.runtime.test.runner.Deploy;
@@ -62,31 +60,17 @@ public class TestClusterLockHelper {
     protected ClusterService clusterService;
 
     @Inject
-    protected KeyValueService keyValueService;
-
+    @Named(ClusterLockHelper.KV_STORE_NAME)
     protected KeyValueStore kvStore;
-
-    @Before
-    public void setUp() {
-        kvStore = keyValueService.getKeyValueStore(ClusterLockHelper.KV_STORE_NAME);
-    }
-
-    @After
-    public void tearDown() {
-        kvStore.put("mykey", (String) null);
-    }
 
     @Test
     public void testLockFailure() {
         // simulate lock set on other node
         kvStore.put("mykey", "mylockinfo");
         // check that locking fails
-        try {
-            runAtomically(() -> {});
-            fail();
-        } catch (RuntimeServiceException e) {
-            assertEquals("Failed to acquire lock 'mykey' after 3s, owner: mylockinfo", e.getMessage());
-        }
+        var e = assertThrows(RuntimeServiceException.class, () -> runAtomically(() -> {
+        }));
+        assertEquals("Failed to acquire lock 'mykey' after 3s, owner: mylockinfo", e.getMessage());
     }
 
     @Test
@@ -95,7 +79,7 @@ public class TestClusterLockHelper {
         runAtomically(() -> {
             lockInfo.setValue(kvStore.getString("mykey"));
         });
-        assertTrue(lockInfo.getValue(), Pattern.matches("node=123 time=.*", lockInfo.getValue()));
+        assertTrue(lockInfo.get(), Pattern.matches("node=123 time=.*", lockInfo.get()));
     }
 
     @Test
@@ -108,7 +92,7 @@ public class TestClusterLockHelper {
         });
         List<LogEvent> events = logCaptureResult.getCaughtEvents();
         assertEquals(1, events.size());
-        LogEvent event = events.get(0);
+        LogEvent event = events.getFirst();
         assertEquals("WARN", event.getLevel().toString());
         assertEquals(
                 "Unlocking 'mykey' but the lock had already expired; consider increasing the try duration for this lock",
@@ -125,7 +109,7 @@ public class TestClusterLockHelper {
         });
         List<LogEvent> events = logCaptureResult.getCaughtEvents();
         assertEquals(1, events.size());
-        LogEvent event = events.get(0);
+        LogEvent event = events.getFirst();
         assertEquals("ERROR", event.getLevel().toString());
         assertEquals(
                 "Failed to unlock 'mykey', the lock expired and has a new owner: node=456 time=sometime; consider increasing the try duration for this lock",

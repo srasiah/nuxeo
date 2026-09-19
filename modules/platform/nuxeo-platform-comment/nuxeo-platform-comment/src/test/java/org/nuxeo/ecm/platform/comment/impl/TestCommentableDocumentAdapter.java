@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020-2024 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,8 +34,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
-import org.nuxeo.ecm.core.test.annotations.Granularity;
-import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.platform.comment.CommentFeature;
 import org.nuxeo.ecm.platform.comment.api.CommentManager;
 import org.nuxeo.ecm.platform.comment.api.CommentableDocument;
@@ -46,7 +44,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
  * @since 11.1
  */
 @RunWith(FeaturesRunner.class)
-@RepositoryConfig(cleanup = Granularity.METHOD)
 @Features(CommentFeature.class)
 public class TestCommentableDocumentAdapter {
 

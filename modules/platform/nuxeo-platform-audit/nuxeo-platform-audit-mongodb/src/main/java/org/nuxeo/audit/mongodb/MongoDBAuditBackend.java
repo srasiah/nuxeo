@@ -18,12 +18,15 @@
  */
 package org.nuxeo.audit.mongodb;
 
+import static com.mongodb.ErrorCategory.DUPLICATE_KEY;
+import static com.mongodb.ErrorCategory.fromErrorCode;
+import static com.mongodb.client.model.Projections.include;
 import static org.nuxeo.audit.api.LogEntryConstants.LOG_ID;
-import static org.nuxeo.ecm.core.uidgen.KeyValueStoreUIDSequencer.DEFAULT_STORE_NAME;
 import static org.nuxeo.runtime.mongodb.MongoDBSerializationHelper.MONGODB_ID;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -45,6 +48,8 @@ import org.nuxeo.audit.api.LogEntryList;
 import org.nuxeo.audit.service.AbstractAuditBackend;
 import org.nuxeo.audit.service.AuditBackend;
 import org.nuxeo.common.utils.TextTemplate;
+import org.nuxeo.ecm.core.api.ConcurrentUpdateException;
+import org.nuxeo.ecm.core.api.CursorResult;
 import org.nuxeo.ecm.core.api.CursorService;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.ScrollResult;
@@ -56,13 +61,15 @@ import org.nuxeo.ecm.core.storage.mongodb.query.MongoDBSearchConverter;
 import org.nuxeo.ecm.core.uidgen.UIDSequencer;
 import org.nuxeo.ecm.platform.query.api.PageProvider;
 import org.nuxeo.runtime.api.Framework;
-import org.nuxeo.runtime.kv.KeyValueService;
-import org.nuxeo.runtime.kv.KeyValueStoreProvider;
+import org.nuxeo.runtime.mongodb.MongoDBSerializationHelper;
 
+import com.mongodb.MongoBulkWriteException;
+import com.mongodb.bulk.BulkWriteError;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.InsertManyOptions;
 import com.mongodb.client.model.Sorts;
 
 /**
@@ -70,7 +77,8 @@ import com.mongodb.client.model.Sorts;
  *
  * @since 9.1
  */
-public class MongoDBAuditBackend extends AbstractAuditBackend {
+public class MongoDBAuditBackend extends AbstractAuditBackend
+        implements AuditBackend.CursorServiceScroll<MongoCursor<Document>, Document> {
 
     private static final Logger log = LogManager.getLogger(MongoDBAuditBackend.class);
 
@@ -80,13 +88,17 @@ public class MongoDBAuditBackend extends AbstractAuditBackend {
 
     protected final CursorService<MongoCursor<Document>, Document, String> cursorService;
 
+    protected final CursorService<MongoCursor<Document>, Document, String> storageCursorService;
+
     /**
      * @since 2025.0
      */
     public MongoDBAuditBackend(MongoCollection<Document> collection) {
         this.collection = collection;
         initUIDSequencer(collection);
-        this.cursorService = new CursorService<>(doc -> {
+        cursorService = new CursorService<>(
+                document -> String.valueOf(document.getLong(MongoDBSerializationHelper.MONGODB_ID)));
+        this.storageCursorService = new CursorService<>(doc -> {
             Object id = doc.remove(MONGODB_ID);
             if (id != null) {
                 doc.put(LOG_ID, id);
@@ -142,6 +154,25 @@ public class MongoDBAuditBackend extends AbstractAuditBackend {
             totalSize = collection.countDocuments(filter);
         }
         return new LogEntryList(result, totalSize);
+    }
+
+    /** @since 2025.18 */
+    @Override
+    public CursorResult<MongoCursor<Document>, Document> scrollLogIdsAsCursor(QueryBuilder query, int batchSize,
+            Duration keepAlive) {
+        // create MongoDB filter & order
+        var builder = new MongoDBQuerySearchBuilder(new MongoDBSearchConverter(LOG_ID), query);
+        builder.walk();
+        var filter = builder.getFilter();
+        var sort = builder.getSort();
+
+        logRequest(filter, sort);
+        MongoCursor<Document> cursor = collection.find(filter)
+                                                 .sort(sort)
+                                                 .projection(include(LOG_ID))
+                                                 .batchSize(batchSize)
+                                                 .iterator();
+        return new CursorResult<>(cursor, batchSize, (int) keepAlive.toSeconds());
     }
 
     @Override
@@ -213,7 +244,23 @@ public class MongoDBAuditBackend extends AbstractAuditBackend {
                     entry.getLogDate(), entry.getDocUUID());
             documents.add(MongoDBAuditEntryWriter.asDocument(entry));
         }
-        collection.insertMany(documents);
+        try {
+            collection.insertMany(documents, new InsertManyOptions().ordered(false));
+        } catch (MongoBulkWriteException mbwe) {
+            List<String> duplicates = mbwe.getWriteErrors()
+                                          .stream()
+                                          .filter(wr -> DUPLICATE_KEY.equals(fromErrorCode(wr.getCode())))
+                                          .map(BulkWriteError::getMessage)
+                                          .collect(Collectors.toList());
+            // Avoid hiding any others bulk errors
+            if (duplicates.size() == mbwe.getWriteErrors().size()) {
+                log.trace("MongoDB:    -> DUPLICATE KEY: {}", duplicates);
+                var concurrentUpdateException = new ConcurrentUpdateException("Concurrent update");
+                duplicates.forEach(concurrentUpdateException::addInfo);
+                throw concurrentUpdateException;
+            }
+            throw new NuxeoException("Error while inserting audit log entries", mbwe);
+        }
     }
 
     @Override
@@ -266,22 +313,19 @@ public class MongoDBAuditBackend extends AbstractAuditBackend {
 
         logRequest(filter, sort);
         MongoCursor<Document> cursor = collection.find(filter).sort(sort).batchSize(batchSize).iterator();
-        String scrollId = cursorService.registerCursor(cursor, batchSize, keepAliveSeconds);
+        String scrollId = storageCursorService.registerCursor(cursor, batchSize, keepAliveSeconds);
         return scroll(scrollId);
     }
 
     @Override
     public ScrollResult<String> scroll(String scrollId) {
-        return cursorService.scroll(scrollId);
+        return storageCursorService.scroll(scrollId);
     }
 
     @Override
     protected void clearEntries() {
         // clear audit
         collection.drop();
-        // clear sequencer
-        ((KeyValueStoreProvider) Framework.getService(KeyValueService.class)
-                                          .getKeyValueStore(DEFAULT_STORE_NAME)).clear();
     }
 
     @Override
@@ -290,5 +334,10 @@ public class MongoDBAuditBackend extends AbstractAuditBackend {
             case EXTENDED_INFO_SEARCH -> true;
             case STARTS_WITH_PARTIAL_MATCH -> true;
         };
+    }
+
+    @Override
+    public CursorService<MongoCursor<Document>, Document, String> getCursorService() {
+        return cursorService;
     }
 }
