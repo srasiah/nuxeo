@@ -33,7 +33,9 @@ task build-base DOCKER_IMAGE_TAG=2025.9
 | `DOCKER_BENCHMARK_IMAGE_NAME` | `$DOCKER_REGISTRY/nuxeo-benchmark` | Benchmark image name |
 | `DOCKER_IMAGE_TAG` | `2025.x` | Image tag |
 | `REVISION` | `2025.9-SNAPSHOT` | Maven revision |
-| `TARGETPLATFORM` | `linux/amd64` | Platform for `push-*-platform` tasks |
+| `DOCKER_PLATFORM` | native (see below) | Platform `build-*` tasks build for; override to cross-build via QEMU emulation, e.g. `DOCKER_PLATFORM=linux/amd64` |
+| `DOCKER_PLATFORMS` | `linux/amd64,linux/arm64` | Comma-separated platform list for the `*-multiarch` tasks |
+| `TARGETPLATFORM` | same as `DOCKER_PLATFORM` | Platform for `push-*-platform` tasks; independently overridable |
 | `BUILD_TAG` | `local` | Build identifier |
 | `CONTAINER_ENGINE` | auto-detected | Path to `podman` or `docker` |
 
@@ -43,8 +45,8 @@ task build-base DOCKER_IMAGE_TAG=2025.9
 |---|---|
 | `CONTAINER_ENGINE` | `podman` if available, else `docker` |
 | `DOCKER_HOST` | Podman socket or `unix:///var/run/docker.sock` for Docker |
-| `ARCH_PROFILE` | `arm64` on Apple Silicon / aarch64, else `amd64` |
-| `DOCKER_PLATFORM` | `linux/arm64` or `linux/amd64` based on `uname -m` |
+| `DOCKER_PLATFORM` | `linux/arm64` or `linux/amd64` based on `uname -m`, unless overridden via `.env`/CLI |
+| `ARCH_PROFILE` | Derived from `DOCKER_PLATFORM` (e.g. `linux/amd64` → `amd64`) |
 | `SCM_REF` | `git rev-parse HEAD` |
 | `JAVA_HOME` | Derived from `which javac` |
 
@@ -81,6 +83,8 @@ task info       # print current configuration and container engine status
 | `task build-and-push` | Build and push both images (sequential) |
 | `task build-and-push-base` | Build and push base image |
 | `task build-and-push-benchmark` | Build and push benchmark image |
+| `task build-and-push-base-multiarch` | Build and push a multi-arch base image (all platforms in `DOCKER_PLATFORMS`) |
+| `task build-and-push-benchmark-multiarch` | Build and push a multi-arch benchmark image (depends on the base multiarch image already being pushed) |
 
 ### Container management
 
@@ -122,6 +126,20 @@ task nuxeo-rm
 **Build and publish a release:**
 ```sh
 task build-and-push DOCKER_IMAGE_TAG=2025.9 REVISION=2025.9
+```
+
+**Cross-build for a different platform (e.g. amd64 on Apple Silicon, via QEMU emulation):**
+```sh
+task build-base DOCKER_PLATFORM=linux/amd64
+task push-base
+```
+
+**Publish a multi-arch image under one tag:** the `*-multiarch` tasks go straight to the
+registry — a multi-platform manifest can't be loaded into the local image cache, so there's
+no separate local build/test step like the single-platform tasks have.
+```sh
+task build-and-push-base-multiarch DOCKER_PLATFORMS=linux/amd64,linux/arm64
+task build-and-push-benchmark-multiarch DOCKER_PLATFORMS=linux/amd64,linux/arm64
 ```
 
 **Diagnose configuration:**

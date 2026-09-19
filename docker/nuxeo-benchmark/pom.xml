@@ -57,19 +57,6 @@
       <type>zip</type>
     </dependency>
 
-    <!--Test-->
-    <dependency>
-      <groupId>org.nuxeo.packages</groupId>
-      <artifactId>nuxeo-openid-login-package</artifactId>
-      <type>zip</type>
-    </dependency>
-
-     <dependency>
-      <groupId>org.nuxeo.packages</groupId>
-      <artifactId>nuxeo-saml2-login-package</artifactId>
-      <type>zip</type>
-    </dependency>
-
   </dependencies>
 
   <build>
@@ -104,7 +91,6 @@
           </execution>
         </executions>
         <configuration>
-          <registry>docker.io</registry>
           <authConfig>
             <username>${env.DOCKER_USERNAME}</username>
             <password>${env.DOCKER_PASSWORD}</password>

@@ -26,10 +26,22 @@ vars:
     sh: |
       v=$(grep -m1 '^DOCKER_IMAGE_TAG=' .env 2>/dev/null | cut -d= -f2-)
       echo "${DOCKER_IMAGE_TAG:-${v:-2025.x}}"
+  # Platform to build for (override via .env or CLI: DOCKER_PLATFORM=linux/amd64 to cross-build
+  # via QEMU emulation); defaults to the host's native platform, auto-detected from `uname -m`.
+  DOCKER_PLATFORM:
+    sh: |
+      v=$(grep -m1 '^DOCKER_PLATFORM=' .env 2>/dev/null | cut -d= -f2-)
+      DETECTED=$(case $(uname -m) in arm64|aarch64) echo linux/arm64;; *) echo linux/amd64;; esac)
+      echo "${DOCKER_PLATFORM:-${v:-$DETECTED}}"
+  # Derived from DOCKER_PLATFORM (e.g. linux/amd64 -> amd64) for the Maven arch profile.
+  ARCH_PROFILE:
+    sh: echo "{{.DOCKER_PLATFORM}}" | sed 's#^linux/##'
+  # Platform passed to `push-*-platform` targets; defaults to whatever DOCKER_PLATFORM built,
+  # but can still be overridden independently via .env/CLI if you need to push a different tag.
   TARGETPLATFORM:
     sh: |
       v=$(grep -m1 '^TARGETPLATFORM=' .env 2>/dev/null | cut -d= -f2-)
-      echo "${TARGETPLATFORM:-${v:-linux/amd64}}"
+      echo "${TARGETPLATFORM:-${v:-{{.DOCKER_PLATFORM}}}}"
   REVISION:
     sh: |
       v=$(grep -m1 '^REVISION=' .env 2>/dev/null | cut -d= -f2-)
@@ -53,12 +65,6 @@ vars:
   CONTAINER_ENGINE_NAME:
     sh: basename $(command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo docker)
 
-  # Architecture-specific build profile.
-  ARCH_PROFILE:
-    sh: "case $(uname -m) in arm64|aarch64) echo arm64;; *) echo amd64;; esac"
-  DOCKER_PLATFORM:
-    sh: "case $(uname -m) in arm64|aarch64) echo linux/arm64;; *) echo linux/amd64;; esac"
-
   # Derived image refs — always computed from other vars.
   DOCKER_BASE_IMAGE: "{{.DOCKER_BASE_IMAGE_NAME}}:{{.DOCKER_IMAGE_TAG}}"
   DOCKER_BENCHMARK_IMAGE: "{{.DOCKER_BENCHMARK_IMAGE_NAME}}:{{.DOCKER_IMAGE_TAG}}"
@@ -70,7 +76,11 @@ vars:
     sh: |
       ENGINE=$(basename $(command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo docker))
       if [ "$ENGINE" = "podman" ]; then
-        SOCKET=$(podman info --format '{{"{{"}}.Host.RemoteSocket.Path{{"}}"}}' 2>/dev/null)
+        # podman machine (macOS/Windows) exposes a host-side forwarding socket, distinct
+        # from Host.RemoteSocket.Path which reports the path inside the VM. Prefer the
+        # machine socket; fall back to Host.RemoteSocket.Path for native Linux podman.
+        SOCKET=$(podman machine inspect --format '{{"{{"}}.ConnectionInfo.PodmanSocket.Path{{"}}"}}' 2>/dev/null)
+        [ -z "$SOCKET" ] && SOCKET=$(podman info --format '{{"{{"}}.Host.RemoteSocket.Path{{"}}"}}' 2>/dev/null)
         # Strip any existing unix:// prefix then re-add it (podman may return a URI or a bare path)
         [ -n "$SOCKET" ] && echo "unix://${SOCKET#unix://}"
       elif [ -n "$DOCKER_HOST" ]; then
@@ -210,6 +220,47 @@ tasks:
     cmds:
       - task: build-benchmark
       - task: push-benchmark
+
+  # Multi-platform manifests can't be loaded into the local image cache, so the plugin's
+  # `build` goal only builds+loads the native platform for local testing; the actual
+  # multi-arch build+push happens in the `push` goal, which defaults to Maven's `deploy`
+  # phase and must therefore be invoked explicitly (plain `mvn install` never reaches it).
+  # DOCKER_REGISTRY must be unset before running mvn: docker-maven-plugin auto-detects that
+  # exact env var name (injected here via `dotenv:`) and prepends it to the image name during
+  # push, which double-prefixes our already registry-qualified DOCKER_BASE_IMAGE/
+  # DOCKER_BENCHMARK_IMAGE (e.g. srasiah/nuxeo -> srasiah/srasiah/nuxeo).
+  build-and-push-base-multiarch:
+    desc: Build and push a multi-arch base image (all platforms in DOCKER_PLATFORMS) directly to the registry
+    dir: nuxeo
+    cmds:
+      - echo "Building & pushing multi-arch base image with {{.CONTAINER_ENGINE_NAME}} -- {{.DOCKER_BASE_IMAGE}} [{{.DOCKER_PLATFORMS}}]"
+      - |
+        unset DOCKER_REGISTRY
+        mvn install docker:push {{.MAVEN_COMMON}} \
+          -Drevision={{.REVISION}} \
+          -Ddocker.platforms={{.DOCKER_PLATFORMS}} \
+          -Ddocker.image.name={{.DOCKER_BASE_IMAGE}}
+      - echo "Multi-arch base image built and pushed"
+      - task: clean-orphans
+        ignore_error: true
+
+  build-and-push-benchmark-multiarch:
+    desc: Build and push a multi-arch benchmark image (all platforms in DOCKER_PLATFORMS) directly to the registry
+    dir: nuxeo-benchmark
+    deps: [build-and-push-base-multiarch]
+    cmds:
+      - echo "Building & pushing multi-arch benchmark image with {{.CONTAINER_ENGINE_NAME}} -- {{.DOCKER_BENCHMARK_IMAGE}} [{{.DOCKER_PLATFORMS}}]"
+      - |
+        unset DOCKER_REGISTRY
+        mvn install docker:push {{.MAVEN_COMMON}} \
+          -Drevision={{.REVISION}} \
+          -Ddocker.base.image={{.DOCKER_BASE_IMAGE}} \
+          -Ddocker.platforms={{.DOCKER_PLATFORMS}} \
+          -Ddocker.buildx.enabled=true \
+          -Ddocker.image.name={{.DOCKER_BENCHMARK_IMAGE}}
+      - echo "Multi-arch benchmark image built and pushed"
+      - task: clean-orphans
+        ignore_error: true
 
   push:
     desc: Push both images to registry
