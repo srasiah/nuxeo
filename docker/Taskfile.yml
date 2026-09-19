@@ -122,9 +122,9 @@ env:
     sh: echo "${GIT_PAT_TOKEN:-}"
 
 tasks:
-  default:
-    desc: Build both base and benchmark images
-    deps: [build-base, build-benchmark]
+#  default:
+#    desc: Build both base and benchmark images
+#    deps: [build-base, build-benchmark]
 
   build-distrib:
     desc: Build Nuxeo distribution (prerequisite for images)
