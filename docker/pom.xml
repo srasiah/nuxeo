@@ -16,6 +16,10 @@
 
   <properties>
     <docker.platforms>linux/amd64</docker.platforms>
+    <!-- Image build args, overridden by the Taskfile -->
+    <docker.build.tag>local</docker.build.tag>
+    <docker.scm.ref>local</docker.scm.ref>
+    <docker.version>2025.x</docker.version>
   </properties>
 
   <modules>

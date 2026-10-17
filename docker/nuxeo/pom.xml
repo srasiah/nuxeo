@@ -63,9 +63,9 @@
               <name>${docker.image.name}</name>
               <build>
                 <args>
-                  <BUILD_TAG>local-nuxeo-nuxeo</BUILD_TAG>
-                  <SCM_REF>local</SCM_REF>
-                  <VERSION>2025.x</VERSION>
+                  <BUILD_TAG>${docker.build.tag}-nuxeo-nuxeo</BUILD_TAG>
+                  <SCM_REF>${docker.scm.ref}</SCM_REF>
+                  <VERSION>${docker.version}</VERSION>
                 </args>
                 <contextDir>${basedir}</contextDir>
                 <buildx>

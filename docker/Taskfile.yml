@@ -65,7 +65,7 @@ vars:
   SCM_REF:
     sh: git rev-parse HEAD 2>/dev/null || echo "local"
   MAVEN_OPTS: "-Xmx4g -Xms2g -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
-  MAVEN_COMMON: "-B -DskipTests -Dnuxeo.skip.enforcer=true"
+  MAVEN_COMMON: "-B -DskipTests -Dnuxeo.skip.enforcer=true -Ddocker.build.tag={{.BUILD_TAG}} -Ddocker.scm.ref={{.SCM_REF}} -Ddocker.version={{.VERSION}}"
 
   # Prefer podman over docker when both are installed.
   CONTAINER_ENGINE:
@@ -77,6 +77,23 @@ vars:
   DOCKER_BASE_IMAGE: "{{.DOCKER_BASE_IMAGE_NAME}}:{{.DOCKER_IMAGE_TAG}}"
   DOCKER_BENCHMARK_IMAGE: "{{.DOCKER_BENCHMARK_IMAGE_NAME}}:{{.DOCKER_IMAGE_TAG}}"
 
+  # Fully qualified refs for podman, which stores unqualified names under localhost/ instead of
+  # resolving them to docker.io like Docker does (e.g. srasiah/nuxeo -> docker.io/srasiah/nuxeo).
+  PODMAN_BASE_IMAGE:
+    sh: |
+      n="{{.DOCKER_BASE_IMAGE}}"
+      case "$n" in
+        */*) case "${n%%/*}" in *.*|*:*|localhost) echo "$n" ;; *) echo "docker.io/$n" ;; esac ;;
+        *) echo "docker.io/library/$n" ;;
+      esac
+  PODMAN_BENCHMARK_IMAGE:
+    sh: |
+      n="{{.DOCKER_BENCHMARK_IMAGE}}"
+      case "$n" in
+        */*) case "${n%%/*}" in *.*|*:*|localhost) echo "$n" ;; *) echo "docker.io/$n" ;; esac ;;
+        *) echo "docker.io/library/$n" ;;
+      esac
+
   # Set DOCKER_HOST for Maven Docker plugin compatibility.
   # For Docker, preserves an existing $DOCKER_HOST if already set (mirrors Makefile `ifndef DOCKER_HOST`).
   # Note: readlink -f requires GNU coreutils on macOS (brew install coreutils).
@@ -87,10 +104,12 @@ vars:
         # podman machine (macOS/Windows) exposes a host-side forwarding socket, distinct
         # from Host.RemoteSocket.Path which reports the path inside the VM. Prefer the
         # machine socket; fall back to Host.RemoteSocket.Path for native Linux podman.
-        SOCKET=$(podman machine inspect --format '{{"{{"}}.ConnectionInfo.PodmanSocket.Path{{"}}"}}' 2>/dev/null)
-        [ -z "$SOCKET" ] && SOCKET=$(podman info --format '{{"{{"}}.Host.RemoteSocket.Path{{"}}"}}' 2>/dev/null)
+        # `|| true`: Task evaluates sh: vars with errexit, so a failed lookup (e.g. no podman
+        # machine on native Linux, exit 125) would otherwise abort the whole Taskfile.
+        SOCKET=$(podman machine inspect --format '{{"{{"}}.ConnectionInfo.PodmanSocket.Path{{"}}"}}' 2>/dev/null || true)
+        [ -z "$SOCKET" ] && SOCKET=$(podman info --format '{{"{{"}}.Host.RemoteSocket.Path{{"}}"}}' 2>/dev/null || true)
         # Strip any existing unix:// prefix then re-add it (podman may return a URI or a bare path)
-        [ -n "$SOCKET" ] && echo "unix://${SOCKET#unix://}"
+        if [ -n "$SOCKET" ]; then echo "unix://${SOCKET#unix://}"; fi
       elif [ -n "$DOCKER_HOST" ]; then
         echo "$DOCKER_HOST"
       else
@@ -237,6 +256,9 @@ tasks:
   # exact env var name (injected here via `dotenv:`) and prepends it to the image name during
   # push, which double-prefixes our already registry-qualified DOCKER_BASE_IMAGE/
   # DOCKER_BENCHMARK_IMAGE (e.g. srasiah/nuxeo -> srasiah/srasiah/nuxeo).
+  # The plugin's multi-platform build shells out to `docker buildx`, which podman doesn't provide,
+  # so with podman Maven only prepares the build context (-Ddocker.skip=true) and podman builds
+  # all platforms into a local manifest list, then pushes it. Build args mirror the module POMs.
   build-and-push-base-multiarch:
     desc: Build and push a multi-arch base image (all platforms in DOCKER_PLATFORMS) directly to the registry
     dir: nuxeo
@@ -244,10 +266,26 @@ tasks:
       - echo "Building & pushing multi-arch base image with {{.CONTAINER_ENGINE_NAME}} -- {{.DOCKER_BASE_IMAGE}} [{{.DOCKER_PLATFORMS}}]"
       - |
         unset DOCKER_REGISTRY
-        mvn install docker:push {{.MAVEN_COMMON}} \
-          -Drevision={{.REVISION}} \
-          -Ddocker.platforms={{.DOCKER_PLATFORMS}} \
-          -Ddocker.image.name={{.DOCKER_BASE_IMAGE}}
+        if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
+          mvn install {{.MAVEN_COMMON}} -Drevision={{.REVISION}} -Ddocker.skip=true
+          # --manifest appends to an existing list, so drop any previous one (or a same-named image);
+          # `podman rmi` alone fails on lists created by `build --manifest` ("tag not known")
+          {{.CONTAINER_ENGINE}} manifest rm {{.PODMAN_BASE_IMAGE}} 2>/dev/null || {{.CONTAINER_ENGINE}} rmi {{.PODMAN_BASE_IMAGE}} 2>/dev/null || true
+          {{.CONTAINER_ENGINE}} build \
+            --platform {{.DOCKER_PLATFORMS}} \
+            --manifest {{.PODMAN_BASE_IMAGE}} \
+            --secret id=nuxeo-public,src=nuxeo-public.repo \
+            --build-arg BUILD_TAG={{.BUILD_TAG}}-nuxeo-nuxeo \
+            --build-arg SCM_REF={{.SCM_REF}} \
+            --build-arg VERSION={{.VERSION}} \
+            .
+          {{.CONTAINER_ENGINE}} manifest push --all {{.PODMAN_BASE_IMAGE}} docker://{{.PODMAN_BASE_IMAGE}}
+        else
+          mvn install docker:push {{.MAVEN_COMMON}} \
+            -Drevision={{.REVISION}} \
+            -Ddocker.platforms={{.DOCKER_PLATFORMS}} \
+            -Ddocker.image.name={{.DOCKER_BASE_IMAGE}}
+        fi
       - echo "Multi-arch base image built and pushed"
       - task: clean-orphans
         ignore_error: true
@@ -260,12 +298,26 @@ tasks:
       - echo "Building & pushing multi-arch benchmark image with {{.CONTAINER_ENGINE_NAME}} -- {{.DOCKER_BENCHMARK_IMAGE}} [{{.DOCKER_PLATFORMS}}]"
       - |
         unset DOCKER_REGISTRY
-        mvn install docker:push {{.MAVEN_COMMON}} \
-          -Drevision={{.REVISION}} \
-          -Ddocker.base.image={{.DOCKER_BASE_IMAGE}} \
-          -Ddocker.platforms={{.DOCKER_PLATFORMS}} \
-          -Ddocker.buildx.enabled=true \
-          -Ddocker.image.name={{.DOCKER_BENCHMARK_IMAGE}}
+        if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
+          mvn install {{.MAVEN_COMMON}} -Drevision={{.REVISION}} -Ddocker.skip=true
+          {{.CONTAINER_ENGINE}} manifest rm {{.PODMAN_BENCHMARK_IMAGE}} 2>/dev/null || {{.CONTAINER_ENGINE}} rmi {{.PODMAN_BENCHMARK_IMAGE}} 2>/dev/null || true
+          {{.CONTAINER_ENGINE}} build \
+            --platform {{.DOCKER_PLATFORMS}} \
+            --manifest {{.PODMAN_BENCHMARK_IMAGE}} \
+            --build-arg BASE_IMAGE={{.PODMAN_BASE_IMAGE}} \
+            --build-arg BUILD_TAG={{.BUILD_TAG}}-nuxeo-nuxeo-benchmark \
+            --build-arg SCM_REF={{.SCM_REF}} \
+            --build-arg VERSION={{.VERSION}} \
+            .
+          {{.CONTAINER_ENGINE}} manifest push --all {{.PODMAN_BENCHMARK_IMAGE}} docker://{{.PODMAN_BENCHMARK_IMAGE}}
+        else
+          mvn install docker:push {{.MAVEN_COMMON}} \
+            -Drevision={{.REVISION}} \
+            -Ddocker.base.image={{.DOCKER_BASE_IMAGE}} \
+            -Ddocker.platforms={{.DOCKER_PLATFORMS}} \
+            -Ddocker.buildx.enabled=true \
+            -Ddocker.image.name={{.DOCKER_BENCHMARK_IMAGE}}
+        fi
       - echo "Multi-arch benchmark image built and pushed"
       - task: clean-orphans
         ignore_error: true
@@ -289,7 +341,10 @@ tasks:
     desc: Push base image for a specific platform to registry
     cmds:
       - echo "Pushing base image {{.DOCKER_BASE_IMAGE}} ({{.TARGETPLATFORM}})..."
-      - "{{.CONTAINER_ENGINE}} push {{.DOCKER_BASE_IMAGE}} --platform {{.TARGETPLATFORM}}"
+      - task: push-image-platform
+        vars:
+          IMAGE: "{{.DOCKER_BASE_IMAGE}}"
+          PODMAN_IMAGE: "{{.PODMAN_BASE_IMAGE}}"
       - echo "Base image pushed successfully"
 
   push-benchmark:
@@ -303,8 +358,44 @@ tasks:
     desc: Push benchmark image for a specific platform to registry
     cmds:
       - echo "Pushing benchmark image {{.DOCKER_BENCHMARK_IMAGE}} ({{.TARGETPLATFORM}})..."
-      - "{{.CONTAINER_ENGINE}} push {{.DOCKER_BENCHMARK_IMAGE}} --platform {{.TARGETPLATFORM}}"
+      - task: push-image-platform
+        vars:
+          IMAGE: "{{.DOCKER_BENCHMARK_IMAGE}}"
+          PODMAN_IMAGE: "{{.PODMAN_BENCHMARK_IMAGE}}"
       - echo "Benchmark image pushed successfully"
+
+  # `podman push` has no --platform flag. For a manifest list (built by the *-multiarch tasks), look
+  # up the TARGETPLATFORM instance's digest, resolve it to its local image ID and push that image to
+  # the tag; for a plain single-platform image (built by build-base/build-benchmark), check its
+  # platform matches and push it as is. Like `docker push --platform`, this overwrites the tag with
+  # a single-platform image.
+  push-image-platform:
+    internal: true
+    requires:
+      vars: [IMAGE, PODMAN_IMAGE]
+    cmds:
+      - |
+        set -e
+        if [ "{{.CONTAINER_ENGINE_NAME}}" != "podman" ]; then
+          {{.CONTAINER_ENGINE}} push {{.IMAGE}} --platform {{.TARGETPLATFORM}}
+          exit 0
+        fi
+        REF="{{.PODMAN_IMAGE}}"
+        if podman manifest exists "$REF" 2>/dev/null; then
+          command -v jq >/dev/null || { echo "jq is required to select a platform from a manifest list" >&2; exit 1; }
+          DIGEST=$(podman manifest inspect "$REF" \
+            | jq -r --arg p "{{.TARGETPLATFORM}}" '.manifests[] | select(.platform.os + "/" + .platform.architecture == $p) | .digest' \
+            | head -1)
+          [ -n "$DIGEST" ] || { echo "No {{.TARGETPLATFORM}} image in manifest list $REF" >&2; exit 1; }
+          ID=$(podman images --digests --no-trunc --format '{{"{{"}}.ID{{"}}"}} {{"{{"}}.Digest{{"}}"}}' \
+            | awk -v d="$DIGEST" '$2 == d { print $1; exit }')
+          [ -n "$ID" ] || { echo "Image $DIGEST ({{.TARGETPLATFORM}}) from $REF not found locally" >&2; exit 1; }
+        else
+          ID="$REF"
+          PLATFORM=$(podman image inspect --format '{{"{{"}}.Os{{"}}"}}/{{"{{"}}.Architecture{{"}}"}}' "$REF")
+          [ "$PLATFORM" = "{{.TARGETPLATFORM}}" ] || { echo "$REF is $PLATFORM, not {{.TARGETPLATFORM}}" >&2; exit 1; }
+        fi
+        podman push "$ID" "docker://$REF"
 
   nuxeo-run:
     desc: Run a nuxeo container
@@ -378,7 +469,7 @@ tasks:
       - |
         REG={{.DOCKER_REGISTRY}}
         case "$REG" in *.*|*:*) ;; *) REG="docker.io" ;; esac
-        USER=$({{.CONTAINER_ENGINE}} login --get-login "$REG" 2>/dev/null)
+        USER=$({{.CONTAINER_ENGINE}} login --get-login "$REG" 2>/dev/null || true)
         if [ -n "$USER" ]; then
           echo "  Logged in as $USER ($REG)"
         else

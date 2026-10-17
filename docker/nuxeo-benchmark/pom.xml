@@ -27,16 +27,23 @@
 
     <dependency>
       <groupId>org.nuxeo.packages</groupId>
+      <artifactId>nuxeo-google-storage-package</artifactId>
+      <type>zip</type>
+    </dependency>
+
+    <dependency>
+      <groupId>org.nuxeo.packages</groupId>
       <artifactId>nuxeo-audit-opensearch1-package</artifactId>
       <type>zip</type>
     </dependency>
- 
+
+    <!--
     <dependency>
       <groupId>org.nuxeo.packages</groupId>
       <artifactId>nuxeo-importer-package</artifactId>
       <type>zip</type>
     </dependency>
-
+    -->
 
     <dependency>
       <groupId>org.nuxeo.packages</groupId>
@@ -101,9 +108,9 @@
               <build>
                 <args>
                   <BASE_IMAGE>${docker.base.image}</BASE_IMAGE>
-                  <BUILD_TAG>local-nuxeo-nuxeo-benchmark</BUILD_TAG>
-                  <SCM_REF>local</SCM_REF>
-                  <VERSION>2025.x</VERSION>
+                  <BUILD_TAG>${docker.build.tag}-nuxeo-nuxeo-benchmark</BUILD_TAG>
+                  <SCM_REF>${docker.scm.ref}</SCM_REF>
+                  <VERSION>${docker.version}</VERSION>
                 </args>
                 <contextDir>${basedir}</contextDir>
                 <buildx>
