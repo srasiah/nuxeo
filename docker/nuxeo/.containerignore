@@ -4,3 +4,5 @@
 !rootfs
 !nuxeo-public.repo
 !target/distrib/nuxeo-server-tomcat-*.zip
+# podman-remote ships --secret files inside the context under this name
+!podman-build-secret*
