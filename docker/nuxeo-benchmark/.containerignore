@@ -1,0 +1,5 @@
+# Only send what the Dockerfile uses: remote builds (podman farm) upload the whole context over SSH.
+*
+!Dockerfile
+!marketplace
+!target/packages

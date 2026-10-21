@@ -1,0 +1,6 @@
+# Only send what the Dockerfile uses: remote builds (podman farm) upload the whole context over SSH.
+*
+!Dockerfile
+!rootfs
+!nuxeo-public.repo
+!target/distrib/nuxeo-server-tomcat-*.zip

@@ -100,7 +100,7 @@
         <configuration>
           <authConfig>
             <username>${env.DOCKER_USERNAME}</username>
-            <password>${env.DOCKER_PASSWORD}</password>
+            <password>${env.DOCKER_TOKEN}</password>
           </authConfig>
           <images>
             <image>

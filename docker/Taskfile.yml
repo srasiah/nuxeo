@@ -58,6 +58,24 @@ vars:
     sh: |
       v=$(grep -m1 '^DISTRIBUTION_URL=' .env 2>/dev/null | cut -d= -f2-)
       echo "${DISTRIBUTION_URL:-$v}"
+  # SSH destinations ([user@]host) of the native builder VMs used by the podman farm tasks.
+  AMD64_BUILDER_VM:
+    sh: |
+      v=$(grep -m1 '^AMD64_BUILDER_VM=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${AMD64_BUILDER_VM:-$v}"
+  ARM64_BUILDER_VM:
+    sh: |
+      v=$(grep -m1 '^ARM64_BUILDER_VM=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${ARM64_BUILDER_VM:-$v}"
+  # Passphrase-less SSH key podman uses to reach the builder VMs (it cannot prompt).
+  BUILDER_SSH_KEY:
+    sh: |
+      v=$(grep -m1 '^BUILDER_SSH_KEY=' .env 2>/dev/null | cut -d= -f2-)
+      k="${BUILDER_SSH_KEY:-${v:-$HOME/.ssh/id_ed25519_podman_farm}}"
+      # .env values are not shell-expanded, so expand a leading ~ ourselves
+      case "$k" in "~/"*) k="$HOME/${k#\~/}" ;; esac
+      echo "$k"
+  FARM_NAME: nuxeo-farm
   VERSION:
     sh: |
       v=$(grep -m1 '^VERSION=' .env 2>/dev/null | cut -d= -f2-)
@@ -187,14 +205,30 @@ tasks:
       - echo "  Platform -- {{.DOCKER_PLATFORM}}"
       - echo "  Architecture Profile -- {{.ARCH_PROFILE}}"
       - echo "  Docker Host -- {{.DOCKER_HOST}}"
+      # The plugin's buildx build shells out to the `docker` CLI, which podman doesn't provide, so with
+      # podman Maven only prepares the build context (-Ddocker.skip=true) and podman builds the image.
       - |
-        mvn install {{.MAVEN_COMMON}} \
-          -P{{.ARCH_PROFILE}} \
-          -Drevision={{.REVISION}} \
-          -Ddocker.platforms={{.DOCKER_PLATFORM}} \
-          -Ddocker.image.name={{.DOCKER_BASE_IMAGE}}
+        if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
+          mvn install {{.MAVEN_COMMON}} -P{{.ARCH_PROFILE}} -Drevision={{.REVISION}} -Ddocker.skip=true
+          {{.CONTAINER_ENGINE}} build \
+            --platform {{.DOCKER_PLATFORM}} \
+            --tag {{.PODMAN_BASE_IMAGE}} \
+            --secret id=nuxeo-public,src=nuxeo-public.repo \
+            --build-arg BUILD_TAG={{.BUILD_TAG}}-nuxeo-nuxeo \
+            --build-arg SCM_REF={{.SCM_REF}} \
+            --build-arg VERSION={{.VERSION}} \
+            .
+          REF={{.PODMAN_BASE_IMAGE}}
+          {{.CONTAINER_ENGINE}} tag "$REF" "${REF%:*}:{{.REVISION}}"
+        else
+          mvn install {{.MAVEN_COMMON}} \
+            -P{{.ARCH_PROFILE}} \
+            -Drevision={{.REVISION}} \
+            -Ddocker.platforms={{.DOCKER_PLATFORM}} \
+            -Ddocker.image.name={{.DOCKER_BASE_IMAGE}}
+          {{.CONTAINER_ENGINE}} tag {{.DOCKER_BASE_IMAGE}} {{.DOCKER_BASE_IMAGE_NAME}}:{{.REVISION}}
+        fi
       - echo "Base image build complete"
-      - "{{.CONTAINER_ENGINE}} tag {{.DOCKER_BASE_IMAGE}} {{.DOCKER_BASE_IMAGE_NAME}}:{{.REVISION}}"
       - task: clean-orphans
         ignore_error: true
 
@@ -212,14 +246,27 @@ tasks:
       - echo "  Platform -- {{.DOCKER_PLATFORM}}"
       - echo "  Base image -- {{.DOCKER_BASE_IMAGE}}"
       - echo "  Docker Host -- {{.DOCKER_HOST}}"
+      # See build-base: with podman, Maven only prepares the build context and podman builds the image.
       - |
-        mvn install {{.MAVEN_COMMON}} \
-          -P{{.ARCH_PROFILE}} \
-          -Drevision={{.REVISION}} \
-          -Ddocker.base.image={{.DOCKER_BASE_IMAGE}} \
-          -Ddocker.platforms={{.DOCKER_PLATFORM}} \
-          -Ddocker.buildx.enabled=true \
-          -Ddocker.image.name={{.DOCKER_BENCHMARK_IMAGE}}
+        if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
+          mvn install {{.MAVEN_COMMON}} -P{{.ARCH_PROFILE}} -Drevision={{.REVISION}} -Ddocker.skip=true
+          {{.CONTAINER_ENGINE}} build \
+            --platform {{.DOCKER_PLATFORM}} \
+            --tag {{.PODMAN_BENCHMARK_IMAGE}} \
+            --build-arg BASE_IMAGE={{.PODMAN_BASE_IMAGE}} \
+            --build-arg BUILD_TAG={{.BUILD_TAG}}-nuxeo-nuxeo-benchmark \
+            --build-arg SCM_REF={{.SCM_REF}} \
+            --build-arg VERSION={{.VERSION}} \
+            .
+        else
+          mvn install {{.MAVEN_COMMON}} \
+            -P{{.ARCH_PROFILE}} \
+            -Drevision={{.REVISION}} \
+            -Ddocker.base.image={{.DOCKER_BASE_IMAGE}} \
+            -Ddocker.platforms={{.DOCKER_PLATFORM}} \
+            -Ddocker.buildx.enabled=true \
+            -Ddocker.image.name={{.DOCKER_BENCHMARK_IMAGE}}
+        fi
       - echo "Benchmark image build complete"
       - task: clean-orphans
         ignore_error: true
@@ -270,9 +317,11 @@ tasks:
           mvn install {{.MAVEN_COMMON}} -Drevision={{.REVISION}} -Ddocker.skip=true
           # --manifest appends to an existing list, so drop any previous one (or a same-named image);
           # `podman rmi` alone fails on lists created by `build --manifest` ("tag not known")
+          # --pull=always: otherwise podman reuses a locally stored FROM image of another arch for every platform
           {{.CONTAINER_ENGINE}} manifest rm {{.PODMAN_BASE_IMAGE}} 2>/dev/null || {{.CONTAINER_ENGINE}} rmi {{.PODMAN_BASE_IMAGE}} 2>/dev/null || true
           {{.CONTAINER_ENGINE}} build \
             --platform {{.DOCKER_PLATFORMS}} \
+            --pull=always \
             --manifest {{.PODMAN_BASE_IMAGE}} \
             --secret id=nuxeo-public,src=nuxeo-public.repo \
             --build-arg BUILD_TAG={{.BUILD_TAG}}-nuxeo-nuxeo \
@@ -303,6 +352,7 @@ tasks:
           {{.CONTAINER_ENGINE}} manifest rm {{.PODMAN_BENCHMARK_IMAGE}} 2>/dev/null || {{.CONTAINER_ENGINE}} rmi {{.PODMAN_BENCHMARK_IMAGE}} 2>/dev/null || true
           {{.CONTAINER_ENGINE}} build \
             --platform {{.DOCKER_PLATFORMS}} \
+            --pull=always \
             --manifest {{.PODMAN_BENCHMARK_IMAGE}} \
             --build-arg BASE_IMAGE={{.PODMAN_BASE_IMAGE}} \
             --build-arg BUILD_TAG={{.BUILD_TAG}}-nuxeo-nuxeo-benchmark \
@@ -321,6 +371,121 @@ tasks:
       - echo "Multi-arch benchmark image built and pushed"
       - task: clean-orphans
         ignore_error: true
+
+  # podman farm builds each platform natively on its builder VM (no QEMU emulation), pushes the
+  # per-arch images, then pushes a manifest list combining them. Maven only prepares the build
+  # contexts locally; podman sends them to the VMs. --local=false keeps this host out of the farm.
+  farm-setup:
+    desc: (Re)create the podman farm from AMD64_BUILDER_VM and ARM64_BUILDER_VM in .env
+    preconditions:
+      - sh: '[ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]'
+        msg: "podman farm requires podman"
+      - sh: '[ -n "{{.AMD64_BUILDER_VM}}" ] && [ -n "{{.ARM64_BUILDER_VM}}" ]'
+        msg: "Set AMD64_BUILDER_VM and ARM64_BUILDER_VM ([user@]host) in .env"
+      - sh: '[ -f "{{.BUILDER_SSH_KEY}}" ]'
+        msg: "SSH key {{.BUILDER_SSH_KEY}} not found (set BUILDER_SSH_KEY in .env)"
+    cmds:
+      - |
+        podman farm rm {{.FARM_NAME}} 2>/dev/null || true
+        for arch in amd64 arm64; do
+          podman system connection rm {{.FARM_NAME}}-$arch 2>/dev/null || true
+        done
+        # Without --socket-path, podman asks each VM over SSH for its podman socket
+        podman system connection add --identity {{.BUILDER_SSH_KEY}} {{.FARM_NAME}}-amd64 ssh://{{.AMD64_BUILDER_VM}}
+        podman system connection add --identity {{.BUILDER_SSH_KEY}} {{.FARM_NAME}}-arm64 ssh://{{.ARM64_BUILDER_VM}}
+        podman farm create {{.FARM_NAME}} {{.FARM_NAME}}-amd64 {{.FARM_NAME}}-arm64
+      - podman farm list
+      - task: farm-login
+
+  # Logs each builder VM in to docker.io with DOCKER_USERNAME/DOCKER_TOKEN from .env (a Docker Hub
+  # access token). The default auth file under /run/user is wiped on reboot, so the login goes to
+  # ~/.config/containers/auth.json, which podman falls back to; the runtime file is removed since it would
+  # take precedence. The password is read from the environment and sent on stdin, never on a command line.
+  farm-login:
+    desc: Log the podman farm builder VMs in to docker.io (persists across reboots)
+    preconditions:
+      - sh: '[ -f "{{.BUILDER_SSH_KEY}}" ]'
+        msg: "SSH key {{.BUILDER_SSH_KEY}} not found (set BUILDER_SSH_KEY in .env)"
+    cmds:
+      - |
+        if [ -z "$DOCKER_USERNAME" ] || [ -z "$DOCKER_TOKEN" ]; then
+          echo "DOCKER_USERNAME/DOCKER_TOKEN not set in .env, keeping the builders' existing docker.io login"
+          exit 0
+        fi
+        set -o pipefail
+        for vm in {{.AMD64_BUILDER_VM}} {{.ARM64_BUILDER_VM}}; do
+          printf '%s' "$DOCKER_TOKEN" | ssh -o BatchMode=yes -i {{.BUILDER_SSH_KEY}} "$vm" \
+            "mkdir -p ~/.config/containers \
+              && podman login --authfile ~/.config/containers/auth.json -u '$DOCKER_USERNAME' --password-stdin docker.io \
+              && rm -f \${XDG_RUNTIME_DIR:-/run/user/\$(id -u)}/containers/auth.json" 2>&1 \
+            | sed "s|^|$vm: |"
+        done
+
+  # podman 4.9's `podman farm build` builds fine but its push is broken ("Invalid image name
+  # ...@@unknown-digest@@"), so the farm's connections are driven directly: each VM builds its own
+  # platform natively and pushes a per-arch tag (<image>-amd64/-arm64), in parallel; then a manifest
+  # list referencing both is created locally and pushed under the plain tag.
+  _farm-build-push:
+    internal: true
+    dir: '{{.DIR}}'
+    cmds:
+      - |
+        set -o pipefail
+        pids=""
+        for arch in amd64 arm64; do
+          (
+            set -e
+            conn={{.FARM_NAME}}-$arch
+            podman --connection $conn build --platform linux/$arch --pull=always \
+              --tag {{.IMAGE}}-$arch {{.BUILD_ARGS}} . 2>&1 | sed "s|^|[$arch] |"
+            podman --connection $conn push {{.IMAGE}}-$arch docker://{{.IMAGE}}-$arch 2>&1 | sed "s|^|[$arch] |"
+          ) &
+          pids="$pids $!"
+        done
+        rc=0
+        for pid in $pids; do wait $pid || rc=1; done
+        exit $rc
+      - |
+        podman manifest rm {{.IMAGE}} 2>/dev/null || podman rmi {{.IMAGE}} 2>/dev/null || true
+        podman manifest create {{.IMAGE}} docker://{{.IMAGE}}-amd64 docker://{{.IMAGE}}-arm64
+        podman manifest push --all {{.IMAGE}} docker://{{.IMAGE}}
+
+  build-and-push-base-farm:
+    desc: Build and push a multi-arch base image natively on the podman farm builder VMs
+    dir: nuxeo
+    deps: [farm-setup]
+    cmds:
+      - echo "Building & pushing multi-arch base image on farm {{.FARM_NAME}} -- {{.PODMAN_BASE_IMAGE}}"
+      - mvn install {{.MAVEN_COMMON}} -Drevision={{.REVISION}} -Ddocker.skip=true
+      - task: _farm-build-push
+        vars:
+          DIR: nuxeo
+          IMAGE: '{{.PODMAN_BASE_IMAGE}}'
+          BUILD_ARGS: >-
+            --secret id=nuxeo-public,src=nuxeo-public.repo
+            --build-arg BUILD_TAG={{.BUILD_TAG}}-nuxeo-nuxeo
+            --build-arg SCM_REF={{.SCM_REF}}
+            --build-arg VERSION={{.VERSION}}
+      - echo "Multi-arch base image built and pushed"
+
+  build-and-push-benchmark-farm:
+    desc: Build and push multi-arch base and benchmark images natively on the podman farm builder VMs
+    dir: nuxeo-benchmark
+    deps: [build-and-push-base-farm]
+    cmds:
+      - echo "Building & pushing multi-arch benchmark image on farm {{.FARM_NAME}} -- {{.PODMAN_BENCHMARK_IMAGE}}"
+      - mvn install {{.MAVEN_COMMON}} -Drevision={{.REVISION}} -Ddocker.skip=true
+      # --pull=always (in _farm-build-push): each VM pulls its arch of the base image just pushed
+      - task: _farm-build-push
+        vars:
+          DIR: nuxeo-benchmark
+          IMAGE: '{{.PODMAN_BENCHMARK_IMAGE}}'
+          BUILD_ARGS: >-
+            --build-arg BASE_IMAGE={{.PODMAN_BASE_IMAGE}}
+            --build-arg BUILD_TAG={{.BUILD_TAG}}-nuxeo-nuxeo-benchmark
+            --build-arg SCM_REF={{.SCM_REF}}
+            --build-arg VERSION={{.VERSION}}
+      - echo "Multi-arch benchmark image built and pushed"
 
   push:
     desc: Push both images to registry

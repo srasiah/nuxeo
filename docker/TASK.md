@@ -38,6 +38,9 @@ task build-base DOCKER_IMAGE_TAG=2025.9
 | `TARGETPLATFORM` | same as `DOCKER_PLATFORM` | Platform for `push-*-platform` tasks; independently overridable |
 | `BUILD_TAG` | `local` | Build identifier |
 | `CONTAINER_ENGINE` | auto-detected | Path to `podman` or `docker` |
+| `AMD64_BUILDER_VM` | — | SSH destination (`[user@]host`) of the native amd64 builder for the `*-farm` tasks |
+| `ARM64_BUILDER_VM` | — | SSH destination (`[user@]host`) of the native arm64 builder for the `*-farm` tasks |
+| `BUILDER_SSH_KEY` | `~/.ssh/id_ed25519_podman_farm` | Passphrase-less SSH key podman uses to reach the builder VMs |
 
 ### Auto-detected variables
 
@@ -84,7 +87,16 @@ task info       # print current configuration and container engine status
 | `task build-and-push-base` | Build and push base image |
 | `task build-and-push-benchmark` | Build and push benchmark image |
 | `task build-and-push-base-multiarch` | Build and push a multi-arch base image (all platforms in `DOCKER_PLATFORMS`) |
-| `task build-and-push-benchmark-multiarch` | Build and push a multi-arch benchmark image (depends on the base multiarch image already being pushed) |
+| `task build-and-push-benchmark-multiarch` | Build and push multi-arch base and benchmark images (runs `build-and-push-base-multiarch` first) |
+
+### Multi-arch with podman farm (native builders)
+
+| Task | Description |
+|---|---|
+| `task build-and-push-benchmark-farm` | Build and push multi-arch base and benchmark images natively on the builder VMs (recommended) |
+| `task build-and-push-base-farm` | Build and push the multi-arch base image natively on the builder VMs |
+| `task farm-setup` | (Re)create the `nuxeo-farm` podman farm from `AMD64_BUILDER_VM` / `ARM64_BUILDER_VM` (run automatically by the tasks above) |
+| `task farm-login` | Log both builder VMs in to docker.io with `DOCKER_USERNAME` / `DOCKER_TOKEN`, persisting across reboots (run by `farm-setup`) |
 
 ### Container management
 
@@ -142,6 +154,45 @@ task build-and-push-base-multiarch DOCKER_PLATFORMS=linux/amd64,linux/arm64
 task build-and-push-benchmark-multiarch DOCKER_PLATFORMS=linux/amd64,linux/arm64
 ```
 
+**Publish a multi-arch image with podman farm (recommended):** each platform is built natively
+on its own builder VM, so nothing is emulated. Maven runs locally to prepare the build context,
+podman uploads it to each VM over SSH (no repo clone needed on the VMs). Each VM pushes its image
+as `<tag>-amd64` / `<tag>-arm64`, and a manifest list combining them is pushed as `<tag>`. (The
+tasks drive the farm's connections directly because `podman farm build`'s push is broken in
+podman 4.9.)
+```sh
+task build-and-push-benchmark-farm   # base + benchmark, all platforms
+task build-and-push-base-farm        # base only
+```
+
+One-time setup:
+
+1. Set `AMD64_BUILDER_VM` and `ARM64_BUILDER_VM` in `.env` (either can be this machine itself).
+2. Create a passphrase-less key and authorize it on both VMs (podman cannot prompt):
+   ```sh
+   ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519_podman_farm
+   ssh-copy-id -i ~/.ssh/id_ed25519_podman_farm.pub user@builder-vm
+   ```
+3. podman's SSH client checks the **ECDSA** host key, so `known_hosts` must hold it (not only the
+   ED25519 one), otherwise `farm-setup` fails with `knownhosts: key mismatch`:
+   ```sh
+   echo "builder-vm $(ssh user@builder-vm cat /etc/ssh/ssh_host_ecdsa_key.pub | cut -d' ' -f1,2)" >> ~/.ssh/known_hosts
+   ```
+4. On each VM, start the podman API socket:
+   ```sh
+   systemctl --user enable --now podman.socket
+   sudo loginctl enable-linger $USER
+   ```
+5. Set `DOCKER_USERNAME` and `DOCKER_TOKEN` (a Docker Hub access token with Read & Write scope)
+   in `.env`.
+6. Check the connections and registry login: `task farm-setup`.
+
+`farm-login` (run by `farm-setup`, so before every farm build) logs each VM in to docker.io and
+saves it to `~/.config/containers/auth.json`. Podman's default `/run/user/<uid>` auth file is wiped
+on reboot, so `farm-login` deletes it once the new login succeeds. The password is sent over SSH on
+stdin and never appears on a command line. Without `DOCKER_USERNAME` / `DOCKER_TOKEN` in `.env`,
+it keeps each VM's existing login.
+
 **Diagnose configuration:**
 ```sh
 task info
@@ -151,4 +202,7 @@ task info
 
 - `.env` values take precedence over Taskfile defaults. CLI vars (`task foo VAR=value`) take precedence over both.
 - `push` and `push-platform` run their two subtasks in **parallel**. `build-and-push` runs build then push **sequentially** (benchmark depends on the base image being built first).
+- Multi-arch builds through QEMU emulation (`*-multiarch` with podman) are slow and fragile: an old
+  `qemu-user-static` breaks `apt-get` signature checks, and podman 4.9 needs `--pull=always` (set in the
+  tasks) so each platform gets its own base image. Prefer the `*-farm` tasks.
 - Container engine format strings (`{{.Names}}`, `{{.Server.Version}}`, etc.) are passed to Docker/Podman using Taskfile's `{{"{{" }}` escape syntax so they are not interpolated by Taskfile's own template engine.
