@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.nuxeo</groupId>
   <artifactId>nuxeo-ecm</artifactId>
-  <version>2025.21-SNAPSHOT</version>
+  <version>2025.22-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Nuxeo ECM Projects</name>
   <description>Nuxeo ECM Platform and related components.</description>
@@ -56,7 +56,7 @@
     <!-- <license.useMissingFile>true</license.useMissingFile> -->
     <!-- <license.missingFile>src/main/license/THIRD-PARTY.properties</license.missingFile> -->
 
-    <nuxeo.platform.version>2025.21-SNAPSHOT</nuxeo.platform.version>
+    <nuxeo.platform.version>2025.22-SNAPSHOT</nuxeo.platform.version>
     <nuxeo.distribution.name>lts</nuxeo.distribution.name>
     <nuxeo.platform.javadoc.version>${project.version}</nuxeo.platform.javadoc.version>
 
@@ -82,7 +82,7 @@
     <apache.poi.version>5.5.1</apache.poi.version>
     <jodreport.version>2.4.0</jodreport.version>
     <jxls.version>3.1.0</jxls.version>
-    <keycloak.version>26.6.1</keycloak.version>
+    <keycloak.version>26.6.2</keycloak.version>
     <keycloak.policy.enforcer.version>26.0.9</keycloak.policy.enforcer.version>
     <keycloak.adapters.version>25.0.3</keycloak.adapters.version>
     <xdocreport.version>2.2.0</xdocreport.version>
@@ -92,11 +92,11 @@
     <google.api.drive.version>v2-rev20201130-1.31.0</google.api.drive.version>
     <box.api.version>1.1.0</box.api.version>
     <pdfbox.version>3.0.7</pdfbox.version>
-    <pdfbox.jbig2.version>3.0.4</pdfbox.jbig2.version>
-    <aws.version>2.44.7</aws.version>
+    <pdfbox.jbig2.version>3.0.5</pdfbox.jbig2.version>
+    <aws.version>2.44.9</aws.version>
     <gcp.version>2.68.0</gcp.version>
     <jackson1.version>1.9.13</jackson1.version>
-    <jackson.bom.version>2.21.3</jackson.bom.version>
+    <jackson.bom.version>2.22.0</jackson.bom.version>
     <bouncycastle.version>1.84</bouncycastle.version>
     <avro.version>1.12.1</avro.version>
     <restlet.version>2.4.4</restlet.version>
@@ -142,7 +142,7 @@
 
     <!-- MongoDB -->
     <mongo.java.driver.version>5.7.0</mongo.java.driver.version>
-    <quartz.mongodb.version>2.3.0</quartz.mongodb.version>
+    <quartz.mongodb.version>2.4.0</quartz.mongodb.version>
 
     <kafka.version>3.9.2</kafka.version>
     <confluent.version>7.9.5</confluent.version>
@@ -150,8 +150,8 @@
     <amqp.client.version>5.30.0</amqp.client.version>
     <opencensus.version>0.31.1</opencensus.version>
     <prometheus.client.version>0.11.0</prometheus.client.version>
-    <protobuf.java.version>4.34.1</protobuf.java.version>
-    <opensaml.version>5.2.1</opensaml.version>
+    <protobuf.java.version>4.35.0</protobuf.java.version>
+    <opensaml.version>5.2.2</opensaml.version>
     <quartz.version>2.5.2</quartz.version>
     <mockito.version>5.23.0</mockito.version>
     <byte-buddy.version>1.18.8</byte-buddy.version>
@@ -2309,7 +2309,7 @@
       <dependency>
         <groupId>xom</groupId>
         <artifactId>xom</artifactId>
-        <version>1.4.2</version>
+        <version>1.4.4</version>
         <exclusions>
           <exclusion>
             <groupId>xml-apis</groupId>
@@ -3170,7 +3170,7 @@
       <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
         <artifactId>woodstox-core</artifactId>
-        <version>7.1.1</version>
+        <version>7.2.0</version>
       </dependency>
 
       <dependency>
@@ -3289,7 +3289,7 @@
       <dependency>
         <groupId>org.jugs.webdav</groupId>
         <artifactId>webdav-jaxrs</artifactId>
-        <version>3.3</version>
+        <version>3.3.1</version>
         <exclusions>
           <exclusion>
             <groupId>com.sun.xml.bind</groupId>
@@ -4724,7 +4724,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>3.6.2</version>
+          <version>3.6.3</version>
           <configuration>
             <rules>
               <requirePluginVersions>

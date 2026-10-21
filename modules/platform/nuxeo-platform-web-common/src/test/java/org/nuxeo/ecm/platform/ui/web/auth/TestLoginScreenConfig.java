@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2010-2017 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2010-2026 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.nuxeo.common.Environment.DISTRIBUTION_PACKAGE;
-import static org.nuxeo.common.Environment.DISTRIBUTION_VERSION;
 import static org.nuxeo.common.Environment.PRODUCT_VERSION;
 
 import java.net.URL;
@@ -34,7 +32,6 @@ import java.util.Arrays;
 import java.util.Map;
 
 import jakarta.inject.Inject;
-import jakarta.ws.rs.core.MultivaluedMap;
 
 import org.glassfish.jersey.uri.UriComponent;
 import org.junit.Test;
@@ -49,16 +46,12 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.HotDeployer;
 import org.nuxeo.runtime.test.runner.RuntimeFeature;
 import org.nuxeo.runtime.test.runner.RuntimeHarness;
-import org.nuxeo.runtime.test.runner.WithFrameworkProperty;
 
 @RunWith(FeaturesRunner.class)
 @Features(RuntimeFeature.class)
 @Deploy("org.nuxeo.ecm.platform.web.common:OSGI-INF/authentication-framework.xml")
 @Deploy("org.nuxeo.ecm.platform.web.common:OSGI-INF/authentication-contrib.xml")
 @Deploy("org.nuxeo.ecm.platform.web.common.test:OSGI-INF/test-loginscreenconfig.xml")
-@WithFrameworkProperty(name = PRODUCT_VERSION, value = "LTS-2015")
-@WithFrameworkProperty(name = DISTRIBUTION_VERSION, value = "7.10")
-@WithFrameworkProperty(name = DISTRIBUTION_PACKAGE, value = "zip")
 public class TestLoginScreenConfig {
 
     @Inject
@@ -340,30 +333,58 @@ public class TestLoginScreenConfig {
     @Test
     public void iCanGetNewsIframeURL() throws Exception {
 
-        LoginScreenConfig config = new LoginScreenConfig();
-        String strUrl = config.getNewsIframeUrl();
-        if (!strUrl.startsWith("http")) {
-            strUrl = "http:" + strUrl;
-        }
-        URL url = new URL(strUrl);
-
-        MultivaluedMap<String, String> query = UriComponent.decodeQuery(url.getQuery(), true);
-
-        assertThat(query.keySet()).contains(PRODUCT_VERSION, DISTRIBUTION_VERSION, DISTRIBUTION_PACKAGE);
-        assertThat(query.get(PRODUCT_VERSION)).contains("LTS-2015");
-        assertThat(query.get(DISTRIBUTION_VERSION)).contains("7.10");
-        assertThat(query.get(DISTRIBUTION_PACKAGE)).contains("zip");
+        var config = new LoginScreenConfig();
+        // NXP-33720: no default news URL anymore, getNewsIframeUrl returns null and news is not displayed
+        assertNull(config.getNewsIframeUrl());
+        assertFalse(config.getDisplayNews());
 
         // Testing with contribution
         config.setNewsIframeUrl("http://example.com?why=testing");
 
-        strUrl = config.getNewsIframeUrl();
-        url = new URL("http:" + strUrl);
-        query = UriComponent.decodeQuery(url.getQuery(), true);
+        var strUrl = config.getNewsIframeUrl();
+        var url = new URL(strUrl);
+        var query = UriComponent.decodeQuery(url.getQuery(), true);
 
         assertThat(query.keySet()).contains("why");
         assertFalse(query.containsKey(PRODUCT_VERSION));
         assertThat(query.get("why")).contains("testing");
+        assertTrue(config.getDisplayNews());
+    }
+
+    /**
+     * NXP-33553: getNewsIframeUrl must reject URLs whose scheme is not http(s) so that a malicious configuration cannot
+     * inject a javascript: (or similar) URL into the login page news iframe. Schemeless URLs (relative or
+     * protocol-relative) are still accepted for backward compatibility.
+     *
+     * @since 2025.22
+     */
+    @Test
+    public void testNewsIframeUrlRejectsUnsafeSchemes() {
+        var config = new LoginScreenConfig();
+
+        // Absolute http(s) URLs are accepted, including query strings.
+        config.setNewsIframeUrl("http://example.com?why=testing");
+        assertEquals("http://example.com?why=testing", config.getNewsIframeUrl());
+        config.setNewsIframeUrl("https://example.com/news");
+        assertEquals("https://example.com/news", config.getNewsIframeUrl());
+
+        // Schemeless URLs (relative or protocol-relative) are accepted; they cannot introduce a script scheme.
+        config.setNewsIframeUrl("someurl");
+        assertEquals("someurl", config.getNewsIframeUrl());
+        config.setNewsIframeUrl("//example.com/news");
+        assertEquals("//example.com/news", config.getNewsIframeUrl());
+
+        // Script-capable schemes are rejected (getNewsIframeUrl returns null).
+        config.setNewsIframeUrl("javascript:alert(1)");
+        assertNull(config.getNewsIframeUrl());
+        config.setNewsIframeUrl("vbscript:msgbox(1)");
+        assertNull(config.getNewsIframeUrl());
+        config.setNewsIframeUrl("file:///etc/passwd");
+        assertNull(config.getNewsIframeUrl());
+
+        // Malformed URLs are rejected without throwing.
+        config.setNewsIframeUrl("http://[malformed");
+        assertNull(config.getNewsIframeUrl());
     }
 
     // NXP-30831

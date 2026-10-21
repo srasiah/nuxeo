@@ -29,10 +29,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 21
-        uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: '21'
           distribution: 'zulu'
@@ -40,7 +40,7 @@ jobs:
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
         with:
           languages: ${{ matrix.language }}
           # If you wish to specify custom queries, you can do so here or in a config file.
@@ -49,6 +49,13 @@ jobs:
 
           # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
           # queries: security-extended,security-and-quality
+
+          # Exclude Maven build output from analysis. Files under target/classes are
+          # copies of source files (e.g. web resources under src/main/resources) and
+          # produce duplicate alerts that shadow the true source-file alerts.
+          config: |
+            paths-ignore:
+              - '**/target/**'
 
       # Run the build manually, we need several Maven commands with custom parameters to build the whole codebase
       - name: Build
@@ -65,32 +72,6 @@ jobs:
           mvn package -B -e -nsu -DskipTests -f packages/pom.xml
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
         with:
           category: "/language:${{matrix.language}}"
-
-      - name: Slack notification
-        if: failure() && (github.event_name == 'push' || github.event_name == 'schedule')
-        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c # v3.0.3
-        env:
-          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-        with:
-          channel-id: 'platform-notifs'
-          payload: |
-            {
-              "attachments": [
-                {
-                  "color": "#A30200",
-                  "blocks": [
-                    {
-                      "type": "section",
-                      "text": {
-                        "type": "mrkdwn",
-                        "text": "<${{ env.REPO_URL }}/actions/runs/${{ github.run_id }}|Code scanning> failed in nuxeo/nuxeo-lts <${{ env.REPO_URL }}/commit/${{ github.sha }}|${{ github.ref_name }}>"
-                      }
-                    }
-                  ]
-                }
-              ]
-            }

@@ -18,7 +18,6 @@
  */
 package org.nuxeo.ecm.platform.ui.web.auth.service;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.commons.collections4.CollectionUtils.emptyIfNull;
 import static org.apache.commons.lang3.BooleanUtils.isNotTrue;
 import static org.apache.commons.lang3.BooleanUtils.isTrue;
@@ -26,16 +25,15 @@ import static org.apache.commons.lang3.BooleanUtils.toBooleanDefaultIfNull;
 import static org.apache.commons.lang3.ObjectUtils.getIfNull;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
-import java.net.URLDecoder;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.ws.rs.core.UriBuilder;
-
-import org.nuxeo.common.Environment;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.nuxeo.common.xmap.XMap;
 import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XNodeList;
@@ -53,6 +51,10 @@ import org.nuxeo.runtime.model.Descriptor;
 @XObject("loginScreenConfig")
 public class LoginScreenConfig implements Descriptor {
 
+    private static final Logger log = LogManager.getLogger(LoginScreenConfig.class);
+
+    /** @deprecated since 2025.21, the nuxeo.com news page is no longer available */
+    @Deprecated(since = "2025.21", forRemoval = true)
     public static final String NUXEO_NEWS_URL = "//www.nuxeo.com/login-page-embedded-1/";
 
     /** @since 8.4 */
@@ -233,7 +235,7 @@ public class LoginScreenConfig implements Descriptor {
     }
 
     public boolean getDisplayNews() {
-        return isNotTrue(removeNews) && isNotBlank(internalGetNewsIframeUrl());
+        return isNotTrue(removeNews) && isNotBlank(newsIframeUrl);
     }
 
     public Boolean getFieldAutocomplete() {
@@ -287,24 +289,35 @@ public class LoginScreenConfig implements Descriptor {
         newsIframeFullUrl = null;
     }
 
+    /** @deprecated since 2025.21, use {@link #getNewsIframeUrl()} instead */
+    @Deprecated(since = "2025.21", forRemoval = true)
     protected String internalGetNewsIframeUrl() {
-        return getIfNull(newsIframeUrl, NUXEO_NEWS_URL);
+        return newsIframeUrl;
     }
 
     public String getNewsIframeUrl() {
         if (newsIframeFullUrl == null) {
-            UriBuilder newsIFrameBuilder = UriBuilder.fromPath(internalGetNewsIframeUrl());
-            if (NUXEO_NEWS_URL.equals(internalGetNewsIframeUrl())) {
-                newsIFrameBuilder.queryParam(Environment.PRODUCT_VERSION,
-                        Framework.getProperty(Environment.PRODUCT_VERSION))
-                                 .queryParam(Environment.DISTRIBUTION_VERSION,
-                                         Framework.getProperty(Environment.DISTRIBUTION_VERSION))
-                                 .queryParam(Environment.DISTRIBUTION_PACKAGE,
-                                         Framework.getProperty(Environment.DISTRIBUTION_PACKAGE));
+            if (newsIframeUrl == null) {
+                return null;
             }
-            newsIframeFullUrl = newsIFrameBuilder.build().toString();
+            // Parse the configured URL and only accept schemeless (relative or
+            // protocol-relative) URLs, or http/https absolute URLs. Reject
+            // schemes such as javascript:, data:, vbscript:, file:, ... which
+            // would enable XSS when the URL is later assigned to iframe.src.
+            try {
+                var uri = URI.create(newsIframeUrl);
+                var scheme = uri.getScheme();
+                if (scheme != null && !"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+                    log.debug("Rejecting newsIframeUrl with unsupported scheme: {}", scheme);
+                    return null;
+                }
+                newsIframeFullUrl = uri.toString();
+            } catch (IllegalArgumentException e) {
+                log.debug("Rejecting malformed newsIframeUrl: {}", newsIframeUrl);
+                return null;
+            }
         }
-        return URLDecoder.decode(newsIframeFullUrl, UTF_8);
+        return newsIframeFullUrl;
     }
 
     /**
