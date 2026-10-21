@@ -1,8 +1,0 @@
-# Only send what the Dockerfile uses: remote builds (podman farm) upload the whole context over SSH.
-*
-!Dockerfile
-!rootfs
-!nuxeo-public.repo
-!target/distrib/nuxeo-server-tomcat-*.zip
-# podman-remote ships --secret files inside the context under this name
-!podman-build-secret*

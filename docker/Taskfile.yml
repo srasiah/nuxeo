@@ -421,6 +421,25 @@ tasks:
             | sed "s|^|$vm: |"
         done
 
+  # Recovers builder VMs after an interrupted or hung build: restarts the podman API service (a hung
+  # build otherwise keeps it blocked), removes leftover build containers and uploaded build contexts.
+  # Images and pushed tags are kept. Don't run it while a farm build is in progress.
+  farm-reset:
+    desc: Restart podman and remove leftover build containers on the farm builder VMs
+    preconditions:
+      - sh: '[ -f "{{.BUILDER_SSH_KEY}}" ]'
+        msg: "SSH key {{.BUILDER_SSH_KEY}} not found (set BUILDER_SSH_KEY in .env)"
+    cmds:
+      - |
+        for vm in {{.AMD64_BUILDER_VM}} {{.ARM64_BUILDER_VM}}; do
+          echo "Resetting $vm"
+          ssh -o BatchMode=yes -i {{.BUILDER_SSH_KEY}} "$vm" \
+            'systemctl --user restart podman.service \
+              && podman ps -a --external -q | xargs -r podman rm --force >/dev/null \
+              && rm -rf /var/tmp/libpod_builder* \
+              && echo "  done, $(podman ps -a --external -q | wc -l) build containers left"'
+        done
+
   # podman 4.9's `podman farm build` builds fine but its push is broken ("Invalid image name
   # ...@@unknown-digest@@"), so the farm's connections are driven directly: each VM builds its own
   # platform natively and pushes a per-arch tag (<image>-amd64/-arm64), in parallel; then a manifest
@@ -455,6 +474,7 @@ tasks:
     dir: nuxeo
     deps: [farm-setup]
     cmds:
+      # No .containerignore in nuxeo/: with --secret, podman 4.9 remote builds then hang mid-build
       - echo "Building & pushing multi-arch base image on farm {{.FARM_NAME}} -- {{.PODMAN_BASE_IMAGE}}"
       - mvn install {{.MAVEN_COMMON}} -Drevision={{.REVISION}} -Ddocker.skip=true
       - task: _farm-build-push
