@@ -32,7 +32,7 @@ task build-base DOCKER_IMAGE_TAG=2025.9
 | `DOCKER_BASE_IMAGE_NAME` | `$DOCKER_REGISTRY/nuxeo` | Base image name (without tag) |
 | `DOCKER_BENCHMARK_IMAGE_NAME` | `$DOCKER_REGISTRY/nuxeo-benchmark` | Benchmark image name |
 | `DOCKER_IMAGE_TAG` | `2025.x` | Image tag |
-| `REVISION` | `2025.9-SNAPSHOT` | Maven revision |
+| `REVISION` | the root pom's `<version>` | Nuxeo version, extra tag of the base image; `build-base` refuses one that differs from the pom (change the version with `mvn versions:set`) |
 | `DOCKER_PLATFORM` | native (see below) | Platform `build-*` tasks build for; override to cross-build via QEMU emulation, e.g. `DOCKER_PLATFORM=linux/amd64` |
 | `DOCKER_PLATFORMS` | `linux/amd64,linux/arm64` | Comma-separated platform list for the `*-multiarch` tasks |
 | `TARGETPLATFORM` | same as `DOCKER_PLATFORM` | Platform for `push-*-platform` tasks; independently overridable |
@@ -137,7 +137,7 @@ task nuxeo-rm
 
 **Build and publish a release:**
 ```sh
-task build-and-push DOCKER_IMAGE_TAG=2025.9 REVISION=2025.9
+task build-and-push DOCKER_IMAGE_TAG=2025.9   # once the poms' version is 2025.9
 ```
 
 **Cross-build for a different platform (e.g. amd64 on Apple Silicon, via QEMU emulation):**

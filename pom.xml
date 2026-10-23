@@ -155,6 +155,11 @@
     <quartz.version>2.5.2</quartz.version>
     <mockito.version>5.23.0</mockito.version>
     <byte-buddy.version>1.18.8</byte-buddy.version>
+
+    <!-- Where maven-public-lts is read from; override with -Dnuxeo.public-lts.repository.url=…. The deploy profile
+         publishes to -Ddistribution.id/-Ddistribution.url/-Ddistribution.snapshots.url, which have no default
+         (docker/: DISTRIBUTION_* in .env); the id names the <server> holding the credentials. -->
+    <nuxeo.public-lts.repository.url>https://packages.nuxeo.com/repository/maven-public-lts/</nuxeo.public-lts.repository.url>
   </properties>
 
   <dependencyManagement>
@@ -5464,9 +5469,13 @@
         </modules>
         <distributionManagement>
             <repository>
-                <id>${DISTRIBUTION_ID}</id>
-                <url>${DISTRIBUTION_URL}</url>
+                <id>${distribution.id}</id>
+                <url>${distribution.url}</url>
             </repository>
+            <snapshotRepository>
+                <id>${distribution.id}</id>
+                <url>${distribution.snapshots.url}</url>
+            </snapshotRepository>
         </distributionManagement>
     </profile>
 
@@ -5505,7 +5514,7 @@
   <repositories>
     <repository>
       <id>maven-public-lts</id>
-      <url>https://packages.nuxeo.com/repository/maven-public-lts/</url>
+      <url>${nuxeo.public-lts.repository.url}</url>
       <releases>
         <enabled>true</enabled>
       </releases>
@@ -5519,7 +5528,7 @@
   <pluginRepositories>
     <pluginRepository>
       <id>maven-public-lts</id>
-      <url>https://packages.nuxeo.com/repository/maven-public-lts/</url>
+      <url>${nuxeo.public-lts.repository.url}</url>
       <releases>
         <enabled>true</enabled>
       </releases>

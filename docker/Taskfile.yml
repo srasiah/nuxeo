@@ -42,10 +42,15 @@ vars:
     sh: |
       v=$(grep -m1 '^TARGETPLATFORM=' .env 2>/dev/null | cut -d= -f2-)
       echo "${TARGETPLATFORM:-${v:-{{.DOCKER_PLATFORM}}}}"
+  # The Nuxeo version being built: the root pom's <version> (nothing reads -Drevision; change the version
+  # in the poms, e.g. mvn versions:set). REVISION may still be set, but build-base, which tags the image
+  # with it, refuses one that differs from the pom.
+  POM_VERSION:
+    sh: sed -n 's:^  <version>\(.*\)</version>$:\1:p' ../pom.xml | head -1
   REVISION:
     sh: |
       v=$(grep -m1 '^REVISION=' .env 2>/dev/null | cut -d= -f2-)
-      echo "${REVISION:-${v:-2025.9-SNAPSHOT}}"
+      echo "${REVISION:-${v:-{{.POM_VERSION}}}}"
   BUILD_TAG:
     sh: |
       v=$(grep -m1 '^BUILD_TAG=' .env 2>/dev/null | cut -d= -f2-)
@@ -58,6 +63,10 @@ vars:
     sh: |
       v=$(grep -m1 '^DISTRIBUTION_URL=' .env 2>/dev/null | cut -d= -f2-)
       echo "${DISTRIBUTION_URL:-$v}"
+  DISTRIBUTION_SNAPSHOTS_URL:
+    sh: |
+      v=$(grep -m1 '^DISTRIBUTION_SNAPSHOTS_URL=' .env 2>/dev/null | cut -d= -f2-)
+      echo "${DISTRIBUTION_SNAPSHOTS_URL:-$v}"
   # SSH destinations ([user@]host) of the native builder VMs used by the podman farm tasks.
   AMD64_BUILDER_VM:
     sh: |
@@ -176,17 +185,23 @@ tasks:
     dir: ..
     cmds:
       - echo "Building Nuxeo distribution..."
-      - mvn install -Pdistrib -DskipTests -Drevision={{.REVISION}}
+      - mvn install -Pdistrib -DskipTests
       - echo "Distribution build complete"
 
   deploy:
     desc: Deploy Nuxeo distribution to registry
     dir: ..
+    preconditions:
+      - sh: '[ -n "{{.DISTRIBUTION_ID}}" ] && [ -n "{{.DISTRIBUTION_URL}}" ] && [ -n "{{.DISTRIBUTION_SNAPSHOTS_URL}}" ]'
+        msg: "Set DISTRIBUTION_ID, DISTRIBUTION_URL and DISTRIBUTION_SNAPSHOTS_URL (in .env, see .env.example)"
     cmds:
       - echo "Deploying Nuxeo distribution..."
+      # the root pom's deploy profile has no default repository: DISTRIBUTION_* name it
       - |
-        mvn clean deploy -Pdeploy -DskipTests -Drevision={{.REVISION}} \
-          -DDISTRIBUTION_ID={{.DISTRIBUTION_ID}} -DDISTRIBUTION_URL={{.DISTRIBUTION_URL}}
+        mvn clean deploy -Pdeploy -DskipTests \
+          -Ddistribution.id={{.DISTRIBUTION_ID}} \
+          -Ddistribution.url={{.DISTRIBUTION_URL}} \
+          -Ddistribution.snapshots.url={{.DISTRIBUTION_SNAPSHOTS_URL}}
       - echo "Deployment complete"
 
   build-parent:
@@ -194,11 +209,15 @@ tasks:
     dir: ../parent
     cmds:
       - echo "Building nuxeo-parent..."
-      - mvn clean install -DskipTests -Drevision={{.REVISION}}
+      - mvn clean install -DskipTests
       - echo "nuxeo-parent build complete"
 
   build-base:
     desc: Build nuxeo base image (skips distrib rebuild)
+    preconditions:
+      - sh: '[ "{{.REVISION}}" = "{{.POM_VERSION}}" ]'
+        msg: "REVISION={{.REVISION}} but the root pom is {{.POM_VERSION}}: the image would be tagged with a version it
+          does not contain. Unset REVISION (it defaults to the pom's version) or change the poms' version."
     dir: nuxeo
     cmds:
       - echo "Building base image with {{.CONTAINER_ENGINE_NAME}} -- {{.DOCKER_BASE_IMAGE}}"
@@ -209,7 +228,7 @@ tasks:
       # podman Maven only prepares the build context (-Ddocker.skip=true) and podman builds the image.
       - |
         if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
-          mvn install {{.MAVEN_COMMON}} -P{{.ARCH_PROFILE}} -Drevision={{.REVISION}} -Ddocker.skip=true
+          mvn install {{.MAVEN_COMMON}} -P{{.ARCH_PROFILE}} -Ddocker.skip=true
           {{.CONTAINER_ENGINE}} build \
             --platform {{.DOCKER_PLATFORM}} \
             --tag {{.PODMAN_BASE_IMAGE}} \
@@ -223,7 +242,6 @@ tasks:
         else
           mvn install {{.MAVEN_COMMON}} \
             -P{{.ARCH_PROFILE}} \
-            -Drevision={{.REVISION}} \
             -Ddocker.platforms={{.DOCKER_PLATFORM}} \
             -Ddocker.image.name={{.DOCKER_BASE_IMAGE}}
           {{.CONTAINER_ENGINE}} tag {{.DOCKER_BASE_IMAGE}} {{.DOCKER_BASE_IMAGE_NAME}}:{{.REVISION}}
@@ -249,7 +267,7 @@ tasks:
       # See build-base: with podman, Maven only prepares the build context and podman builds the image.
       - |
         if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
-          mvn install {{.MAVEN_COMMON}} -P{{.ARCH_PROFILE}} -Drevision={{.REVISION}} -Ddocker.skip=true
+          mvn install {{.MAVEN_COMMON}} -P{{.ARCH_PROFILE}} -Ddocker.skip=true
           {{.CONTAINER_ENGINE}} build \
             --platform {{.DOCKER_PLATFORM}} \
             --tag {{.PODMAN_BENCHMARK_IMAGE}} \
@@ -261,7 +279,6 @@ tasks:
         else
           mvn install {{.MAVEN_COMMON}} \
             -P{{.ARCH_PROFILE}} \
-            -Drevision={{.REVISION}} \
             -Ddocker.base.image={{.DOCKER_BASE_IMAGE}} \
             -Ddocker.platforms={{.DOCKER_PLATFORM}} \
             -Ddocker.buildx.enabled=true \
@@ -314,7 +331,7 @@ tasks:
       - |
         unset DOCKER_REGISTRY
         if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
-          mvn install {{.MAVEN_COMMON}} -Drevision={{.REVISION}} -Ddocker.skip=true
+          mvn install {{.MAVEN_COMMON}} -Ddocker.skip=true
           # --manifest appends to an existing list, so drop any previous one (or a same-named image);
           # `podman rmi` alone fails on lists created by `build --manifest` ("tag not known")
           # --pull=always: otherwise podman reuses a locally stored FROM image of another arch for every platform
@@ -331,7 +348,6 @@ tasks:
           {{.CONTAINER_ENGINE}} manifest push --all {{.PODMAN_BASE_IMAGE}} docker://{{.PODMAN_BASE_IMAGE}}
         else
           mvn install docker:push {{.MAVEN_COMMON}} \
-            -Drevision={{.REVISION}} \
             -Ddocker.platforms={{.DOCKER_PLATFORMS}} \
             -Ddocker.image.name={{.DOCKER_BASE_IMAGE}}
         fi
@@ -348,7 +364,7 @@ tasks:
       - |
         unset DOCKER_REGISTRY
         if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
-          mvn install {{.MAVEN_COMMON}} -Drevision={{.REVISION}} -Ddocker.skip=true
+          mvn install {{.MAVEN_COMMON}} -Ddocker.skip=true
           {{.CONTAINER_ENGINE}} manifest rm {{.PODMAN_BENCHMARK_IMAGE}} 2>/dev/null || {{.CONTAINER_ENGINE}} rmi {{.PODMAN_BENCHMARK_IMAGE}} 2>/dev/null || true
           {{.CONTAINER_ENGINE}} build \
             --platform {{.DOCKER_PLATFORMS}} \
@@ -362,7 +378,6 @@ tasks:
           {{.CONTAINER_ENGINE}} manifest push --all {{.PODMAN_BENCHMARK_IMAGE}} docker://{{.PODMAN_BENCHMARK_IMAGE}}
         else
           mvn install docker:push {{.MAVEN_COMMON}} \
-            -Drevision={{.REVISION}} \
             -Ddocker.base.image={{.DOCKER_BASE_IMAGE}} \
             -Ddocker.platforms={{.DOCKER_PLATFORMS}} \
             -Ddocker.buildx.enabled=true \
@@ -476,7 +491,7 @@ tasks:
     cmds:
       # No .containerignore in nuxeo/: with --secret, podman 4.9 remote builds then hang mid-build
       - echo "Building & pushing multi-arch base image on farm {{.FARM_NAME}} -- {{.PODMAN_BASE_IMAGE}}"
-      - mvn install {{.MAVEN_COMMON}} -Drevision={{.REVISION}} -Ddocker.skip=true
+      - mvn install {{.MAVEN_COMMON}} -Ddocker.skip=true
       - task: _farm-build-push
         vars:
           DIR: nuxeo
@@ -494,7 +509,7 @@ tasks:
     deps: [build-and-push-base-farm]
     cmds:
       - echo "Building & pushing multi-arch benchmark image on farm {{.FARM_NAME}} -- {{.PODMAN_BENCHMARK_IMAGE}}"
-      - mvn install {{.MAVEN_COMMON}} -Drevision={{.REVISION}} -Ddocker.skip=true
+      - mvn install {{.MAVEN_COMMON}} -Ddocker.skip=true
       # --pull=always (in _farm-build-push): each VM pulls its arch of the base image just pushed
       - task: _farm-build-push
         vars:
@@ -634,6 +649,7 @@ tasks:
       - printf '%-30s %s\n' "Detected Platform:" "{{.DOCKER_PLATFORM}}"
       - printf '%-30s %s\n' "Architecture Profile:" "{{.ARCH_PROFILE}}"
       - printf '%-30s %s\n' "REVISION:" "{{.REVISION}}"
+      - printf '%-30s %s\n' "POM_VERSION:" "{{.POM_VERSION}}"
       - printf '%-30s %s\n' "BUILD_TAG:" "{{.BUILD_TAG}}"
       - printf '%-30s %s\n' "SCM_REF:" "{{.SCM_REF}}"
       - printf '%-30s %s\n' "VERSION:" "{{.VERSION}}"
@@ -641,8 +657,9 @@ tasks:
       - printf '%-30s %s\n' "JAVA_HOME:" "{{.JAVA_HOME}}"
       - printf '%-30s %s\n' "MAVEN_OPTS:" "{{.MAVEN_OPTS}}"
       - printf '%-30s %s\n' "MAVEN_COMMON:" "{{.MAVEN_COMMON}}"
-      - printf '%-30s %s\n' "DISTRIBUTION_ID:" "{{.DISTRIBUTION_ID}}"
-      - printf '%-30s %s\n' "DISTRIBUTION_URL:" "{{.DISTRIBUTION_URL}}"
+      - printf '%-30s %s\n' "DISTRIBUTION_ID:" "{{.DISTRIBUTION_ID | default "(not set)"}}"
+      - printf '%-30s %s\n' "DISTRIBUTION_URL:" "{{.DISTRIBUTION_URL | default "(not set)"}}"
+      - printf '%-30s %s\n' "DISTRIBUTION_SNAPSHOTS_URL:" "{{.DISTRIBUTION_SNAPSHOTS_URL | default "(not set)"}}"
       - echo ""
       - echo "{{.CONTAINER_ENGINE_NAME}} Status:"
       - |
