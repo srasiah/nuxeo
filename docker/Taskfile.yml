@@ -511,11 +511,13 @@ tasks:
       - echo "Building & pushing multi-arch benchmark image on farm {{.FARM_NAME}} -- {{.PODMAN_BENCHMARK_IMAGE}}"
       - mvn install {{.MAVEN_COMMON}} -Ddocker.skip=true
       # --pull=always (in _farm-build-push): each VM pulls its arch of the base image just pushed
+      # --no-cache: the packages come in through bind mounts, so a changed zip may not invalidate the cached install step
       - task: _farm-build-push
         vars:
           DIR: nuxeo-benchmark
           IMAGE: '{{.PODMAN_BENCHMARK_IMAGE}}'
           BUILD_ARGS: >-
+            --no-cache
             --build-arg BASE_IMAGE={{.PODMAN_BASE_IMAGE}}
             --build-arg BUILD_TAG={{.BUILD_TAG}}-nuxeo-nuxeo-benchmark
             --build-arg SCM_REF={{.SCM_REF}}
