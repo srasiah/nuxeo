@@ -96,7 +96,7 @@ task info       # print current configuration and container engine status
 | `task build-and-push-benchmark-farm` | Build and push multi-arch base and benchmark images natively on the builder VMs (recommended) |
 | `task build-and-push-base-farm` | Build and push the multi-arch base image natively on the builder VMs |
 | `task farm-setup` | (Re)create the `nuxeo-farm` podman farm from `AMD64_BUILDER_VM` / `ARM64_BUILDER_VM` (run automatically by the tasks above) |
-| `task farm-login` | Log both builder VMs in to docker.io with `DOCKER_USERNAME` / `DOCKER_TOKEN`, persisting across reboots (run by `farm-setup`) |
+| `task farm-login` | Log both builder VMs in to the image registry with `DOCKER_USERNAME` / `DOCKER_TOKEN`, persisting across reboots (run by `farm-setup`) |
 
 ### Container management
 
@@ -183,11 +183,11 @@ One-time setup:
    systemctl --user enable --now podman.socket
    sudo loginctl enable-linger $USER
    ```
-5. Set `DOCKER_USERNAME` and `DOCKER_TOKEN` (a Docker Hub access token with Read & Write scope)
-   in `.env`.
+5. Set `DOCKER_USERNAME` and `DOCKER_TOKEN` (a login with push rights on the image registry) in
+   `.env`.
 6. Check the connections and registry login: `task farm-setup`.
 
-`farm-login` (run by `farm-setup`, so before every farm build) logs each VM in to docker.io and
+`farm-login` (run by `farm-setup`, so before every farm build) logs each VM in to the registry in the image name and
 saves it to `~/.config/containers/auth.json`. Podman's default `/run/user/<uid>` auth file is wiped
 on reboot, so `farm-login` deletes it once the new login succeeds. The password is sent over SSH on
 stdin and never appears on a command line. Without `DOCKER_USERNAME` / `DOCKER_TOKEN` in `.env`,

@@ -412,26 +412,27 @@ tasks:
       - podman farm list
       - task: farm-login
 
-  # Logs each builder VM in to docker.io with DOCKER_USERNAME/DOCKER_TOKEN from .env (a Docker Hub
-  # access token). The default auth file under /run/user is wiped on reboot, so the login goes to
+  # Logs each builder VM in to the registry the images go to, with DOCKER_USERNAME/DOCKER_TOKEN from
+  # .env. The default auth file under /run/user is wiped on reboot, so the login goes to
   # ~/.config/containers/auth.json, which podman falls back to; the runtime file is removed since it would
   # take precedence. The password is read from the environment and sent on stdin, never on a command line.
   farm-login:
-    desc: Log the podman farm builder VMs in to docker.io (persists across reboots)
+    desc: Log the podman farm builder VMs in to the image registry (persists across reboots)
     preconditions:
       - sh: '[ -f "{{.BUILDER_SSH_KEY}}" ]'
         msg: "SSH key {{.BUILDER_SSH_KEY}} not found (set BUILDER_SSH_KEY in .env)"
     cmds:
       - |
         if [ -z "$DOCKER_USERNAME" ] || [ -z "$DOCKER_TOKEN" ]; then
-          echo "DOCKER_USERNAME/DOCKER_TOKEN not set in .env, keeping the builders' existing docker.io login"
+          echo "DOCKER_USERNAME/DOCKER_TOKEN not set in .env, keeping the builders' existing registry login"
           exit 0
         fi
         set -o pipefail
+        registry=$(echo "{{.PODMAN_BASE_IMAGE}}" | cut -d/ -f1)
         for vm in {{.AMD64_BUILDER_VM}} {{.ARM64_BUILDER_VM}}; do
           printf '%s' "$DOCKER_TOKEN" | ssh -o BatchMode=yes -i {{.BUILDER_SSH_KEY}} "$vm" \
             "mkdir -p ~/.config/containers \
-              && podman login --authfile ~/.config/containers/auth.json -u '$DOCKER_USERNAME' --password-stdin docker.io \
+              && podman login --authfile ~/.config/containers/auth.json -u '$DOCKER_USERNAME' --password-stdin '$registry' \
               && rm -f \${XDG_RUNTIME_DIR:-/run/user/\$(id -u)}/containers/auth.json" 2>&1 \
             | sed "s|^|$vm: |"
         done
