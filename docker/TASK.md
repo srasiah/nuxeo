@@ -8,7 +8,6 @@ Build, push, and manage Nuxeo container images using Maven and Docker/Podman.
 - Docker or Podman
 - Maven 3.x
 - Java (JDK) — `JAVA_HOME` is auto-detected from `javac` on `$PATH`
-- GNU coreutils (`readlink -f`) — on macOS: `brew install coreutils`
 
 ## Configuration
 
@@ -64,7 +63,6 @@ task info       # print current configuration and container engine status
 
 | Task | Description |
 |---|---|
-| `task` | Build both base and benchmark images (default) |
 | `task build-distrib` | Build Nuxeo Maven distribution (required before first image build) |
 | `task build-parent` | Build `nuxeo-parent` POM only |
 | `task build-base` | Build `nuxeo` base image (uses existing distribution) |
@@ -95,7 +93,7 @@ task info       # print current configuration and container engine status
 |---|---|
 | `task build-and-push-benchmark-farm` | Build and push multi-arch base and benchmark images natively on the builder VMs (recommended) |
 | `task build-and-push-base-farm` | Build and push the multi-arch base image natively on the builder VMs |
-| `task farm-setup` | (Re)create the `nuxeo-farm` podman farm from `AMD64_BUILDER_VM` / `ARM64_BUILDER_VM` (run automatically by the tasks above) |
+| `task farm-setup` | (Re)create the `nuxeo-farm-*` podman connections to `AMD64_BUILDER_VM` / `ARM64_BUILDER_VM` (run automatically by the tasks above) |
 | `task farm-login` | Log both builder VMs in to the image registry with `DOCKER_USERNAME` / `DOCKER_TOKEN`, persisting across reboots (run by `farm-setup`) |
 
 ### Container management
@@ -158,7 +156,7 @@ task build-and-push-benchmark-multiarch DOCKER_PLATFORMS=linux/amd64,linux/arm64
 on its own builder VM, so nothing is emulated. Maven runs locally to prepare the build context,
 podman uploads it to each VM over SSH (no repo clone needed on the VMs). Each VM pushes its image
 as `<tag>-amd64` / `<tag>-arm64`, and a manifest list combining them is pushed as `<tag>`. (The
-tasks drive the farm's connections directly because `podman farm build`'s push is broken in
+tasks drive the builders' connections directly because `podman farm build`'s push is broken in
 podman 4.9.)
 ```sh
 task build-and-push-benchmark-farm   # base + benchmark, all platforms

@@ -98,7 +98,7 @@ vars:
   CONTAINER_ENGINE:
     sh: command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo "docker"
   CONTAINER_ENGINE_NAME:
-    sh: basename $(command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo docker)
+    sh: basename {{.CONTAINER_ENGINE}}
 
   # Derived image refs — always computed from other vars.
   DOCKER_BASE_IMAGE: "{{.DOCKER_BASE_IMAGE_NAME}}:{{.DOCKER_IMAGE_TAG}}"
@@ -106,28 +106,25 @@ vars:
 
   # Fully qualified refs for podman, which stores unqualified names under localhost/ instead of
   # resolving them to docker.io like Docker does (e.g. srasiah/nuxeo -> docker.io/srasiah/nuxeo).
+  QUALIFY_IMAGE: |
+    case "$n" in
+      */*) case "${n%%/*}" in *.*|*:*|localhost) echo "$n" ;; *) echo "docker.io/$n" ;; esac ;;
+      *) echo "docker.io/library/$n" ;;
+    esac
   PODMAN_BASE_IMAGE:
     sh: |
       n="{{.DOCKER_BASE_IMAGE}}"
-      case "$n" in
-        */*) case "${n%%/*}" in *.*|*:*|localhost) echo "$n" ;; *) echo "docker.io/$n" ;; esac ;;
-        *) echo "docker.io/library/$n" ;;
-      esac
+      {{.QUALIFY_IMAGE}}
   PODMAN_BENCHMARK_IMAGE:
     sh: |
       n="{{.DOCKER_BENCHMARK_IMAGE}}"
-      case "$n" in
-        */*) case "${n%%/*}" in *.*|*:*|localhost) echo "$n" ;; *) echo "docker.io/$n" ;; esac ;;
-        *) echo "docker.io/library/$n" ;;
-      esac
+      {{.QUALIFY_IMAGE}}
 
   # Set DOCKER_HOST for Maven Docker plugin compatibility.
-  # For Docker, preserves an existing $DOCKER_HOST if already set (mirrors Makefile `ifndef DOCKER_HOST`).
-  # Note: readlink -f requires GNU coreutils on macOS (brew install coreutils).
+  # For Docker, preserves an existing $DOCKER_HOST if already set.
   DOCKER_HOST:
     sh: |
-      ENGINE=$(basename $(command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo docker))
-      if [ "$ENGINE" = "podman" ]; then
+      if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
         # podman machine (macOS/Windows) exposes a host-side forwarding socket, distinct
         # from Host.RemoteSocket.Path which reports the path inside the VM. Prefer the
         # machine socket; fall back to Host.RemoteSocket.Path for native Linux podman.
@@ -169,17 +166,12 @@ env:
   # Enable BuildKit for Docker builds; not needed for Podman.
   DOCKER_BUILDKIT:
     sh: |
-      ENGINE=$(basename $(command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo docker))
-      [ "$ENGINE" = "docker" ] && echo "1" || echo ""
+      [ "{{.CONTAINER_ENGINE_NAME}}" = "docker" ] && echo "1" || echo ""
   # Mirror Makefile's `GIT_APT_TOKEN := $(GIT_PAT_TOKEN)` alias.
   GIT_APT_TOKEN:
     sh: echo "${GIT_PAT_TOKEN:-}"
 
 tasks:
-#  default:
-#    desc: Build both base and benchmark images
-#    deps: [build-base, build-benchmark]
-
   build-distrib:
     desc: Build Nuxeo distribution (prerequisite for images)
     dir: ..
@@ -265,11 +257,13 @@ tasks:
       - echo "  Base image -- {{.DOCKER_BASE_IMAGE}}"
       - echo "  Docker Host -- {{.DOCKER_HOST}}"
       # See build-base: with podman, Maven only prepares the build context and podman builds the image.
+      # --no-cache: the packages come in through bind mounts, so a changed zip may not invalidate the cached install step
       - |
         if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
           mvn install {{.MAVEN_COMMON}} -P{{.ARCH_PROFILE}} -Ddocker.skip=true
           {{.CONTAINER_ENGINE}} build \
             --platform {{.DOCKER_PLATFORM}} \
+            --no-cache \
             --tag {{.PODMAN_BENCHMARK_IMAGE}} \
             --build-arg BASE_IMAGE={{.PODMAN_BASE_IMAGE}} \
             --build-arg BUILD_TAG={{.BUILD_TAG}}-nuxeo-nuxeo-benchmark \
@@ -369,6 +363,7 @@ tasks:
           {{.CONTAINER_ENGINE}} build \
             --platform {{.DOCKER_PLATFORMS}} \
             --pull=always \
+            --no-cache \
             --manifest {{.PODMAN_BENCHMARK_IMAGE}} \
             --build-arg BASE_IMAGE={{.PODMAN_BASE_IMAGE}} \
             --build-arg BUILD_TAG={{.BUILD_TAG}}-nuxeo-nuxeo-benchmark \
@@ -387,29 +382,27 @@ tasks:
       - task: clean-orphans
         ignore_error: true
 
-  # podman farm builds each platform natively on its builder VM (no QEMU emulation), pushes the
-  # per-arch images, then pushes a manifest list combining them. Maven only prepares the build
-  # contexts locally; podman sends them to the VMs. --local=false keeps this host out of the farm.
+  # The *-farm tasks build each platform natively on its builder VM (no QEMU emulation), push the
+  # per-arch images, then push a manifest list combining them. Maven only prepares the build
+  # contexts locally; podman sends them to the VMs over the connections set up here.
   farm-setup:
-    desc: (Re)create the podman farm from AMD64_BUILDER_VM and ARM64_BUILDER_VM in .env
+    desc: (Re)create the podman connections to AMD64_BUILDER_VM and ARM64_BUILDER_VM in .env
     preconditions:
       - sh: '[ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]'
-        msg: "podman farm requires podman"
+        msg: "The *-farm tasks require podman"
       - sh: '[ -n "{{.AMD64_BUILDER_VM}}" ] && [ -n "{{.ARM64_BUILDER_VM}}" ]'
         msg: "Set AMD64_BUILDER_VM and ARM64_BUILDER_VM ([user@]host) in .env"
       - sh: '[ -f "{{.BUILDER_SSH_KEY}}" ]'
         msg: "SSH key {{.BUILDER_SSH_KEY}} not found (set BUILDER_SSH_KEY in .env)"
     cmds:
       - |
-        podman farm rm {{.FARM_NAME}} 2>/dev/null || true
         for arch in amd64 arm64; do
           podman system connection rm {{.FARM_NAME}}-$arch 2>/dev/null || true
         done
         # Without --socket-path, podman asks each VM over SSH for its podman socket
         podman system connection add --identity {{.BUILDER_SSH_KEY}} {{.FARM_NAME}}-amd64 ssh://{{.AMD64_BUILDER_VM}}
         podman system connection add --identity {{.BUILDER_SSH_KEY}} {{.FARM_NAME}}-arm64 ssh://{{.ARM64_BUILDER_VM}}
-        podman farm create {{.FARM_NAME}} {{.FARM_NAME}}-amd64 {{.FARM_NAME}}-arm64
-      - podman farm list
+      - podman system connection list
       - task: farm-login
 
   # Logs each builder VM in to the registry the images go to, with DOCKER_USERNAME/DOCKER_TOKEN from
@@ -457,7 +450,7 @@ tasks:
         done
 
   # podman 4.9's `podman farm build` builds fine but its push is broken ("Invalid image name
-  # ...@@unknown-digest@@"), so the farm's connections are driven directly: each VM builds its own
+  # ...@@unknown-digest@@"), so the builders' connections are driven directly: each VM builds its own
   # platform natively and pushes a per-arch tag (<image>-amd64/-arm64), in parallel; then a manifest
   # list referencing both is created locally and pushed under the plain tag.
   _farm-build-push:
@@ -474,6 +467,8 @@ tasks:
             podman --connection $conn build --platform linux/$arch --pull=always \
               --tag {{.IMAGE}}-$arch {{.BUILD_ARGS}} . 2>&1 | sed "s|^|[$arch] |"
             podman --connection $conn push {{.IMAGE}}-$arch docker://{{.IMAGE}}-$arch 2>&1 | sed "s|^|[$arch] |"
+            # Frees the images earlier builds left untagged; the label spares other projects' images on the VMs
+            podman --connection $conn image prune --force --filter label=org.nuxeo.version 2>&1 | sed "s|^|[$arch] |" || true
           ) &
           pids="$pids $!"
         done
@@ -537,7 +532,7 @@ tasks:
     desc: Push base image to registry
     cmds:
       - echo "Pushing base image {{.DOCKER_BASE_IMAGE}}..."
-      - "{{.CONTAINER_ENGINE}} push {{.DOCKER_BASE_IMAGE}}"
+      - "{{.CONTAINER_ENGINE}} push {{.PODMAN_BASE_IMAGE}}"
       - echo "Base image pushed successfully"
 
   push-base-platform:
@@ -554,7 +549,7 @@ tasks:
     desc: Push benchmark image to registry
     cmds:
       - echo "Pushing benchmark image {{.DOCKER_BENCHMARK_IMAGE}}..."
-      - "{{.CONTAINER_ENGINE}} push {{.DOCKER_BENCHMARK_IMAGE}}"
+      - "{{.CONTAINER_ENGINE}} push {{.PODMAN_BENCHMARK_IMAGE}}"
       - echo "Benchmark image pushed successfully"
 
   push-benchmark-platform:
@@ -604,11 +599,11 @@ tasks:
     desc: Run a nuxeo container
     cmds:
       - |
-        if {{.CONTAINER_ENGINE}} ps -a --format '{{"{{"}}.Names{{"}}"}}' | grep -wq nuxeo; then
+        if {{.CONTAINER_ENGINE}} ps -a --format '{{"{{"}}.Names{{"}}"}}' | grep -qx nuxeo; then
           echo "Container 'nuxeo' already exists. Use 'task nuxeo-rm' to remove it first."
         else
           echo "Starting nuxeo container from {{.DOCKER_BENCHMARK_IMAGE}}..."
-          {{.CONTAINER_ENGINE}} run -d --name nuxeo -p 8080:8080 {{.DOCKER_BENCHMARK_IMAGE}}
+          {{.CONTAINER_ENGINE}} run -d --name nuxeo -p 8080:8080 {{.PODMAN_BENCHMARK_IMAGE}}
           echo "Nuxeo is running at http://localhost:8080"
         fi
 
