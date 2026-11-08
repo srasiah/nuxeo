@@ -17,16 +17,4 @@ LABEL org.nuxeo.benchmark.version=$VERSION
 LABEL org.label-schema.name="Nuxeo Benchmark Server"
 LABEL org.opencontainers.image.title="Nuxeo Benchmark Server"
 
-
-# Install offline packages from both sources via bind mounts, so the zips never
-# end up baked into an image layer. ./marketplace holds optional local overrides
-# (may be empty); ./target/packages is populated by `mvn dependency:copy-dependencies`.
-# /tmp/local-packages must be created in this same RUN: the base image declares
-# VOLUME /tmp, so anything a previous RUN wrote under /tmp is discarded.
-RUN --mount=type=bind,source=./marketplace,target=/tmp/marketplace \
-    --mount=type=bind,source=./target/packages,target=/tmp/target-packages \
-    mkdir -p /tmp/local-packages \
- && { cp /tmp/marketplace/*.zip /tmp/local-packages/ 2>/dev/null || true; } \
- && cp /tmp/target-packages/*.zip /tmp/local-packages/ \
- && /install-packages.sh --offline /tmp/local-packages/*.zip \
- && rm -rf /tmp/local-packages
+RUN --mount=type=bind,source=./target/packages,target=/tmp/local-packages /install-packages.sh --offline /tmp/local-packages/*.zip
