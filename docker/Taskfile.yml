@@ -143,7 +143,7 @@ vars:
   JAVA_VERSION:
     sh: |
       v=$(grep -m1 '^JAVA_VERSION=' .env 2>/dev/null | cut -d= -f2-)
-      echo "${JAVA_VERSION:-${v:-current}}"
+      echo "${JAVA_VERSION:-$v}"
 
   # Derive JAVA_HOME from JAVA_VERSION (sdkman path) when set in .env or CLI env.
   # Precedence: JAVA_VERSION (.env / CLI) > inherited JAVA_HOME > fallback to sdkman current.
@@ -158,6 +158,8 @@ vars:
       else
         echo "$HOME/.sdkman/candidates/java/current"
       fi
+  # Set on the command: an env: block loses to a JAVA_HOME already in the shell, and SDKMAN always sets one
+  MVN: JAVA_HOME={{.JAVA_HOME}} mvn
 
 env:
   MAVEN_OPTS: "{{.MAVEN_OPTS}}"
@@ -177,7 +179,7 @@ tasks:
     dir: ..
     cmds:
       - echo "Building Nuxeo distribution..."
-      - mvn install -Pdistrib -DskipTests
+      - '{{.MVN}} install -Pdistrib -DskipTests'
       - echo "Distribution build complete"
 
   deploy:
@@ -190,7 +192,7 @@ tasks:
       - echo "Deploying Nuxeo distribution..."
       # the root pom's deploy profile has no default repository: DISTRIBUTION_* name it
       - |
-        mvn clean deploy -Pdeploy -DskipTests \
+        {{.MVN}} clean deploy -Pdeploy -DskipTests \
           -Ddistribution.id={{.DISTRIBUTION_ID}} \
           -Ddistribution.url={{.DISTRIBUTION_URL}} \
           -Ddistribution.snapshots.url={{.DISTRIBUTION_SNAPSHOTS_URL}}
@@ -201,7 +203,7 @@ tasks:
     dir: ../parent
     cmds:
       - echo "Building nuxeo-parent..."
-      - mvn clean install -DskipTests
+      - '{{.MVN}} clean install -DskipTests'
       - echo "nuxeo-parent build complete"
 
   build-base:
@@ -220,7 +222,7 @@ tasks:
       # podman Maven only prepares the build context (-Ddocker.skip=true) and podman builds the image.
       - |
         if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
-          mvn install {{.MAVEN_COMMON}} -P{{.ARCH_PROFILE}} -Ddocker.skip=true
+          {{.MVN}} install {{.MAVEN_COMMON}} -P{{.ARCH_PROFILE}} -Ddocker.skip=true
           {{.CONTAINER_ENGINE}} build \
             --platform {{.DOCKER_PLATFORM}} \
             --tag {{.PODMAN_BASE_IMAGE}} \
@@ -232,7 +234,7 @@ tasks:
           REF={{.PODMAN_BASE_IMAGE}}
           {{.CONTAINER_ENGINE}} tag "$REF" "${REF%:*}:{{.REVISION}}"
         else
-          mvn install {{.MAVEN_COMMON}} \
+          {{.MVN}} install {{.MAVEN_COMMON}} \
             -P{{.ARCH_PROFILE}} \
             -Ddocker.platforms={{.DOCKER_PLATFORM}} \
             -Ddocker.image.name={{.DOCKER_BASE_IMAGE}}
@@ -260,7 +262,7 @@ tasks:
       # --no-cache: the packages come in through bind mounts, so a changed zip may not invalidate the cached install step
       - |
         if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
-          mvn install {{.MAVEN_COMMON}} -P{{.ARCH_PROFILE}} -Ddocker.skip=true
+          {{.MVN}} install {{.MAVEN_COMMON}} -P{{.ARCH_PROFILE}} -Ddocker.skip=true
           {{.CONTAINER_ENGINE}} build \
             --platform {{.DOCKER_PLATFORM}} \
             --no-cache \
@@ -271,7 +273,7 @@ tasks:
             --build-arg VERSION={{.VERSION}} \
             .
         else
-          mvn install {{.MAVEN_COMMON}} \
+          {{.MVN}} install {{.MAVEN_COMMON}} \
             -P{{.ARCH_PROFILE}} \
             -Ddocker.base.image={{.DOCKER_BASE_IMAGE}} \
             -Ddocker.platforms={{.DOCKER_PLATFORM}} \
@@ -325,7 +327,7 @@ tasks:
       - |
         unset DOCKER_REGISTRY
         if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
-          mvn install {{.MAVEN_COMMON}} -Ddocker.skip=true
+          {{.MVN}} install {{.MAVEN_COMMON}} -Ddocker.skip=true
           # --manifest appends to an existing list, so drop any previous one (or a same-named image);
           # `podman rmi` alone fails on lists created by `build --manifest` ("tag not known")
           # --pull=always: otherwise podman reuses a locally stored FROM image of another arch for every platform
@@ -341,7 +343,7 @@ tasks:
             .
           {{.CONTAINER_ENGINE}} manifest push --all {{.PODMAN_BASE_IMAGE}} docker://{{.PODMAN_BASE_IMAGE}}
         else
-          mvn install docker:push {{.MAVEN_COMMON}} \
+          {{.MVN}} install docker:push {{.MAVEN_COMMON}} \
             -Ddocker.platforms={{.DOCKER_PLATFORMS}} \
             -Ddocker.image.name={{.DOCKER_BASE_IMAGE}}
         fi
@@ -358,7 +360,7 @@ tasks:
       - |
         unset DOCKER_REGISTRY
         if [ "{{.CONTAINER_ENGINE_NAME}}" = "podman" ]; then
-          mvn install {{.MAVEN_COMMON}} -Ddocker.skip=true
+          {{.MVN}} install {{.MAVEN_COMMON}} -Ddocker.skip=true
           {{.CONTAINER_ENGINE}} manifest rm {{.PODMAN_BENCHMARK_IMAGE}} 2>/dev/null || {{.CONTAINER_ENGINE}} rmi {{.PODMAN_BENCHMARK_IMAGE}} 2>/dev/null || true
           {{.CONTAINER_ENGINE}} build \
             --platform {{.DOCKER_PLATFORMS}} \
@@ -372,7 +374,7 @@ tasks:
             .
           {{.CONTAINER_ENGINE}} manifest push --all {{.PODMAN_BENCHMARK_IMAGE}} docker://{{.PODMAN_BENCHMARK_IMAGE}}
         else
-          mvn install docker:push {{.MAVEN_COMMON}} \
+          {{.MVN}} install docker:push {{.MAVEN_COMMON}} \
             -Ddocker.base.image={{.DOCKER_BASE_IMAGE}} \
             -Ddocker.platforms={{.DOCKER_PLATFORMS}} \
             -Ddocker.buildx.enabled=true \
@@ -487,7 +489,7 @@ tasks:
     cmds:
       # No .containerignore in nuxeo/: with --secret, podman 4.9 remote builds then hang mid-build
       - echo "Building & pushing multi-arch base image on farm {{.FARM_NAME}} -- {{.PODMAN_BASE_IMAGE}}"
-      - mvn install {{.MAVEN_COMMON}} -Ddocker.skip=true
+      - '{{.MVN}} install {{.MAVEN_COMMON}} -Ddocker.skip=true'
       - task: _farm-build-push
         vars:
           DIR: nuxeo
@@ -505,7 +507,7 @@ tasks:
     deps: [build-and-push-base-farm]
     cmds:
       - echo "Building & pushing multi-arch benchmark image on farm {{.FARM_NAME}} -- {{.PODMAN_BENCHMARK_IMAGE}}"
-      - mvn install {{.MAVEN_COMMON}} -Ddocker.skip=true
+      - '{{.MVN}} install {{.MAVEN_COMMON}} -Ddocker.skip=true'
       # --pull=always (in _farm-build-push): each VM pulls its arch of the base image just pushed
       # --no-cache: the packages come in through bind mounts, so a changed zip may not invalidate the cached install step
       - task: _farm-build-push
