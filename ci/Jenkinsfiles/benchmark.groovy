@@ -76,6 +76,8 @@ pipeline {
     BRANCH_NAME = "${params.NUXEO_BRANCH.replaceAll('/', '-')}"
     NUXEO_DOCKER_IMAGE_WITH_VERSION = resolveDockerImageVersion("${params.NUXEO_DOCKER_IMAGE}")
     INSTALL_NEEDED_PACKAGES = "${params.INSTALL_NEEDED_PACKAGES}"
+    USE_VERSITYGW = "${params.USE_VERSITYGW == null ? true : params.USE_VERSITYGW}"
+    BENCHMARK_STATUS_CONTEXT = "${USE_VERSITYGW.toBoolean() ? 'benchmark/versitygw-tests' : 'benchmark/tests'}"
     NX_REPLICA_COUNT = "${params.NUXEO_NB_APP_NODE.toInteger()}"
     NX_WORKER_COUNT = "${params.NUXEO_NB_WORKER_NODE.toInteger()}"
 
@@ -111,7 +113,7 @@ pipeline {
       steps {
         container('maven') {
           script {
-            nxGitHub.setStatus(context: 'benchmark/tests', message: 'Benchmark tests', state: 'PENDING', commitSha: env.SCM_REF)
+            nxGitHub.setStatus(context: env.BENCHMARK_STATUS_CONTEXT, message: 'Benchmark tests', state: 'PENDING', commitSha: env.SCM_REF)
             nxK8s.setPodLabels()
           }
         }
@@ -163,7 +165,10 @@ s.close()
           """
           nxWithHelmfileDeployment(namespace: "${BENCHMARK_NAMESPACE}", environment: 'benchmark',
               secrets: [[name: 'platform-tls', namespace: 'platform'], [name: 'instance-clid', namespace: 'platform']],
-              envVars: ["BUCKET_PREFIX=benchmark-tests-${BRANCH_NAME}-BUILD-${BUILD_NUMBER}/"]) {
+              envVars: [
+                "BUCKET_PREFIX=benchmark-tests-${BRANCH_NAME}-BUILD-${BUILD_NUMBER}/",
+                "USE_VERSITYGW=${USE_VERSITYGW}",
+              ]) {
             script {
               try {
                 dir("${GATLING_TESTS_PATH}") {
@@ -175,6 +180,7 @@ s.close()
                   gatling("org.nuxeo.cap.bench.Sim10CreateFolders")
                   gatling("org.nuxeo.cap.bench.Sim20CreateDocuments -Dusers=32")
                   gatling("org.nuxeo.cap.bench.Sim25WaitForAsync")
+                  gatling("org.nuxeo.cap.bench.Sim27SetPreferences -Dusers=32")
                   gatling("org.nuxeo.cap.bench.Sim25BulkUpdateFolders -Dusers=32 -Dduration=180 -Dpause_ms=0")
                   gatling("org.nuxeo.cap.bench.Sim30UpdateDocuments -Dusers=32 -Dduration=180")
                   gatling("org.nuxeo.cap.bench.Sim35WaitForAsync")
@@ -191,6 +197,11 @@ s.close()
                 // Redis is in the Jenkins agent pod. Not in the nuxeo-benchmark namespace and deployment.
                 nxK8s.describePod(namespace: "${CURRENT_NAMESPACE}", pod: "${JENKINS_AGENT_NAME}")
                 nxK8s.getPodLogs(namespace: "${CURRENT_NAMESPACE}", pod: "${JENKINS_AGENT_NAME} -c redis", file: "${namespace}_redis.log")
+                // VersityGW S3 gateway runs in the benchmark namespace
+                if (env.USE_VERSITYGW.toBoolean()) {
+                  nxK8s.describePod(namespace: "${BENCHMARK_NAMESPACE}", pod: 'versitygw')
+                  nxK8s.getPodLogs(namespace: "${BENCHMARK_NAMESPACE}", selector: 'app.kubernetes.io/instance=versitygw', file: "${namespace}_versitygw.log")
+                }
                 // archiveArtifacts doesn't support absolute path so do not use GATLING_TESTS_PATH
                 archiveArtifacts allowEmptyArchive: true, artifacts: 'ftests/nuxeo-server-gatling-tests/target/gatling/**/*'
                 if (params.DEBUG.toBoolean()) {
@@ -213,14 +224,16 @@ s.close()
       environment {
         GAT_REPORT_ARTIFACT_GROUP = 'org.nuxeo.tools'
         GAT_REPORT_ARTIFACT_ID = 'gatling-report'
-        GAT_REPORT_ARTIFACT_VERSION = '6.3'
+        GAT_REPORT_ARTIFACT_VERSION = '6.4'
         GAT_REPORT_ARTIFACT_TYPE = 'jar'
         GAT_REPORT_ARTIFACT_CLASSIFIER = 'capsule-fat'
         GAT_REPORT_ARTIFACT = "${GAT_REPORT_ARTIFACT_ID}-${GAT_REPORT_ARTIFACT_VERSION}-${GAT_REPORT_ARTIFACT_CLASSIFIER}.${GAT_REPORT_ARTIFACT_TYPE}"
         GAT_REPORT_ARTIFACT_DIR = "${GATLING_TESTS_PATH}/target"
         GAT_REPORT_ARTIFACT_FULL_NAME = "${GAT_REPORT_ARTIFACT_GROUP}:${GAT_REPORT_ARTIFACT_ID}:${GAT_REPORT_ARTIFACT_VERSION}:${GAT_REPORT_ARTIFACT_TYPE}:${GAT_REPORT_ARTIFACT_CLASSIFIER}"
 
-        JAVA_MODULES_ARGLINE = '--add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED'
+        // --add-opens java.base/java.lang required since gatling-report 6.4 to read Gatling 3.13+'s binary
+        // simulation.log format (see SimulationParserV4 in gatling-report)
+        JAVA_MODULES_ARGLINE = '--add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED'
         MUSTACHE_TEMPLATE = "${GATLING_TESTS_PATH}/target/report-template.mustache"
       }
       steps {
@@ -245,7 +258,7 @@ s.close()
               sh 'mv target/gatling/* ${REPORT_PATH}'
               // build stats
               sh 'java ${JAVA_MODULES_ARGLINE} -jar ${GAT_REPORT_ARTIFACT_DIR}/${GAT_REPORT_ARTIFACT} -f -o ${REPORT_PATH} -n data.yml -t ${MUSTACHE_TEMPLATE} ' +
-                  '-m import,move,bulk,mbulk,exportcsv,create,createasync,nav,search,update,updateasync,bench,crud,crudasync,reindex,cleanup,fullgc ' +
+                  '-m import,move,bulk,mbulk,exportcsv,create,createasync,setpref,nav,search,update,updateasync,bench,crud,crudasync,reindex,cleanup,fullgc ' +
                   '${REPORT_PATH}/sim10massstreamimport/detail/simulation.log.gz ' +
                   '${REPORT_PATH}/sim15move/detail/simulation.log.gz ' +
                   '${REPORT_PATH}/sim15bulkupdatedocuments/detail/simulation.log.gz ' +
@@ -253,6 +266,7 @@ s.close()
                   '${REPORT_PATH}/sim20csvexport/detail/simulation.log.gz ' +
                   '${REPORT_PATH}/sim20createdocuments/detail/simulation.log.gz ' +
                   '${REPORT_PATH}/sim25waitforasync/detail/simulation.log.gz ' +
+                  '${REPORT_PATH}/sim27setpreferences/detail/simulation.log.gz ' +
                   '${REPORT_PATH}/sim30navigation/detail/simulation.log.gz ' +
                   '${REPORT_PATH}/sim30search/detail/simulation.log.gz ' +
                   '${REPORT_PATH}/sim30updatedocuments/detail/simulation.log.gz ' +
@@ -274,10 +288,11 @@ s.close()
               sh "echo 'bench_suite: \"${BENCHMARK_BENCH_SUITE}\"' >> ${REPORT_PATH}/data.yml"
               sh "echo \"nuxeonodes: \$(( \${NX_REPLICA_COUNT} + \${NX_WORKER_COUNT} ))\" >> ${REPORT_PATH}/data.yml"
               sh "echo 'esnodes: 1' >> ${REPORT_PATH}/data.yml"
-              sh "echo 'classifier: \"\"' >> ${REPORT_PATH}/data.yml"
+              sh "echo 'classifier: \"${env.USE_VERSITYGW.toBoolean() ? 'versitygw' : 'aws-s3'}\"' >> ${REPORT_PATH}/data.yml"
               sh "echo 'distribution: \"${VERSION}\"' >> ${REPORT_PATH}/data.yml"
               sh "echo 'default_category: \"${BENCHMARK_CATEGORY}\"' >> ${REPORT_PATH}/data.yml"
               sh "echo 'kafka: true' >> ${REPORT_PATH}/data.yml"
+              sh "echo 'versitygw: ${USE_VERSITYGW}' >> ${REPORT_PATH}/data.yml"
               sh "echo 'import_docs: ${BENCHMARK_NB_DOCS}' >> ${REPORT_PATH}/data.yml"
               // Calculate benchmark duration between import and fullgc
               sh """
@@ -363,7 +378,7 @@ s.close()
   post {
     always {
       script {
-        nxGitHub.setStatus(context: 'benchmark/tests', message: 'Benchmark tests', commitSha: env.SCM_REF)
+        nxGitHub.setStatus(context: env.BENCHMARK_STATUS_CONTEXT, message: 'Benchmark tests', commitSha: env.SCM_REF)
         nxUtils.setDescription(default: "Benchmark URL: ${BENCHMARK_RESULT_URL}")
         if (isTriggeredByCron() || isTriggeredByNuxeoPromotion()) {
           nxUtils.callIfBuildRecoverOrFail(
